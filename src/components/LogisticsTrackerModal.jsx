@@ -245,10 +245,10 @@ export const LogisticsTrackerModal = ({ booking, isOpen, onClose }) => {
               </span>
               <button
                 onClick={handleSimulateOffRoute}
-                className="text-[11px] font-bold text-sky-600 hover:underline flex items-center gap-1"
+                className="text-[11px] font-bold text-sky-600 hover:underline flex items-center gap-1 cursor-pointer"
               >
                 <RotateCcw className="w-3 h-3" />
-                Simular Desvio de Rota
+                Recalcular Trajeto
               </button>
             </div>
 
@@ -285,7 +285,7 @@ export const LogisticsTrackerModal = ({ booking, isOpen, onClose }) => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
             <button
               onClick={() => openExternalNavigation(destinationLat, destinationLng, booking.spaceAddress)}
-              className="bg-sky-600 hover:bg-sky-500 text-white font-extrabold text-xs py-3.5 px-4 rounded-2xl shadow-lg shadow-sky-600/30 transition flex items-center justify-center gap-2"
+              className="bg-sky-600 hover:bg-sky-500 text-white font-extrabold text-xs py-3.5 px-4 rounded-2xl shadow-lg shadow-sky-600/30 transition flex items-center justify-center gap-2 cursor-pointer"
             >
               <Compass className="w-4 h-4 text-sky-200" />
               <span>Abrir Navegação GPS Externa</span>
@@ -293,14 +293,15 @@ export const LogisticsTrackerModal = ({ booking, isOpen, onClose }) => {
 
             <button
               onClick={handleSimulateArrival}
-              className="bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs py-3.5 px-4 rounded-2xl shadow-md transition flex items-center justify-center gap-2"
+              className="bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs py-3.5 px-4 rounded-2xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
             >
-              {logisticsStep === 1 && "Simular Chegada Próxima (500m)"}
-              {logisticsStep === 2 && "Simular Chegada ao Portão Exato"}
+              {logisticsStep === 1 && "Avançar no Trajeto (500m)"}
+              {logisticsStep === 2 && "Confirmar Chegada ao Portão"}
               {logisticsStep === 3 && "Escanear QR Code & Estacionar"}
               {logisticsStep === 4 && "✓ Estacionado com Sucesso"}
             </button>
           </div>
+
 
         </div>
 

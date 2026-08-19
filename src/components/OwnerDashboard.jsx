@@ -18,12 +18,14 @@ import {
   TrendingUp,
   PlusCircle,
   Edit,
+  Trash2,
   QrCode,
   Flame,
   CheckCircle2,
   Lock,
   Unlock,
   AlertCircle,
+  AlertTriangle,
   PieChart,
   ArrowUpRight
 } from 'lucide-react';
@@ -31,10 +33,13 @@ import {
 export const OwnerDashboard = () => {
   const {
     currentUser,
+    isAuthenticated,
+    openLoginModal,
     parkingSpaces = [],
     bookings = [],
     withdrawals = [],
     requestWithdrawal,
+    deleteParkingSpace,
     setIsAddSpotModalOpen,
     setEditingSpot,
     setIsScannerOpen,
@@ -44,9 +49,34 @@ export const OwnerDashboard = () => {
   const [activeOwnerTab, setActiveOwnerTab] = useState('visãogeral'); // visãogeral, vagas, calendario, mensalistas, financeiro
   const [withdrawalAmount, setWithdrawalAmount] = useState('250');
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
+  const [spotToDelete, setSpotToDelete] = useState(null);
   const [lockedHours, setLockedHours] = useState(['12:00', '13:00']);
 
+  if (!isAuthenticated) {
+    return (
+      <div className="max-w-md mx-auto px-4 py-20 text-center space-y-5 animate-in fade-in">
+        <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-3xl flex items-center justify-center mx-auto shadow-sm">
+          <DollarSign className="w-8 h-8" />
+        </div>
+        <div className="space-y-1.5">
+          <h2 className="text-2xl font-black text-slate-900">Painel do Anfitrião</h2>
+          <p className="text-xs text-slate-600 leading-relaxed">
+            Faça login na sua conta de proprietário para cadastrar garagens, acompanhar reservas, controlar faturamento e solicitar saques PIX.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={openLoginModal}
+          className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm py-3.5 rounded-2xl shadow-lg shadow-emerald-600/30 transition cursor-pointer"
+        >
+          Entrar como Anfitrião
+        </button>
+      </div>
+    );
+  }
+
   const safeUser = currentUser || { id: 'usr_2', name: 'Juliana Santos', email: 'juliana@proprietario.com', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80' };
+
   const safeSpaces = Array.isArray(parkingSpaces) ? parkingSpaces : [];
   const safeBookings = Array.isArray(bookings) ? bookings : [];
 
@@ -68,13 +98,18 @@ export const OwnerDashboard = () => {
     mySpaces.some(space => space.id === b.spaceId)
   ));
 
-
-
-  // Revenue math
+  // Real Revenue math
   const grossRevenue = myBookings.reduce((sum, b) => sum + Number(b.subtotal || b.totalPrice || 0), 0);
   const platformCommissions = myBookings.reduce((sum, b) => sum + Number(b.platformFee || 0), 0);
   const netEarnings = grossRevenue - platformCommissions;
-  const availableBalance = Math.max(0, netEarnings - 100); // 100 spent/withdrawn mockup
+
+  // Real withdrawals math
+  const totalWithdrawn = (withdrawals || [])
+    .filter(w => (w.ownerId === safeUser.id || w.ownerName === safeUser.name) && (w.status === 'Concluído' || w.status === 'Pendente'))
+    .reduce((sum, w) => sum + Number(w.amount || 0), 0);
+
+  const availableBalance = Math.max(0, netEarnings - totalWithdrawn);
+
 
   // Analytics Chart Data
   const monthlyRevenueData = [
@@ -407,19 +442,33 @@ export const OwnerDashboard = () => {
                     <span>⚡ Tarifa Dinâmica de Eventos (+30%)</span>
                   </button>
 
-                  <button
-                    onClick={() => {
-                      setEditingSpot(spot);
-                      setIsAddSpotModalOpen(true);
-                    }}
-                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition"
-                  >
-                    <Edit className="w-3.5 h-3.5" />
-                    Editar Vaga
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingSpot(spot);
+                        setIsAddSpotModalOpen(true);
+                      }}
+                      className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition cursor-pointer"
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                      <span>Editar</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setSpotToDelete(spot)}
+                      className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition cursor-pointer"
+                      title="Excluir garagem do aplicativo"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                      <span>Excluir</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
+
           </div>
         </div>
       )}
@@ -555,7 +604,7 @@ export const OwnerDashboard = () => {
               </button>
               <button
                 type="submit"
-                className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold py-2.5 rounded-xl"
+                className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold py-2.5 rounded-xl cursor-pointer"
               >
                 Confirmar Saque
               </button>
@@ -564,6 +613,48 @@ export const OwnerDashboard = () => {
         </div>
       )}
 
+      {/* Delete Garage Confirmation Modal */}
+      {spotToDelete && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white p-6 rounded-3xl max-w-sm w-full space-y-4 text-center shadow-2xl">
+            <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+
+            <div className="space-y-1">
+              <h3 className="font-black text-slate-900 text-base">Excluir Garagem?</h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Tem certeza que deseja remover <strong>"{spotToDelete.title}"</strong> do aplicativo? Esta ação é permanente e removerá a vaga do mapa e do banco de dados.
+              </p>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setSpotToDelete(null)}
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-3 rounded-xl transition cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const targetId = spotToDelete.id;
+                  setSpotToDelete(null);
+                  if (typeof deleteParkingSpace === 'function') {
+                    await deleteParkingSpace(targetId);
+                  }
+                }}
+                className="flex-1 bg-rose-600 hover:bg-rose-500 text-white text-xs font-black py-3 rounded-xl shadow-md shadow-rose-600/30 transition cursor-pointer"
+              >
+                Sim, Excluir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
+

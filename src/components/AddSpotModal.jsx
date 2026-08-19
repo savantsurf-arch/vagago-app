@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { X, MapPin, Car, ShieldCheck, DollarSign, Image, CheckCircle, Plus } from 'lucide-react';
+import { X, MapPin, Car, ShieldCheck, DollarSign, Image, CheckCircle, Plus, RefreshCw, AlertCircle } from 'lucide-react';
 import { geocodeAddress } from '../services/googleServices';
 
 export const AddSpotModal = () => {
@@ -11,6 +11,9 @@ export const AddSpotModal = () => {
     setEditingSpot,
     saveParkingSpace
   } = useApp();
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState('');
 
   const [formData, setFormData] = useState({
     title: '',
@@ -43,6 +46,7 @@ export const AddSpotModal = () => {
   });
 
   useEffect(() => {
+    setFormError('');
     if (editingSpot) {
       setFormData(editingSpot);
     } else {
@@ -81,16 +85,31 @@ export const AddSpotModal = () => {
 
   if (!isAddSpotModalOpen) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
+    setFormError('');
 
+    if (!formData.title.trim()) {
+      setFormError('Por favor, informe o título da garagem.');
+      return;
+    }
+    if (!formData.address.trim()) {
+      setFormError('Por favor, informe o endereço da garagem.');
+      return;
+    }
+    if (!formData.priceHourly || formData.priceHourly <= 0) {
+      setFormError('Informe um valor válido para a tarifa por hora.');
+      return;
+    }
+
+    setIsSubmitting(true);
     
     // Geocode address dynamically to get Itabuna coordinates
     const geo = geocodeAddress(formData.address || formData.neighborhood || "Centro, Itabuna - BA");
     
     const spotPayload = {
       ...formData,
-      title: formData.title || `Garagem ${formData.neighborhood || 'Itabuna'}`,
+      title: formData.title.trim(),
       city: 'Itabuna',
       state: 'BA',
       lat: geo.lat,
@@ -100,10 +119,17 @@ export const AddSpotModal = () => {
       facadePhoto: formData.facadePhoto || formData.photos[0]
     };
 
-    saveParkingSpace(spotPayload);
-    setIsAddSpotModalOpen(false);
-    setEditingSpot(null);
+    try {
+      await saveParkingSpace(spotPayload);
+      setIsSubmitting(false);
+      setIsAddSpotModalOpen(false);
+      setEditingSpot(null);
+    } catch (err) {
+      setIsSubmitting(false);
+      setFormError('Não foi possível salvar a garagem. Tente novamente.');
+    }
   };
+
 
   const toggleFeature = (feat) => {
     setFormData(prev => {
@@ -413,13 +439,29 @@ export const AddSpotModal = () => {
             </div>
           </div>
 
+          {formError && (
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 font-bold text-xs flex items-center gap-2 animate-in fade-in">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{formError}</span>
+            </div>
+          )}
+
           <button
             type="button"
             onClick={handleSubmit}
-            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm py-3.5 rounded-2xl shadow-lg shadow-emerald-600/30 transition transform hover:-translate-y-0.5 cursor-pointer"
+            disabled={isSubmitting}
+            className="w-full bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 disabled:opacity-50 text-white font-extrabold text-sm py-3.5 rounded-2xl shadow-lg shadow-emerald-600/30 transition transform hover:-translate-y-0.5 cursor-pointer flex items-center justify-center gap-2"
           >
-            {editingSpot ? "Salvar Alterações na Vaga" : "Publicar Minha Vaga no VagaGo"}
+            {isSubmitting ? (
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                <span>Salvando Garagem...</span>
+              </>
+            ) : (
+              <span>{editingSpot ? "Salvar Alterações na Vaga" : "Publicar Minha Vaga no VagaGo"}</span>
+            )}
           </button>
+
 
 
         </form>

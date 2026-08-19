@@ -1,7 +1,7 @@
 import React, { useState, Component } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
-import { RoleSwitcher } from './components/RoleSwitcher';
 import { Navbar } from './components/Navbar';
+
 import { LandingPage } from './components/LandingPage';
 import { SearchPage } from './components/SearchPage';
 import { SpotDetailsModal } from './components/SpotDetailsModal';
@@ -77,8 +77,8 @@ const MainContent = () => {
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
-      <RoleSwitcher />
       <Navbar onOpenDepositModal={() => setIsDepositOpen(true)} />
+
 
       <div className="flex-1">
         {activeTab === 'landing' && <LandingPage />}

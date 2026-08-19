@@ -22,7 +22,8 @@ import {
   calculateSmartParkOptions
 } from '../services/geoUtils';
 import { supabase, isSupabaseConfigured, fetchUsersFromSupabase } from '../services/supabaseClient';
-import { fetchSpacesFromSupabase, publishSpaceToSupabase } from '../services/supabaseService';
+import { fetchSpacesFromSupabase, publishSpaceToSupabase, deleteSpaceFromSupabase, registerUserInSupabase } from '../services/supabaseService';
+
 
 
 const AppContext = createContext();
@@ -118,15 +119,16 @@ export const AppProvider = ({ children }) => {
   };
 
 
-  const register = (newUserData) => {
+  const register = async (newUserData) => {
     const newId = `usr_${Date.now()}`;
+    const cleanEmail = (newUserData.email || '').trim().toLowerCase();
     const newUser = {
       id: newId,
-      name: newUserData.name,
-      email: newUserData.email,
+      name: newUserData.name || cleanEmail.split('@')[0],
+      email: cleanEmail,
       role: newUserData.role || 'CLIENTE',
-      phone: newUserData.phone || '(11) 98888-7777',
-      cpf: newUserData.cpf || '123.456.789-00',
+      phone: newUserData.phone || '(73) 99123-4567',
+      cpf: newUserData.cpf || '000.000.000-00',
       avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=250&q=80",
       status: "Ativo",
       referralCode: `VAGA${Math.floor(1000 + Math.random() * 9000)}`,
@@ -134,7 +136,7 @@ export const AppProvider = ({ children }) => {
       createdAt: new Date().toISOString().split('T')[0]
     };
 
-    setUsers(prev => [newUser, ...prev]);
+    setUsers(prev => [newUser, ...prev.filter(u => u.email !== cleanEmail)]);
     setCurrentUser(newUser);
     setActiveRole(newUser.role);
     setIsAuthenticated(true);
@@ -142,9 +144,17 @@ export const AppProvider = ({ children }) => {
     setAuthToken(token);
     localStorage.setItem('vagago_isAuthenticated', 'true');
     localStorage.setItem('vagago_authToken', token);
-    localStorage.setItem('vagago_currentUser_email', newUser.email);
+    localStorage.setItem('vagago_currentUser_email', cleanEmail);
+
+    try {
+      await registerUserInSupabase(newUser);
+    } catch (e) {
+      console.warn("Notice registering user to cloud:", e);
+    }
+
     return newUser;
   };
+
 
   const logout = () => {
     setIsAuthenticated(false);
@@ -680,6 +690,26 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  const deleteParkingSpace = async (spotId) => {
+    if (!spotId) return;
+    setParkingSpaces(prev => prev.filter(s => s.id !== spotId));
+    try {
+      const saved = localStorage.getItem('vagago_parkingSpaces');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const filtered = parsed.filter(s => s.id !== spotId);
+        localStorage.setItem('vagago_parkingSpaces', JSON.stringify(filtered));
+      }
+    } catch (e) {}
+
+    try {
+      await deleteSpaceFromSupabase(spotId);
+    } catch (e) {
+      console.warn("Notice deleting space from cloud:", e);
+    }
+  };
+
+
 
 
 
@@ -898,6 +928,7 @@ export const AppProvider = ({ children }) => {
       toggleEventPricing,
       addVehicle,
       saveParkingSpace,
+      deleteParkingSpace,
 
 
       authorizeCheckIn,

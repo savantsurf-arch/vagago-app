@@ -39,6 +39,8 @@ export const ClientDashboard = ({
 }) => {
   const {
     currentUser,
+    isAuthenticated,
+    openLoginModal,
     bookings = [],
     cancelBooking,
     vehicles = [],
@@ -50,23 +52,42 @@ export const ClientDashboard = ({
     setIsScannerOpen
   } = useApp();
 
-  const [clientTab, setClientTab] = useState('reservas'); // reservas, meustipos, favoritos, pagamentos, suporte
-  const [selectedBookingForQR, setSelectedBookingForQR] = useState(null);
-  const [shareNotice, setShareNotice] = useState('');
-  const [isAddVehicleModalOpen, setIsAddVehicleModalOpen] = useState(false);
-
-  const [chatSpot, setChatSpot] = useState(null);
-  const [isChatOpen, setIsChatOpen] = useState(false);
-
-  const [reviewBooking, setReviewBooking] = useState(null);
+  const [activeTabLocal, setActiveTabLocal] = useState('reservas'); // reservas, veiculos, carteira, perfil
+  const [selectedVehicle, setSelectedVehicle] = useState(null);
+  const [isAddVehicleOpen, setIsAddVehicleOpen] = useState(false);
   const [isReviewOpen, setIsReviewOpen] = useState(false);
-
-  const [gateBooking, setGateBooking] = useState(null);
+  const [reviewBooking, setReviewBooking] = useState(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatSpot, setChatSpot] = useState(null);
+  const [shareNotice, setShareNotice] = useState('');
   const [isGateOpen, setIsGateOpen] = useState(false);
+  const [gateBooking, setGateBooking] = useState(null);
 
+  if (!isAuthenticated) {
+    return (
+      <div className="max-w-md mx-auto px-4 py-20 text-center space-y-5 animate-in fade-in">
+        <div className="w-16 h-16 bg-sky-100 text-sky-600 rounded-3xl flex items-center justify-center mx-auto shadow-sm">
+          <Calendar className="w-8 h-8" />
+        </div>
+        <div className="space-y-1.5">
+          <h2 className="text-2xl font-black text-slate-900">Acesse suas Reservas</h2>
+          <p className="text-xs text-slate-600 leading-relaxed">
+            Faça login ou crie sua conta para gerenciar suas garagens reservadas, rotas no mapa, QR Code e carteira digital.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={openLoginModal}
+          className="w-full bg-sky-600 hover:bg-sky-500 text-white font-extrabold text-sm py-3.5 rounded-2xl shadow-lg shadow-sky-600/30 transition cursor-pointer"
+        >
+          Entrar na Minha Conta
+        </button>
+      </div>
+    );
+  }
 
+  const safeUser = currentUser || { id: 'usr_1', name: 'Motorista VagaGo', email: 'motorista@vagago.com', phone: '(73) 98765-4321', credits: 20, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80' };
 
-  const safeUser = currentUser || { id: 'usr_1', name: 'Matheus Silva', email: 'matheus@cliente.com', phone: '(73) 98765-4321', credits: 20, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80' };
   const safeBookings = Array.isArray(bookings) ? bookings : [];
   const safeFavorites = Array.isArray(favorites) ? favorites : [];
 
@@ -265,11 +286,12 @@ export const ClientDashboard = ({
                         type="button"
                         onClick={() => { setGateBooking(b); setIsGateOpen(true); }}
                         className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold px-3 py-2 rounded-xl flex items-center gap-1.5 transition shadow-sm cursor-pointer"
-                        title="Simular Abertura de Portão Inteligente"
+                        title="Abrir Portão Inteligente"
                       >
                         <Zap className="w-3.5 h-3.5 text-emerald-300 animate-pulse" />
                         <span>Abrir Portão</span>
                       </button>
+
 
                       <button
                         type="button"

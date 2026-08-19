@@ -199,9 +199,9 @@ export const CheckInScannerModal = () => {
                   Aproxime o celular do motorista do leitor da guarita
                 </div>
 
-                {/* Quick Scan Demo Shortcuts */}
+                {/* Quick Scan Shortcuts */}
                 <div className="pt-2 flex flex-wrap items-center justify-center gap-1.5">
-                  <span className="text-[11px] text-slate-400 font-bold">Simular Leitura:</span>
+                  <span className="text-[11px] text-slate-400 font-bold">Reservas Ativas:</span>
                   {bookings.slice(0, 3).map((b) => (
                     <button
                       key={b.id}
@@ -213,6 +213,7 @@ export const CheckInScannerModal = () => {
                     </button>
                   ))}
                 </div>
+
               </div>
             </div>
           )}

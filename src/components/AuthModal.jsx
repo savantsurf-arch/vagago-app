@@ -13,7 +13,6 @@ import {
   CheckCircle2,
   AlertCircle,
   ArrowRight,
-  Sparkles,
   RefreshCw,
   UserCheck
 } from 'lucide-react';
@@ -26,14 +25,12 @@ export const AuthModal = () => {
     setAuthModalMode,
     login,
     register,
-    forgotPassword,
-    resetPassword,
-    users
+    resetPassword
   } = useApp();
 
   // Form states
-  const [email, setEmail] = useState('matheus@cliente.com');
-  const [password, setPassword] = useState('123456');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
 
@@ -67,25 +64,55 @@ export const AuthModal = () => {
 
   const strength = getPasswordStrength(password);
 
-  const handleLoginSubmit = (e) => {
+  const handleLoginSubmit = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
     setErrorMessage('');
-    const targetEmail = email || 'matheus@cliente.com';
-    const targetPassword = password || '123456';
-    const success = login(targetEmail, targetPassword);
-    if (success) {
-      setIsAuthModalOpen(false);
-    } else {
-      setErrorMessage('Erro ao realizar o login. Tente novamente.');
+    setSuccessMessage('');
+
+    const cleanEmail = (email || '').trim();
+    if (!cleanEmail) {
+      setErrorMessage('Por favor, informe seu e-mail.');
+      return;
+    }
+    if (!password || password.length < 6) {
+      setErrorMessage('A senha deve ter no mínimo 6 caracteres.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const success = await login(cleanEmail, password);
+      setIsLoading(false);
+      if (success) {
+        setIsAuthModalOpen(false);
+        setEmail('');
+        setPassword('');
+      } else {
+        setErrorMessage('E-mail ou senha incorretos. Verifique suas credenciais.');
+      }
+    } catch (err) {
+      setIsLoading(false);
+      setErrorMessage('Erro ao conectar ao servidor. Tente novamente.');
     }
   };
 
-
-
-  const handleRegisterSubmit = (e) => {
-    e.preventDefault();
+  const handleRegisterSubmit = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
     setErrorMessage('');
+    setSuccessMessage('');
 
+    if (!name.trim()) {
+      setErrorMessage('Informe seu nome completo.');
+      return;
+    }
+    if (!email.trim() || !email.includes('@')) {
+      setErrorMessage('Informe um e-mail válido.');
+      return;
+    }
+    if (!password || password.length < 6) {
+      setErrorMessage('A senha deve ter no mínimo 6 caracteres.');
+      return;
+    }
     if (password !== confirmPassword) {
       setErrorMessage('As senhas digitadas não coincidem.');
       return;
@@ -96,27 +123,37 @@ export const AuthModal = () => {
     }
 
     setIsLoading(true);
-    setTimeout(() => {
-      register({
-        name,
-        email,
+    try {
+      await register({
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
         password,
-        phone: phone || '(11) 98888-7777',
-        cpf: cpf || '123.456.789-00',
+        phone: phone.trim() || '(73) 99123-4567',
+        cpf: cpf.trim() || '000.000.000-00',
         role: accountType
       });
       setIsLoading(false);
-      setIsAuthModalOpen(false);
-    }, 800);
+      setSuccessMessage('Conta criada com sucesso! Seja bem-vindo ao VagaGo.');
+      setTimeout(() => {
+        setIsAuthModalOpen(false);
+        setName('');
+        setEmail('');
+        setPassword('');
+        setConfirmPassword('');
+      }, 1000);
+    } catch (err) {
+      setIsLoading(false);
+      setErrorMessage('Não foi possível cadastrar a conta. Tente novamente.');
+    }
   };
 
   const handleForgotSubmit = (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     setErrorMessage('');
 
     if (forgotStep === 1) {
-      if (!email) {
-        setErrorMessage('Informe seu e-mail para receber o código.');
+      if (!email || !email.includes('@')) {
+        setErrorMessage('Informe um e-mail válido para receber o código.');
         return;
       }
       setIsLoading(true);
@@ -147,120 +184,129 @@ export const AuthModal = () => {
     }
   };
 
-  const handleQuickLogin = (userEmail, userRole) => {
-    setEmail(userEmail);
-    setPassword('123456');
-    login(userEmail, '123456');
-    setIsAuthModalOpen(false);
-  };
-
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-in fade-in">
-      <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+      <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
         
-        {/* Top Header Banner */}
-        <div className="p-6 bg-gradient-to-r from-sky-600 to-sky-700 text-white relative">
-          <button
-            onClick={() => setIsAuthModalOpen(false)}
-            className="absolute top-4 right-4 p-1.5 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition"
-          >
-            <X className="w-5 h-5" />
-          </button>
-
-          <div className="flex items-center gap-3">
-            <img src="/logo-vagago.png" alt="VagaGo" className="h-9 w-auto bg-white p-1 rounded-lg shadow-sm" />
+        {/* Header */}
+        <div className="p-5 bg-gradient-to-r from-sky-600 via-sky-700 to-slate-900 text-white flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-white/10 rounded-xl">
+              <Lock className="w-5 h-5 text-sky-200" />
+            </div>
             <div>
-              <h3 className="font-extrabold text-lg">
-                {authModalMode === 'login' && "Acessar sua Conta"}
-                {authModalMode === 'register' && "Criar Conta no VagaGo"}
-                {authModalMode === 'forgot' && "Recuperação de Senha"}
+              <h3 className="font-extrabold text-base">
+                {authModalMode === 'login' && 'Entrar na sua Conta'}
+                {authModalMode === 'register' && 'Criar Conta no VagaGo'}
+                {authModalMode === 'forgot' && 'Recuperar Senha'}
               </h3>
-              <p className="text-xs text-sky-100">Sua vaga parada pode gerar dinheiro</p>
+              <p className="text-xs text-sky-200">
+                {authModalMode === 'login' && 'Acesse suas garagens, reservas e carteira'}
+                {authModalMode === 'register' && 'Cadastre-se grátis em menos de 1 minuto'}
+                {authModalMode === 'forgot' && 'Enviaremos um código para redefinir o acesso'}
+              </p>
             </div>
           </div>
 
-          {/* Mode Switch Tabs */}
-          <div className="flex items-center gap-2 mt-4 bg-sky-900/30 p-1 rounded-xl border border-sky-400/30 text-xs font-bold">
-            <button
-              onClick={() => { setAuthModalMode('login'); setErrorMessage(''); }}
-              className={`flex-1 py-1.5 rounded-lg transition ${
-                authModalMode === 'login' ? 'bg-white text-sky-700 shadow-sm' : 'text-sky-100 hover:bg-white/10'
-              }`}
-            >
-              Entrar
-            </button>
-            <button
-              onClick={() => { setAuthModalMode('register'); setErrorMessage(''); }}
-              className={`flex-1 py-1.5 rounded-lg transition ${
-                authModalMode === 'register' ? 'bg-white text-sky-700 shadow-sm' : 'text-sky-100 hover:bg-white/10'
-              }`}
-            >
-              Cadastrar
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setIsAuthModalOpen(false)}
+            className="p-1.5 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
-        {/* Modal Form Body */}
-        <div className="p-6 space-y-4 text-xs">
+        {/* Modal Body */}
+        <div className="p-6 overflow-y-auto space-y-4 text-xs">
           
+          {/* Tabs for Login vs Register */}
+          {authModalMode !== 'forgot' && (
+            <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-2xl">
+              <button
+                type="button"
+                onClick={() => { setAuthModalMode('login'); setErrorMessage(''); setSuccessMessage(''); }}
+                className={`py-2 text-xs font-bold rounded-xl transition cursor-pointer ${
+                  authModalMode === 'login'
+                    ? 'bg-white text-slate-900 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                Já tenho conta
+              </button>
+              <button
+                type="button"
+                onClick={() => { setAuthModalMode('register'); setErrorMessage(''); setSuccessMessage(''); }}
+                className={`py-2 text-xs font-bold rounded-xl transition cursor-pointer ${
+                  authModalMode === 'register'
+                    ? 'bg-white text-slate-900 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                Criar nova conta
+              </button>
+            </div>
+          )}
+
+          {/* Feedback Alerts */}
           {errorMessage && (
-            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 font-semibold flex items-center gap-2 animate-in fade-in">
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-bold flex items-center gap-2 animate-in fade-in">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
               <span>{errorMessage}</span>
             </div>
           )}
 
           {successMessage && (
-            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 font-semibold flex items-center gap-2 animate-in fade-in">
-              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs font-bold flex items-center gap-2 animate-in fade-in">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>{successMessage}</span>
             </div>
           )}
 
           {/* LOGIN FORM */}
           {authModalMode === 'login' && (
-            <form onSubmit={handleLoginSubmit} className="space-y-4">
+            <form onSubmit={handleLoginSubmit} className="space-y-3.5">
               
               <div>
-                <label className="font-bold text-slate-700 block mb-1">E-mail *</label>
+                <label className="font-bold text-slate-700 block mb-1">E-mail Cadastrado</label>
                 <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                   <input
                     type="email"
                     required
                     placeholder="seu@email.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-3 py-2.5 font-bold text-slate-800 focus:ring-2 focus:ring-sky-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-3 py-2.5 font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-sky-500"
                   />
                 </div>
               </div>
 
               <div>
-                <div className="flex justify-between items-center mb-1">
-                  <label className="font-bold text-slate-700">Senha *</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="font-bold text-slate-700">Sua Senha</label>
                   <button
                     type="button"
-                    onClick={() => { setAuthModalMode('forgot'); setErrorMessage(''); }}
+                    onClick={() => { setAuthModalMode('forgot'); setErrorMessage(''); setSuccessMessage(''); }}
                     className="text-[11px] font-bold text-sky-600 hover:underline"
                   >
                     Esqueceu a senha?
                   </button>
                 </div>
                 <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                   <input
-                    type={showPassword ? "text" : "password"}
+                    type={showPassword ? 'text' : 'password'}
                     required
-                    placeholder="••••••••"
+                    placeholder="Digite sua senha"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-10 py-2.5 font-bold text-slate-800 focus:ring-2 focus:ring-sky-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-10 py-2.5 font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-sky-500"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    className="absolute right-3 top-3 text-slate-400 hover:text-slate-600"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -280,49 +326,12 @@ export const AuthModal = () => {
               </div>
 
               <button
-                type="button"
-                onClick={handleLoginSubmit}
-                className="w-full bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white font-extrabold text-sm py-3 rounded-xl shadow-md shadow-sky-600/30 transition flex items-center justify-center gap-2 cursor-pointer"
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-sky-600 hover:bg-sky-500 active:bg-sky-700 disabled:opacity-50 text-white font-extrabold text-sm py-3 rounded-xl shadow-md shadow-sky-600/30 transition flex items-center justify-center gap-2 cursor-pointer"
               >
-                <span>Entrar no VagaGo</span>
+                {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <span>Entrar no VagaGo</span>}
               </button>
-
-
-
-              {/* DEMO QUICK-LOGIN BUTTONS */}
-              <div className="pt-4 border-t border-slate-100 space-y-2.5">
-                <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider block text-center">
-                  🚀 Entrar com 1-Clique (Perfis de Teste)
-                </span>
-                
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleQuickLogin('matheus@cliente.com', 'CLIENTE')}
-                    className="p-2.5 bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded-xl text-[11px] font-black text-sky-800 text-center transition flex flex-col items-center gap-0.5 shadow-2xs"
-                  >
-                    <span>🚗 Cliente</span>
-                    <span className="text-[9px] font-medium text-sky-600">Matheus</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleQuickLogin('juliana@proprietario.com', 'PROPRIETÁRIO')}
-                    className="p-2.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl text-[11px] font-black text-emerald-800 text-center transition flex flex-col items-center gap-0.5 shadow-2xs"
-                  >
-                    <span>🏠 Anfitriã</span>
-                    <span className="text-[9px] font-medium text-emerald-600">Juliana</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleQuickLogin('admin@vagago.com.br', 'ADMINISTRADOR')}
-                    className="p-2.5 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-xl text-[11px] font-black text-purple-800 text-center transition flex flex-col items-center gap-0.5 shadow-2xs"
-                  >
-                    <span>🛡️ Admin</span>
-                    <span className="text-[9px] font-medium text-purple-600">VagaGo</span>
-                  </button>
-                </div>
-              </div>
-
 
             </form>
           )}
@@ -332,23 +341,23 @@ export const AuthModal = () => {
             <form onSubmit={handleRegisterSubmit} className="space-y-3">
               
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Tipo de Conta *</label>
+                <label className="font-bold text-slate-700 block mb-1">Como deseja usar o VagaGo? *</label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => setAccountType('CLIENTE')}
-                    className={`p-2 rounded-xl border text-center font-bold transition ${
+                    className={`p-2.5 rounded-xl border text-center font-bold transition cursor-pointer ${
                       accountType === 'CLIENTE'
                         ? 'bg-sky-50 border-sky-500 text-sky-800 ring-2 ring-sky-300'
                         : 'bg-slate-50 border-slate-200 text-slate-600'
                     }`}
                   >
-                    🚗 Quero Estacionar (Cliente)
+                    🚗 Quero Estacionar (Motorista)
                   </button>
                   <button
                     type="button"
                     onClick={() => setAccountType('PROPRIETÁRIO')}
-                    className={`p-2 rounded-xl border text-center font-bold transition ${
+                    className={`p-2.5 rounded-xl border text-center font-bold transition cursor-pointer ${
                       accountType === 'PROPRIETÁRIO'
                         ? 'bg-emerald-50 border-emerald-500 text-emerald-800 ring-2 ring-emerald-300'
                         : 'bg-slate-50 border-slate-200 text-slate-600'
@@ -364,10 +373,10 @@ export const AuthModal = () => {
                 <input
                   type="text"
                   required
-                  placeholder="Ex: Matheus Silva"
+                  placeholder="Ex: Seu Nome Completo"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-800"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-900 focus:bg-white"
                 />
               </div>
 
@@ -380,30 +389,30 @@ export const AuthModal = () => {
                     placeholder="seu@email.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-800"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-900 focus:bg-white"
                   />
                 </div>
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">Telefone / WhatsApp</label>
                   <input
                     type="text"
-                    placeholder="(11) 98888-7777"
+                    placeholder="(73) 99123-4567"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-800"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-900 focus:bg-white"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Senha *</label>
+                <label className="font-bold text-slate-700 block mb-1">Senha de Acesso *</label>
                 <input
                   type="password"
                   required
                   placeholder="Mínimo 6 caracteres"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-800"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-900 focus:bg-white"
                 />
                 {password && (
                   <div className="mt-1 space-y-1">
@@ -423,7 +432,7 @@ export const AuthModal = () => {
                   placeholder="Repita sua senha"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-800"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-900 focus:bg-white"
                 />
               </div>
 
@@ -434,13 +443,13 @@ export const AuthModal = () => {
                   onChange={(e) => setAcceptedTerms(e.target.checked)}
                   className="rounded text-sky-600 focus:ring-sky-500"
                 />
-                <span className="text-[11px] text-slate-600">Concordo com os Termos de Uso e Política do VagaGo</span>
+                <span className="text-[11px] text-slate-600">Concordo com os Termos de Uso e Política de Privacidade do VagaGo</span>
               </label>
 
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm py-3 rounded-xl shadow-md transition flex items-center justify-center gap-2"
+                className="w-full bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 disabled:opacity-50 text-white font-extrabold text-sm py-3 rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
               >
                 {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : "Criar Minha Conta Grátis"}
               </button>
@@ -455,7 +464,7 @@ export const AuthModal = () => {
               {forgotStep === 1 && (
                 <>
                   <p className="text-slate-600 leading-relaxed">
-                    Digite seu e-mail cadastrado para receber as instruções e o código de redefinição de senha.
+                    Digite seu e-mail cadastrado para receber o código de redefinição de senha.
                   </p>
                   <div>
                     <label className="font-bold text-slate-700 block mb-1">E-mail Cadastrado *</label>
@@ -465,14 +474,15 @@ export const AuthModal = () => {
                       placeholder="seu@email.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 font-bold text-slate-800"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 font-bold text-slate-900"
                     />
                   </div>
                   <button
                     type="submit"
-                    className="w-full bg-sky-600 hover:bg-sky-500 text-white font-extrabold text-sm py-3 rounded-xl shadow-md transition"
+                    disabled={isLoading}
+                    className="w-full bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-extrabold text-sm py-3 rounded-xl shadow-md transition cursor-pointer"
                   >
-                    Enviar Código de Recuperação
+                    {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : "Enviar Código de Recuperação"}
                   </button>
                 </>
               )}
@@ -483,7 +493,7 @@ export const AuthModal = () => {
                     Digite o código de 6 dígitos enviado para <strong>{email}</strong>:
                   </p>
                   <div>
-                    <label className="font-bold text-slate-700 block mb-1">Código OTP (6 Dígitos) *</label>
+                    <label className="font-bold text-slate-700 block mb-1">Código de 6 Dígitos *</label>
                     <input
                       type="text"
                       maxLength={6}
@@ -495,7 +505,7 @@ export const AuthModal = () => {
                   </div>
                   <button
                     type="submit"
-                    className="w-full bg-sky-600 hover:bg-sky-500 text-white font-extrabold text-sm py-3 rounded-xl shadow-md transition"
+                    className="w-full bg-sky-600 hover:bg-sky-500 text-white font-extrabold text-sm py-3 rounded-xl shadow-md transition cursor-pointer"
                   >
                     Validar Código
                   </button>
@@ -512,15 +522,15 @@ export const AuthModal = () => {
                     <input
                       type="password"
                       required
-                      placeholder="Nova senha (mín. 6 dígitos)"
+                      placeholder="Nova senha (mín. 6 caracteres)"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 font-bold text-slate-800"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 font-bold text-slate-900"
                     />
                   </div>
                   <button
                     type="submit"
-                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm py-3 rounded-xl shadow-md transition"
+                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm py-3 rounded-xl shadow-md transition cursor-pointer"
                   >
                     Salvar Nova Senha
                   </button>
@@ -530,7 +540,7 @@ export const AuthModal = () => {
               <button
                 type="button"
                 onClick={() => setAuthModalMode('login')}
-                className="w-full text-center font-bold text-slate-500 hover:text-slate-800 text-xs"
+                className="w-full text-center font-bold text-slate-500 hover:text-slate-800 text-xs cursor-pointer"
               >
                 Voltar para o Login
               </button>

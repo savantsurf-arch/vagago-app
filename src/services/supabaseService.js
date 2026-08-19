@@ -175,3 +175,63 @@ export async function publishSpaceToSupabase(spot) {
     return false;
   }
 }
+
+// Delete spot from Supabase Cloud
+export async function deleteSpaceFromSupabase(spotId) {
+  if (!isSupabaseConfigured || !spotId) return false;
+
+  try {
+    const targetUUID = ensureUUID(spotId, false);
+    const { error } = await supabase
+      .from('parking_spaces')
+      .delete()
+      .or(`id.eq.${targetUUID},id.eq.${spotId}`);
+
+    if (error) {
+      console.warn("Supabase delete notice:", error.message);
+      return false;
+    }
+    console.log("🗑️ Vaga excluída no Supabase Cloud:", spotId);
+    return true;
+  } catch (e) {
+    console.warn("Supabase delete error:", e);
+    return false;
+  }
+}
+
+// Register user in Supabase Cloud users table
+export async function registerUserInSupabase(user) {
+  if (!isSupabaseConfigured || !user) return false;
+
+  try {
+    const userUUID = ensureUUID(user.id, true);
+    const userRow = {
+      id: userUUID,
+      name: user.name,
+      email: user.email.toLowerCase(),
+      role: user.role || 'CLIENTE',
+      phone: user.phone || '(73) 99123-4567',
+      cpf: user.cpf || '000.000.000-00',
+      avatar: user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=250&q=80',
+      credits: Number(user.credits || 20.00),
+      status: user.status || 'Ativo',
+      referral_code: user.referralCode || `VAGA${Math.floor(1000 + Math.random() * 9000)}`
+    };
+
+    const { data, error } = await supabase
+      .from('users')
+      .upsert([userRow], { onConflict: 'email' })
+      .select();
+
+    if (error) {
+      console.warn("Supabase user register notice:", error.message);
+      return false;
+    }
+    console.log("👤 Usuário sincronizado no Supabase Cloud:", data);
+    return true;
+  } catch (e) {
+    console.warn("Supabase user register error:", e);
+    return false;
+  }
+}
+

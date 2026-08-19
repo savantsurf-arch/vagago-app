@@ -161,8 +161,9 @@ export const WalletDepositModal = ({ isOpen, onClose }) => {
                 {isLoading ? (
                   <RefreshCw className="w-4 h-4 animate-spin" />
                 ) : (
-                  " Simular Confirmação do PIX (Adicionar Créditos)"
+                  "Confirmar Recarga de Créditos via PIX"
                 )}
+
               </button>
 
               <button

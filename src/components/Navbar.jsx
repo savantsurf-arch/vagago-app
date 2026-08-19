@@ -132,6 +132,17 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
                     Favoritos ({safeFavorites.length})
                   </button>
 
+                  <button
+                    onClick={() => {
+                      switchRole('PROPRIETÁRIO');
+                      setActiveTab('owner_dashboard');
+                    }}
+                    className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold px-3 py-1.5 rounded-lg border border-emerald-200 transition flex items-center gap-1.5 ml-1 cursor-pointer"
+                    title="Acessar painel para alugar sua garagem e gerar renda"
+                  >
+                    <LayoutDashboard className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Modo Anfitrião</span>
+                  </button>
                 </>
               )}
 
@@ -164,6 +175,18 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
                     <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
                     Financeiro & Saques
                   </button>
+
+                  <button
+                    onClick={() => {
+                      switchRole('CLIENTE');
+                      setActiveTab('search');
+                    }}
+                    className="bg-sky-50 hover:bg-sky-100 text-sky-800 font-bold px-3 py-1.5 rounded-lg border border-sky-200 transition flex items-center gap-1.5 ml-1 cursor-pointer"
+                    title="Trocar para visão de motorista buscando vagas"
+                  >
+                    <Search className="w-3.5 h-3.5 text-sky-600" />
+                    <span>Modo Motorista</span>
+                  </button>
                 </>
               )}
 
@@ -178,8 +201,19 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
                     <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
                     Painel Admin Global
                   </button>
+
+                  <button
+                    onClick={() => {
+                      switchRole('CLIENTE');
+                      setActiveTab('search');
+                    }}
+                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>Ver como Cliente</span>
+                  </button>
                 </>
               )}
+
             </nav>
 
             {/* Right side Actions & User */}
