@@ -40,11 +40,16 @@ export const OwnerDashboard = () => {
     withdrawals = [],
     requestWithdrawal,
     deleteParkingSpace,
+    pauseParkingSpace,
+    activateParkingSpace,
+    approveBooking,
+    rejectBooking,
     setIsAddSpotModalOpen,
     setEditingSpot,
     setIsScannerOpen,
     demandRegions
   } = useApp();
+
 
   const [activeOwnerTab, setActiveOwnerTab] = useState('visãogeral'); // visãogeral, vagas, calendario, mensalistas, financeiro
   const [withdrawalAmount, setWithdrawalAmount] = useState('250');
@@ -292,6 +297,7 @@ export const OwnerDashboard = () => {
         {[
           { id: 'visãogeral', label: 'Visão Geral & Gráficos' },
           { id: 'vagas', label: `Minhas Garagens (${mySpaces.length})` },
+          { id: 'reservas', label: `Solicitações & Reservas (${myBookings.length})` },
           { id: 'calendario', label: 'Calendário & Bloqueios' },
           { id: 'mensalistas', label: 'Mensalistas (Assinaturas)' },
           { id: 'financeiro', label: 'Financeiro & Comissões (10%)' }
@@ -309,6 +315,7 @@ export const OwnerDashboard = () => {
           </button>
         ))}
       </div>
+
 
       {/* TAB 1: VISÃO GERAL & GRÁFICOS */}
       {activeOwnerTab === 'visãogeral' && (
@@ -464,6 +471,18 @@ export const OwnerDashboard = () => {
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
+                        onClick={() => spot.status === 'Pausada' ? activateParkingSpace(spot.id) : pauseParkingSpace(spot.id)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
+                          spot.status === 'Pausada'
+                            ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300'
+                            : 'bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300'
+                        }`}
+                      >
+                        {spot.status === 'Pausada' ? '🟢 Ativar Anúncio' : '⏸️ Pausar Anúncio'}
+                      </button>
+
+                      <button
+                        type="button"
                         onClick={() => {
                           setEditingSpot(spot);
                           setIsAddSpotModalOpen(true);
@@ -491,6 +510,81 @@ export const OwnerDashboard = () => {
           )}
         </div>
       )}
+
+      {/* TAB: SOLICITAÇÕES & RESERVAS */}
+      {activeOwnerTab === 'reservas' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-extrabold text-slate-900 text-base">Controle de Reservas da Garagem</h3>
+              <p className="text-xs text-slate-500">Aprove ou recuse solicitações e gerencie quem está estacionando.</p>
+            </div>
+          </div>
+
+          {myBookings.length === 0 ? (
+            <div className="bg-white p-8 sm:p-12 rounded-3xl border border-dashed border-slate-300 text-center space-y-3">
+              <Calendar className="w-12 h-12 text-slate-400 mx-auto" />
+              <h4 className="font-extrabold text-slate-800 text-base">Nenhuma reserva recebida ainda</h4>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                Assim que um motorista reservar sua garagem, a solicitação aparecerá aqui com todos os detalhes do veículo e horários.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {myBookings.map((b) => (
+                <div key={b.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase ${
+                        b.bookingStatus === 'Aguardando Aprovação'
+                          ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                          : b.bookingStatus === 'Confirmado'
+                          ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                          : b.bookingStatus === 'Recusado' || b.bookingStatus === 'Cancelado'
+                          ? 'bg-rose-100 text-rose-900 border border-rose-300'
+                          : 'bg-slate-100 text-slate-800'
+                      }`}>
+                        {b.bookingStatus}
+                      </span>
+                      <span className="text-xs font-mono text-slate-400">#{b.bookingNumber}</span>
+                    </div>
+
+                    <h4 className="font-bold text-slate-900 text-sm">
+                      {b.userName} • <span className="text-slate-600 font-normal">{b.vehicle?.brand} {b.vehicle?.model} ({b.vehicle?.plate})</span>
+                    </h4>
+                    <p className="text-xs text-slate-500">
+                      📍 {b.spaceTitle} • 📅 {b.date} das {b.startTime} às {b.endTime} ({b.totalHours}h)
+                    </p>
+                    <div className="text-xs font-black text-emerald-700">
+                      Recebimento líquido: R$ {Number(b.ownerPayout || b.totalPrice * 0.9).toFixed(2)} (Taxa VagaGo: R$ {Number(b.platformFee || b.totalPrice * 0.1).toFixed(2)})
+                    </div>
+                  </div>
+
+                  {b.bookingStatus === 'Aguardando Aprovação' && (
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                      <button
+                        type="button"
+                        onClick={() => approveBooking(b.id)}
+                        className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl shadow-md transition cursor-pointer"
+                      >
+                        ✓ Aceitar Reserva
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => rejectBooking(b.id)}
+                        className="flex-1 sm:flex-none bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer"
+                      >
+                        ✕ Recusar
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
 
 
 

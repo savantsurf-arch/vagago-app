@@ -30,6 +30,7 @@ export const BookingFlowModal = () => {
     vehicles = [],
     addVehicle,
     createBooking,
+    checkAvailability,
     coupons = [],
     currentUser
   } = useApp();
@@ -46,19 +47,20 @@ export const BookingFlowModal = () => {
   const [startTime, setStartTime] = useState('14:00');
   const [endTime, setEndTime] = useState('18:00');
   const [selectedVehicleId, setSelectedVehicleId] = useState(safeVehicles[0]?.id || 'new');
+  const [availabilityError, setAvailabilityError] = useState('');
   
   // New vehicle form
   const [isAddingNewVehicle, setIsAddingNewVehicle] = useState(safeVehicles.length === 0);
   const [newVehicle, setNewVehicle] = useState({
-    brand: 'Toyota',
-    model: 'Corolla XEi',
-    plate: 'DEF-5E67',
-    color: 'Branco',
-    type: 'Sedan'
+    brand: '',
+    model: '',
+    plate: '',
+    color: '',
+    type: 'Carro'
   });
 
   // Payment method & Coupon
-  const [paymentMethod, setPaymentMethod] = useState('PIX'); // PIX, CreditCard
+  const [paymentMethod, setPaymentMethod] = useState('PIX'); // PIX, CreditCard, Carteira VagaGo
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [couponError, setCouponError] = useState('');
@@ -98,7 +100,20 @@ export const BookingFlowModal = () => {
     setIsAddingNewVehicle(false);
   };
 
+  const handleProceedToPayment = () => {
+    setAvailabilityError('');
+    if (typeof checkAvailability === 'function') {
+      const check = checkAvailability(selectedSpot.id, selectedDate, startTime, endTime);
+      if (!check.available) {
+        setAvailabilityError(check.reason);
+        return;
+      }
+    }
+    setStep(2);
+  };
+
   const handleConfirmBooking = () => {
+    setAvailabilityError('');
     let vehicleData = safeVehicles.find(v => v.id === selectedVehicleId);
     if (!vehicleData) {
       vehicleData = newVehicle;
@@ -118,36 +133,41 @@ export const BookingFlowModal = () => {
       discountAmount: discount,
       totalPrice,
       paymentMethod,
-      secretAccessInstructions: selectedSpot.secretAccessInstructions || "🔐 A senha do portão eletrônico é 4821. Apresente o QR Code na portaria.",
+      secretAccessInstructions: selectedSpot.secretAccessInstructions || "🔐 Instruções de portão liberadas após a confirmação.",
       vehicle: vehicleData
     };
 
-    const result = typeof createBooking === 'function' ? createBooking(bookingPayload) : {
-      id: `bk_${Date.now()}`,
-      bookingNumber: Math.floor(100000 + Math.random() * 900000).toString(),
-      spaceTitle: selectedSpot.title,
-      spaceAddress: selectedSpot.address,
-      date: selectedDate,
-      startTime,
-      endTime,
-      paymentMethod,
-      totalPrice,
-      vehicle: vehicleData,
-      qrCodeData: `VAGAGO-BK-${Date.now()}`
-    };
+    try {
+      const result = typeof createBooking === 'function' ? createBooking(bookingPayload) : {
+        id: `bk_${Date.now()}`,
+        bookingNumber: Math.floor(100000 + Math.random() * 900000).toString(),
+        spaceTitle: selectedSpot.title,
+        spaceAddress: selectedSpot.address,
+        date: selectedDate,
+        startTime,
+        endTime,
+        paymentMethod,
+        totalPrice,
+        vehicle: vehicleData,
+        bookingStatus: selectedSpot.requireApproval ? 'Aguardando Aprovação' : 'Confirmado',
+        qrCodeData: `VAGAGO-BK-${Date.now()}`
+      };
 
-    setCompletedBooking(result);
-    setStep(3);
+      setCompletedBooking(result);
+      setStep(3);
 
-    // Trigger celebration confetti
-    if (typeof confetti === 'function') {
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 }
-      });
+      if (typeof confetti === 'function') {
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+      }
+    } catch (err) {
+      setAvailabilityError(err.message || 'Erro ao processar reserva.');
     }
   };
+
 
   const pixCopyString = "00020126580014br.gov.bcb.pix0136vagago-pix-gateway-key-2026520400005303986540532.005802BR5920VAGAGO PLATAFORMA LTDA6009SAO PAULO62070503***6304E8A1";
 
@@ -357,14 +377,22 @@ export const BookingFlowModal = () => {
                 </div>
               </div>
 
+              {availabilityError && (
+                <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                  <span className="font-bold">{availabilityError}</span>
+                </div>
+              )}
+
               <button
                 type="button"
-                onClick={() => setStep(2)}
+                onClick={handleProceedToPayment}
                 className="w-full bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white font-extrabold text-sm py-3.5 px-4 rounded-2xl shadow-lg shadow-sky-600/30 transition flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>Avançar para Pagamento</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
+
 
             </div>
           )}

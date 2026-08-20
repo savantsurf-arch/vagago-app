@@ -573,12 +573,171 @@ export const AppProvider = ({ children }) => {
     localStorage.setItem('vagago_withdrawals', JSON.stringify(withdrawals));
   }, [withdrawals]);
 
-  // Handlers
+  // Handlers & Engine
   const toggleFavorite = (spotId) => {
     setFavorites(prev => prev.includes(spotId) ? prev.filter(id => id !== spotId) : [...prev, spotId]);
   };
 
+  // AVAILABILITY ENGINE - Prevents double bookings and time slot conflicts
+  const checkAvailability = (spaceId, date, startTime, endTime) => {
+    if (!spaceId || !date || !startTime || !endTime) {
+      return { available: false, reason: 'Informações de data ou horário incompletas.' };
+    }
+
+    const spot = parkingSpaces.find(s => s.id === spaceId);
+    if (!spot) {
+      return { available: false, reason: 'Vaga não encontrada.' };
+    }
+
+    if (spot.status === 'Pausada' || spot.isAvailable === false) {
+      return { available: false, reason: 'Este anúncio está pausado temporariamente pelo anfitrião.' };
+    }
+
+    const toMinutes = (timeStr) => {
+      const [h, m] = (timeStr || '00:00').split(':').map(Number);
+      return (h || 0) * 60 + (m || 0);
+    };
+
+    const reqStart = toMinutes(startTime);
+    const reqEnd = toMinutes(endTime);
+
+    if (reqEnd <= reqStart) {
+      return { available: false, reason: 'O horário de saída deve ser posterior ao horário de entrada.' };
+    }
+
+    // Check conflict with existing active/pending bookings for same spot and date
+    const conflictingBooking = bookings.find(b => {
+      if (b.spaceId !== spaceId || b.date !== date) return false;
+      if (b.bookingStatus === 'Cancelado' || b.bookingStatus === 'Recusado') return false;
+
+      const bStart = toMinutes(b.startTime);
+      const bEnd = toMinutes(b.endTime);
+
+      const hasOverlap = !(reqEnd <= bStart || reqStart >= bEnd);
+      return hasOverlap;
+    });
+
+    if (conflictingBooking) {
+      return {
+        available: false,
+        reason: `Horário indisponível! Já existe uma reserva (${conflictingBooking.startTime} às ${conflictingBooking.endTime}). Escolha outro horário.`
+      };
+    }
+
+    return { available: true };
+  };
+
+  const pauseParkingSpace = async (spotId) => {
+    setParkingSpaces(prev => prev.map(s => s.id === spotId ? { ...s, status: 'Pausada', isAvailable: false } : s));
+    try {
+      if (isSupabaseConfigured) {
+        await supabase.from('parking_spaces').update({ status: 'Pausada', is_available: false }).eq('id', spotId);
+      }
+    } catch (e) {}
+  };
+
+  const activateParkingSpace = async (spotId) => {
+    setParkingSpaces(prev => prev.map(s => s.id === spotId ? { ...s, status: 'Ativa', isAvailable: true } : s));
+    try {
+      if (isSupabaseConfigured) {
+        await supabase.from('parking_spaces').update({ status: 'Ativa', is_available: true }).eq('id', spotId);
+      }
+    } catch (e) {}
+  };
+
+  const approveBooking = (bookingId) => {
+    const found = bookings.find(b => b.id === bookingId || b.bookingNumber === bookingId);
+    if (found) {
+      setBookings(prev => prev.map(b => (b.id === bookingId || b.bookingNumber === bookingId) ? { ...b, bookingStatus: 'Confirmado' } : b));
+      setNotifications(prev => [
+        {
+          id: `not_${Date.now()}`,
+          userId: found.userId,
+          type: 'booking_approved',
+          title: '✅ Reserva Aprovada pelo Locador!',
+          message: `Sua reserva da vaga "${found.spaceTitle}" foi confirmada para ${found.date} das ${found.startTime} às ${found.endTime}.`,
+          read: false,
+          timestamp: 'Agora mesmo'
+        },
+        ...prev
+      ]);
+    }
+  };
+
+  const rejectBooking = (bookingId) => {
+    const found = bookings.find(b => b.id === bookingId || b.bookingNumber === bookingId);
+    if (found) {
+      setBookings(prev => prev.map(b => (b.id === bookingId || b.bookingNumber === bookingId) ? { ...b, bookingStatus: 'Recusado' } : b));
+      if (found.paymentMethod === 'Carteira VagaGo' && found.totalPrice) {
+        const refundUser = users.find(u => u.id === found.userId);
+        if (refundUser) {
+          const newCredits = (refundUser.credits || 0) + found.totalPrice;
+          setUsers(prev => prev.map(u => u.id === found.userId ? { ...u, credits: newCredits } : u));
+          if (currentUser && currentUser.id === found.userId) {
+            setCurrentUser(prev => ({ ...prev, credits: newCredits }));
+          }
+        }
+      }
+      setNotifications(prev => [
+        {
+          id: `not_${Date.now()}`,
+          userId: found.userId,
+          type: 'booking_rejected',
+          title: '❌ Solicitação de Reserva Não Aprovada',
+          message: `O locador não pôde aceitar sua reserva para "${found.spaceTitle}". ${found.paymentMethod === 'Carteira VagaGo' ? 'Seu saldo foi reembolsado.' : ''}`,
+          read: false,
+          timestamp: 'Agora mesmo'
+        },
+        ...prev
+      ]);
+    }
+  };
+
+  const addReview = ({ bookingId, spaceId, rating, comment, role, userName, userAvatar }) => {
+    const newRev = {
+      id: `rev_${Date.now()}`,
+      bookingId,
+      spaceId,
+      userName: userName || currentUser?.name || 'Locatário',
+      userAvatar: userAvatar || currentUser?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80',
+      rating: Number(rating || 5),
+      comment: comment || 'Ótima experiência com a garagem!',
+      role: role || 'LOCATARIO',
+      date: new Date().toISOString().split('T')[0]
+    };
+
+    setReviews(prev => [newRev, ...prev]);
+
+    if (spaceId) {
+      setParkingSpaces(prev => prev.map(s => {
+        if (s.id === spaceId) {
+          const currentReviews = reviews.filter(r => r.spaceId === spaceId);
+          const totalScore = currentReviews.reduce((sum, r) => sum + r.rating, Number(rating || 5));
+          const newCount = currentReviews.length + 1;
+          const newAvg = Number((totalScore / newCount).toFixed(1));
+          return { ...s, rating: newAvg, reviewsCount: newCount };
+        }
+        return s;
+      }));
+    }
+
+    if (bookingId) {
+      setBookings(prev => prev.map(b => (b.id === bookingId || b.bookingNumber === bookingId) ? { ...b, hasReviewed: true } : b));
+    }
+
+    return newRev;
+  };
+
   const createBooking = (newBookingData) => {
+    // Run Availability Check
+    const availCheck = checkAvailability(newBookingData.spaceId, newBookingData.date, newBookingData.startTime, newBookingData.endTime);
+    if (!availCheck.available) {
+      throw new Error(availCheck.reason);
+    }
+
+    const targetSpot = parkingSpaces.find(s => s.id === newBookingData.spaceId);
+    const requiresApproval = targetSpot?.requireApproval || targetSpot?.instantBooking === false;
+
     const bookingId = `bk_${Date.now()}`;
     const bookingNumber = `VG-${Math.floor(10000 + Math.random() * 90000)}`;
     const subtotalVal = Number(newBookingData.subtotal || newBookingData.totalPrice || 10);
@@ -586,12 +745,14 @@ export const AppProvider = ({ children }) => {
     const ownerPayout = Number((subtotalVal - platformFee).toFixed(2));
 
     const safeUser = currentUser || {
-      id: 'usr_1',
-      name: 'Matheus Silva',
+      id: `usr_${Date.now()}`,
+      name: 'Locatário VagaGo',
       phone: '(73) 98765-4321',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80',
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=250&q=80',
       credits: 20
     };
+
+    const initialStatus = requiresApproval ? 'Aguardando Aprovação' : 'Confirmado';
 
     const completeBooking = {
       id: bookingId,
@@ -603,7 +764,7 @@ export const AppProvider = ({ children }) => {
       platformFee,
       ownerPayout,
       paymentStatus: 'Aprovado',
-      bookingStatus: 'Confirmado',
+      bookingStatus: initialStatus,
       qrCodeData: `VAGAGO-${bookingNumber}-${newBookingData.spaceId || 'SP1'}`,
       createdAt: new Date().toISOString(),
       checkInTime: null,
@@ -619,8 +780,24 @@ export const AppProvider = ({ children }) => {
     }
 
     setBookings(prev => [completeBooking, ...prev]);
+
+    // Send notification to host (Locador)
+    setNotifications(prev => [
+      {
+        id: `not_${Date.now()}`,
+        userId: newBookingData.ownerId,
+        type: 'new_booking_request',
+        title: requiresApproval ? '🔔 Nova Solicitação de Reserva Pendente!' : '🎉 Nova Reserva Confirmada!',
+        message: `${safeUser.name} reservou sua garagem "${newBookingData.spaceTitle}" para ${newBookingData.date} (${newBookingData.startTime} às ${newBookingData.endTime}). Valor líquido a receber: R$ ${ownerPayout.toFixed(2)}`,
+        read: false,
+        timestamp: 'Agora mesmo'
+      },
+      ...prev
+    ]);
+
     return completeBooking;
   };
+
 
 
   const addVehicle = (vehicleData) => {
@@ -960,8 +1137,12 @@ export const AppProvider = ({ children }) => {
       setActiveTab,
       searchLocation,
       setSearchLocation: handleSearchLocationChange,
-      searchFilters,
-      setSearchFilters,
+      checkAvailability,
+      pauseParkingSpace,
+      activateParkingSpace,
+      approveBooking,
+      rejectBooking,
+      addReview,
       createBooking,
       extendBooking,
       cancelBooking,
@@ -971,12 +1152,12 @@ export const AppProvider = ({ children }) => {
       saveParkingSpace,
       deleteParkingSpace,
 
-
       authorizeCheckIn,
       completeCheckOut,
       openSpotDetails,
       openBookingFlow
     }}>
+
       {children}
     </AppContext.Provider>
   );

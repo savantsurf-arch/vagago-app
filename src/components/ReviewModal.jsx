@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { X, Star, CheckCircle2, ThumbsUp, ShieldCheck, Sparkles } from 'lucide-react';
 
 export const ReviewModal = ({ isOpen, onClose, booking }) => {
-  const { currentUser } = useApp();
+  const { currentUser, addReview } = useApp();
 
   const [rating, setRating] = useState(5);
   const [selectedTags, setSelectedTags] = useState(['Muito Segura', 'Fácil Acesso']);
@@ -29,13 +29,25 @@ export const ReviewModal = ({ isOpen, onClose, booking }) => {
 
   const handleSubmitReview = (e) => {
     if (e && e.preventDefault) e.preventDefault();
+    if (typeof addReview === 'function') {
+      addReview({
+        bookingId: booking.id,
+        spaceId: booking.spaceId,
+        rating,
+        comment: comment || selectedTags.join(', '),
+        role: 'LOCATARIO',
+        userName: currentUser?.name || 'Locatário VagaGo',
+        userAvatar: currentUser?.avatar
+      });
+    }
     setIsSubmitted(true);
 
     setTimeout(() => {
       setIsSubmitted(false);
       onClose();
-    }, 1500);
+    }, 1200);
   };
+
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-in fade-in">

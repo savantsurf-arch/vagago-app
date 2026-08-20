@@ -46,11 +46,15 @@ export const SearchPage = () => {
 
   // Filter application logic including Distance Radius & Access Hours
   const filteredSpots = parkingSpaces.filter(spot => {
+    if (!spot) return false;
+    if (spot.status === 'Pausada' || spot.isAvailable === false) return false;
+
     // Distance radius filter
     if (distanceRadius === '500m' && spot.calculatedDistKm > 0.5) return false;
     if (distanceRadius === '1km' && spot.calculatedDistKm > 1.0) return false;
     if (distanceRadius === '2km' && spot.calculatedDistKm > 2.0) return false;
     if (distanceRadius === '5km' && spot.calculatedDistKm > 5.0) return false;
+
 
     // Access Hours Filter
     if (searchFilters.accessHours === '24H' && !spot.is24h && !spot.availableHours.includes('24')) return false;
