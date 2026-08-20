@@ -86,7 +86,8 @@ export const ClientDashboard = ({
     );
   }
 
-  const safeUser = currentUser || { id: 'usr_1', name: 'Motorista VagaGo', email: 'motorista@vagago.com', phone: '(73) 98765-4321', credits: 20, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80' };
+  const safeUser = currentUser || {};
+
 
   const safeBookings = Array.isArray(bookings) ? bookings : [];
   const safeFavorites = Array.isArray(favorites) ? favorites : [];

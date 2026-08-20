@@ -1,88 +1,9 @@
-// Mock Data for VagaGo SaaS Platform - Pilot City: ITABUNA - BA with Entrance Coordinates 🚪
+// Data for VagaGo SaaS Platform - Pilot City: ITABUNA - BA with Entrance Coordinates 🚪
 
-export const INITIAL_USERS = [
-  {
-    id: "usr_1",
-    name: "Matheus Silva",
-    email: "matheus@cliente.com",
-    role: "CLIENTE",
-    phone: "(73) 98765-4321",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80",
-    cpf: "123.456.789-00",
-    referralCode: "MATHEUS20",
-    credits: 20,
-    status: "Ativo",
-    createdAt: "2025-10-15"
-  },
-  {
-    id: "usr_2",
-    name: "Juliana Santos (Anfitriã Itabuna)",
-    email: "juliana@proprietario.com",
-    role: "PROPRIETÁRIO",
-    phone: "(73) 99123-4567",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80",
-    cpf: "987.654.321-11",
-    pixKey: "juliana.itabuna@pix.com.br",
-    bankAccount: "Banco do Brasil - Ag 0892 CC 12345-6",
-    referralCode: "ITABUNA50",
-    credits: 50,
-    isSuperHost: true,
-    completedBookings: 22,
-    status: "Ativo",
-    createdAt: "2025-08-10"
-  },
-  {
-    id: "70154527-86d3-41c0-9bdc-a575228e76ce",
-    name: "Carlos Mendes (Anfitrião Itabuna)",
-    email: "carlos@proprietario.com",
-    role: "PROPRIETÁRIO",
-    phone: "(73) 98844-3322",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=250&q=80",
-    cpf: "456.789.123-44",
-    pixKey: "carlos.mendes@pix.com.br",
-    bankAccount: "Bradesco - Ag 1245 CC 98765-4",
-    referralCode: "CARLOS30",
-    credits: 120,
-    isSuperHost: true,
-    completedBookings: 35,
-    status: "Ativo",
-    createdAt: "2025-05-12"
-  },
-  {
-    id: "usr_3",
-    name: "Administrador VagaGo",
-    email: "admin@vagago.com.br",
-    role: "ADMINISTRADOR",
-    phone: "(73) 3003-8242",
-    avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=250&q=80",
-    status: "Ativo",
-    createdAt: "2025-01-01"
-  }
-];
+export const INITIAL_USERS = [];
 
+export const INITIAL_VEHICLES = [];
 
-export const INITIAL_VEHICLES = [
-  {
-    id: "veh_1",
-    userId: "usr_1",
-    brand: "Honda",
-    model: "Civic Touring",
-    plate: "ABC-1D23",
-    color: "Prata",
-    type: "Sedan",
-    isDefault: true
-  },
-  {
-    id: "veh_2",
-    userId: "usr_1",
-    brand: "Jeep",
-    model: "Compass Longitude",
-    plate: "XYZ-9876",
-    color: "Preto",
-    type: "SUV",
-    isDefault: false
-  }
-];
 
 export const INITIAL_PARKING_SPACES = [
   {
@@ -325,47 +246,7 @@ export const INITIAL_PARKING_SPACES = [
   }
 ];
 
-export const INITIAL_BOOKINGS = [
-  {
-    id: "bk_101",
-    bookingNumber: "VG-ITB-9402",
-    userId: "usr_1",
-    userName: "Matheus Silva",
-    userPhone: "(73) 98765-4321",
-    userAvatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
-    spaceId: "spc_ita_1",
-    spaceTitle: "Garagem Central Cinquentenário Itabuna",
-    spaceAddress: "Av. Cinquentenário, 450 - Centro, Itabuna - BA",
-    ownerId: "usr_2",
-    ownerName: "Juliana Santos",
-    date: new Date().toISOString().split('T')[0],
-    startTime: "14:00",
-    endTime: "18:00",
-    totalHours: 4,
-    priceType: "hourly",
-    pricePerHour: 6.00,
-    subtotal: 24.00,
-    platformFee: 2.40,
-    ownerPayout: 21.60,
-    discountAmount: 0,
-    totalPrice: 24.00,
-    paymentMethod: "PIX",
-    paymentStatus: "Aprovado",
-    bookingStatus: "Confirmado",
-    qrCodeData: "VAGAGO-ITB101-Cinquentenario-ABC1D23-2026",
-    secretAccessInstructions: "🔐 O portão automático abre via controle na guarita ou aplicativo. A vaga 01 fica logo à esquerda após o portão.",
-    vehicle: {
-      brand: "Honda",
-      model: "Civic Touring",
-      plate: "ABC-1D23",
-      color: "Prata",
-      type: "Sedan"
-    },
-    checkInTime: null,
-    checkOutTime: null,
-    createdAt: new Date().toISOString()
-  }
-];
+export const INITIAL_BOOKINGS = [];
 
 export const INITIAL_DEMAND_REGIONS = [
   {
@@ -397,17 +278,8 @@ export const INITIAL_DEMAND_REGIONS = [
   }
 ];
 
-export const INITIAL_NOTIFICATIONS = [
-  {
-    id: "not_1",
-    userId: "usr_1",
-    type: "booking_confirmed",
-    title: "Reserva Confirmada em Itabuna! 🎉",
-    message: "Sua vaga na Garagem Central Cinquentenário Itabuna está reservada para hoje às 14:00.",
-    read: false,
-    timestamp: "Há 5 minutos"
-  }
-];
+export const INITIAL_NOTIFICATIONS = [];
+
 
 export const INITIAL_COUPONS = [
   {

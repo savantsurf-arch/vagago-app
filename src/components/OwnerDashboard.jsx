@@ -75,22 +75,17 @@ export const OwnerDashboard = () => {
     );
   }
 
-  const safeUser = currentUser || { id: 'usr_2', name: 'Juliana Santos', email: 'juliana@proprietario.com', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80' };
+  const safeUser = currentUser || {};
 
   const safeSpaces = Array.isArray(parkingSpaces) ? parkingSpaces : [];
   const safeBookings = Array.isArray(bookings) ? bookings : [];
 
-  // Filter host spaces & bookings - Robust matching by ID, Email or Host Name
-  let mySpaces = safeSpaces.filter(s => s && (
+  // Filter host spaces & bookings - Matching by ID or Email of authenticated host
+  const mySpaces = safeSpaces.filter(s => s && (
     s.ownerId === safeUser.id || 
-    (s.ownerEmail && safeUser.email && s.ownerEmail.toLowerCase() === safeUser.email.toLowerCase()) ||
-    (s.ownerName && safeUser.name && s.ownerName.toLowerCase().includes(safeUser.name.toLowerCase().split(' ')[0]))
+    (s.ownerEmail && safeUser.email && s.ownerEmail.toLowerCase() === safeUser.email.toLowerCase())
   ));
 
-  // Fallback: If no spaces matched due to legacy cache, display host spaces for Juliana Santos
-  if (mySpaces.length === 0 && safeSpaces.length > 0) {
-    mySpaces = safeSpaces.filter(s => s && (s.ownerId === 'usr_2' || !s.ownerId || s.id?.includes('spc_ita')));
-  }
 
   const myBookings = safeBookings.filter(b => b && (
     b.ownerId === safeUser.id || 
@@ -367,111 +362,135 @@ export const OwnerDashboard = () => {
             <h3 className="font-extrabold text-slate-900 text-base">Garagens Cadastradas e Gestão por Lote</h3>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {mySpaces.map((spot) => (
-              <div key={spot.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                <div className="flex gap-4">
-                  <img src={spot.photos[0]} alt="" className="w-24 h-24 rounded-xl object-cover" />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase">
-                        {spot.status}
-                      </span>
-                      {spot.isMultiSpot && (
-                        <span className="bg-sky-100 text-sky-800 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
-                          🏢 Lote de {spot.totalBoxes || 5} Boxes
-                        </span>
-                      )}
-                      {spot.isEventPricingActive && (
-                        <span className="bg-amber-100 text-amber-900 text-[10px] font-black px-2 py-0.5 rounded-full uppercase flex items-center gap-1">
-                          ⚡ Eventos (+30%)
-                        </span>
-                      )}
-                    </div>
-
-                    <h4 className="font-extrabold text-slate-900 text-sm mt-1">{spot.title}</h4>
-                    <p className="text-xs text-slate-500">{spot.address}</p>
-                    
-                    <div className="mt-2 text-xs font-black text-sky-600">
-                      R$ {spot.priceHourly.toFixed(2)}/h • R$ {spot.priceDaily.toFixed(2)}/dia
-                    </div>
-                  </div>
-                </div>
-
-                {/* Host Pack 2: Multi-Spot Boxes Operations Grid */}
-                {spot.isMultiSpot && (
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-                    <span className="text-[11px] font-extrabold text-slate-800 uppercase block">
-                      Gestão dos Boxes no Terreno / Prédio:
-                    </span>
-                    <div className="grid grid-cols-5 gap-1.5">
-                      {(spot.boxes || [
-                        { id: 1, name: "Box 01", status: "Ocupado" },
-                        { id: 2, name: "Box 02", status: "Livre" },
-                        { id: 3, name: "Box 03", status: "Livre" },
-                        { id: 4, name: "Box 04", status: "Livre" },
-                        { id: 5, name: "Box 05", status: "Livre" }
-                      ]).map((b) => (
-                        <div
-                          key={b.id}
-                          className={`p-2 rounded-lg text-center border text-[10px] font-bold ${
-                            b.status === 'Ocupado'
-                              ? 'bg-rose-50 border-rose-300 text-rose-800'
-                              : 'bg-emerald-50 border-emerald-300 text-emerald-800'
-                          }`}
-                        >
-                          <span className="block font-black">{b.name}</span>
-                          <span className="text-[9px] uppercase">{b.status}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Host Pack 2: Event Dynamic Surge Button & Edit Button */}
-                <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
-                  <button
-                    onClick={() => useApp().toggleEventPricing(spot.id)}
-                    className={`px-3 py-1.5 rounded-xl font-extrabold text-xs transition flex items-center gap-1 ${
-                      spot.isEventPricingActive
-                        ? 'bg-amber-500 text-white shadow-xs'
-                        : 'bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100'
-                    }`}
-                    title="Aumentar preço automaticamente em +30% para dias de shows ou jogos de futebol"
-                  >
-                    <span>⚡ Tarifa Dinâmica de Eventos (+30%)</span>
-                  </button>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditingSpot(spot);
-                        setIsAddSpotModalOpen(true);
-                      }}
-                      className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition cursor-pointer"
-                    >
-                      <Edit className="w-3.5 h-3.5" />
-                      <span>Editar</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setSpotToDelete(spot)}
-                      className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition cursor-pointer"
-                      title="Excluir garagem do aplicativo"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                      <span>Excluir</span>
-                    </button>
-                  </div>
-                </div>
+          {mySpaces.length === 0 ? (
+            <div className="bg-white p-8 sm:p-12 rounded-3xl border border-dashed border-slate-300 text-center space-y-4">
+              <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-3xl flex items-center justify-center mx-auto">
+                <Car className="w-8 h-8" />
               </div>
-            ))}
+              <div className="space-y-1">
+                <h4 className="font-extrabold text-slate-900 text-base">Você ainda não possui garagens cadastradas</h4>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                  Cadastre sua primeira garagem e comece a faturar alugando o espaço para outros motoristas.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingSpot(null);
+                  setIsAddSpotModalOpen(true);
+                }}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs px-6 py-3 rounded-2xl shadow-lg shadow-emerald-600/30 transition cursor-pointer"
+              >
+                + Cadastrar Minha Garagem
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {mySpaces.map((spot) => (
+                <div key={spot.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                  <div className="flex gap-4">
+                    <img src={spot.photos[0]} alt="" className="w-24 h-24 rounded-xl object-cover" />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase">
+                          {spot.status}
+                        </span>
+                        {spot.isMultiSpot && (
+                          <span className="bg-sky-100 text-sky-800 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
+                            🏢 Lote de {spot.totalBoxes || 5} Boxes
+                          </span>
+                        )}
+                        {spot.isEventPricingActive && (
+                          <span className="bg-amber-100 text-amber-900 text-[10px] font-black px-2 py-0.5 rounded-full uppercase flex items-center gap-1">
+                            ⚡ Eventos (+30%)
+                          </span>
+                        )}
+                      </div>
 
-          </div>
+                      <h4 className="font-extrabold text-slate-900 text-sm mt-1">{spot.title}</h4>
+                      <p className="text-xs text-slate-500">{spot.address}</p>
+                      
+                      <div className="mt-2 text-xs font-black text-sky-600">
+                        R$ {spot.priceHourly.toFixed(2)}/h • R$ {spot.priceDaily.toFixed(2)}/dia
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Host Pack 2: Multi-Spot Boxes Operations Grid */}
+                  {spot.isMultiSpot && (
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                      <span className="text-[11px] font-extrabold text-slate-800 uppercase block">
+                        Gestão dos Boxes no Terreno / Prédio:
+                      </span>
+                      <div className="grid grid-cols-5 gap-1.5">
+                        {(spot.boxes || [
+                          { id: 1, name: "Box 01", status: "Ocupado" },
+                          { id: 2, name: "Box 02", status: "Livre" },
+                          { id: 3, name: "Box 03", status: "Livre" },
+                          { id: 4, name: "Box 04", status: "Livre" },
+                          { id: 5, name: "Box 05", status: "Livre" }
+                        ]).map((b) => (
+                          <div
+                            key={b.id}
+                            className={`p-2 rounded-lg text-center border text-[10px] font-bold ${
+                              b.status === 'Ocupado'
+                                ? 'bg-rose-50 border-rose-300 text-rose-800'
+                                : 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                            }`}
+                          >
+                            <span className="block font-black">{b.name}</span>
+                            <span className="text-[9px] uppercase">{b.status}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Host Pack 2: Event Dynamic Surge Button & Edit Button */}
+                  <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
+                    <button
+                      onClick={() => useApp().toggleEventPricing(spot.id)}
+                      className={`px-3 py-1.5 rounded-xl font-extrabold text-xs transition flex items-center gap-1 ${
+                        spot.isEventPricingActive
+                          ? 'bg-amber-500 text-white shadow-xs'
+                          : 'bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100'
+                      }`}
+                      title="Aumentar preço automaticamente em +30% para dias de shows ou jogos de futebol"
+                    >
+                      <span>⚡ Tarifa Dinâmica de Eventos (+30%)</span>
+                    </button>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingSpot(spot);
+                          setIsAddSpotModalOpen(true);
+                        }}
+                        className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition cursor-pointer"
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                        <span>Editar</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setSpotToDelete(spot)}
+                        className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition cursor-pointer"
+                        title="Excluir garagem do aplicativo"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                        <span>Excluir</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
+
 
 
       {/* TAB 3: CALENDÁRIO & BLOQUEIO DE HORÁRIOS */}

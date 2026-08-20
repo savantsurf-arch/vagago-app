@@ -31,10 +31,22 @@ const AppContext = createContext();
 
 
 export const AppProvider = ({ children }) => {
-  // Users dataset
+  // Clear legacy mock users on first run
+  const LEGACY_EMAILS = ['matheus@cliente.com', 'juliana@proprietario.com', 'carlos@proprietario.com', 'admin@vagago.com.br'];
+
+  // Users dataset - Only real registered users
   const [users, setUsers] = useState(() => {
-    const saved = localStorage.getItem('vagago_users');
-    return saved ? JSON.parse(saved) : INITIAL_USERS;
+    try {
+      const saved = localStorage.getItem('vagago_users');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          const filtered = parsed.filter(u => u && !LEGACY_EMAILS.includes(u.email?.toLowerCase()));
+          return filtered;
+        }
+      }
+    } catch (e) {}
+    return [];
   });
 
   // Active Role State
@@ -42,73 +54,93 @@ export const AppProvider = ({ children }) => {
     return localStorage.getItem('vagago_activeRole') || 'CLIENTE';
   });
 
-  // AUTHENTICATION SYSTEM STATE
+  // AUTHENTICATION SYSTEM STATE - Defaults to false when not logged in
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return localStorage.getItem('vagago_isAuthenticated') === 'true';
+    const isAuth = localStorage.getItem('vagago_isAuthenticated') === 'true';
+    const savedEmail = localStorage.getItem('vagago_currentUser_email');
+    if (isAuth && savedEmail && !LEGACY_EMAILS.includes(savedEmail.toLowerCase())) {
+      return true;
+    }
+    return false;
   });
 
   const [authToken, setAuthToken] = useState(() => {
-    return localStorage.getItem('vagago_authToken') || 'mock_jwt_token_12345';
+    const isAuth = localStorage.getItem('vagago_isAuthenticated') === 'true';
+    const savedEmail = localStorage.getItem('vagago_currentUser_email');
+    if (isAuth && savedEmail && !LEGACY_EMAILS.includes(savedEmail.toLowerCase())) {
+      return localStorage.getItem('vagago_authToken') || null;
+    }
+    return null;
   });
 
   const [currentUser, setCurrentUser] = useState(() => {
+    const isAuth = localStorage.getItem('vagago_isAuthenticated') === 'true';
     const savedEmail = localStorage.getItem('vagago_currentUser_email');
-    if (savedEmail) {
-      const found = users.find(u => u.email === savedEmail);
-      if (found) return found;
+    if (isAuth && savedEmail && !LEGACY_EMAILS.includes(savedEmail.toLowerCase())) {
+      try {
+        const saved = localStorage.getItem('vagago_users');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          const found = parsed.find(u => u && u.email?.toLowerCase() === savedEmail.toLowerCase());
+          if (found) return found;
+        }
+      } catch (e) {}
     }
-    return users.find(u => u.role === activeRole) || users[0];
+    return null;
   });
 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState('login'); // login, register, forgot
 
-  // Sync Role & CurrentUser
+  // Sync Role & Save Users
   useEffect(() => {
     localStorage.setItem('vagago_activeRole', activeRole);
-    if (!isAuthenticated) {
-      const matchedUser = users.find(u => u.role === activeRole);
-      if (matchedUser) {
-        setCurrentUser(matchedUser);
-      }
-    }
-  }, [activeRole, users, isAuthenticated]);
+  }, [activeRole]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('vagago_users', JSON.stringify(users));
+    } catch (e) {}
+  }, [users]);
 
   const switchRole = (newRole) => {
     setActiveRole(newRole);
     localStorage.setItem('vagago_activeRole', newRole);
-    const matchedUser = users.find(u => u.role === newRole);
-    if (matchedUser) {
-      setCurrentUser(matchedUser);
+    if (currentUser) {
+      const updatedUser = { ...currentUser, role: newRole };
+      setCurrentUser(updatedUser);
+      setUsers(prev => prev.map(u => u.email === currentUser.email ? updatedUser : u));
     }
   };
 
-
-  // Auth Methods - Robust Guaranteed Login
-  const login = (emailInput, passwordInput) => {
+  // Auth Methods - Clean Real Authentication
+  const login = async (emailInput, passwordInput) => {
     const cleanEmail = (emailInput || '').trim().toLowerCase();
     if (!cleanEmail) return false;
 
-    let foundUser = users.find(u => u.email.toLowerCase() === cleanEmail);
-    
-    // Auto-create user on the fly if new email is provided
+    // Search in local registered users
+    let foundUser = users.find(u => u && u.email?.toLowerCase() === cleanEmail);
+
+    // If not found locally, try fetching from Supabase Cloud users table
+    if (!foundUser && isSupabaseConfigured) {
+      try {
+        const cloudUsers = await fetchUsersFromSupabase();
+        if (Array.isArray(cloudUsers) && cloudUsers.length > 0) {
+          const cloudFound = cloudUsers.find(u => u && u.email?.toLowerCase() === cleanEmail && !LEGACY_EMAILS.includes(cleanEmail));
+          if (cloudFound) {
+            foundUser = cloudFound;
+            setUsers(prev => [foundUser, ...prev.filter(u => u.email !== cleanEmail)]);
+          }
+        }
+      } catch (e) {}
+    }
+
     if (!foundUser) {
-      foundUser = {
-        id: `usr_${Date.now()}`,
-        name: cleanEmail.split('@')[0] || 'Usuário VagaGo',
-        email: cleanEmail,
-        role: cleanEmail.includes('proprietario') || cleanEmail.includes('anfitriao') ? 'PROPRIETÁRIO' : cleanEmail.includes('admin') ? 'ADMINISTRADOR' : 'CLIENTE',
-        phone: '(73) 99123-4567',
-        avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=250&q=80",
-        status: "Ativo",
-        credits: 20,
-        createdAt: new Date().toISOString().split('T')[0]
-      };
-      setUsers(prev => [foundUser, ...prev]);
+      return false;
     }
 
     setCurrentUser(foundUser);
-    setActiveRole(foundUser.role);
+    setActiveRole(foundUser.role || 'CLIENTE');
     setIsAuthenticated(true);
     const token = `jwt_token_${Date.now()}`;
     setAuthToken(token);
@@ -117,7 +149,6 @@ export const AppProvider = ({ children }) => {
     localStorage.setItem('vagago_currentUser_email', foundUser.email);
     return true;
   };
-
 
   const register = async (newUserData) => {
     const newId = `usr_${Date.now()}`;
@@ -155,14 +186,16 @@ export const AppProvider = ({ children }) => {
     return newUser;
   };
 
-
   const logout = () => {
     setIsAuthenticated(false);
+    setCurrentUser(null);
     setAuthToken(null);
     localStorage.removeItem('vagago_isAuthenticated');
     localStorage.removeItem('vagago_authToken');
     localStorage.removeItem('vagago_currentUser_email');
+    setActiveTab('landing');
   };
+
 
   const resetPassword = (emailInput, newPassword) => {
     console.log(`Password reset for ${emailInput} to ${newPassword}`);
