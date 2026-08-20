@@ -315,112 +315,133 @@ export const LandingPage = () => {
             )}
           </div>
 
-
         </div>
       </section>
 
-      {/* STRATEGIC DEMAND MAP SECTION FOR HOSTS */}
+
+      {/* WHY DRIVERS LOVE VAGAGO (KEY BENEFITS) */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-sky-950 text-white rounded-3xl p-8 sm:p-12 shadow-2xl relative overflow-hidden">
-          
-          <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            
-            <div className="lg:col-span-7 space-y-4">
-              <div className="inline-flex items-center gap-2 bg-emerald-500/20 text-emerald-400 text-xs font-bold px-3 py-1 rounded-full border border-emerald-500/30">
-                <Flame className="w-4 h-4 text-emerald-400" />
-                <span>Mapa de Demanda VagaGo</span>
-              </div>
-
-              <h2 className="text-3xl sm:text-4xl font-black leading-tight">
-                Regiões com Altíssima Procura por Estacionamento
-              </h2>
-
-              <p className="text-slate-300 text-sm leading-relaxed">
-                Nossos dados mostram centenas de motoristas buscando vagas diariamente nessas áreas. Se você tem uma garagem parada nestes bairros, pode faturar imediatamente!
-              </p>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                {demandRegions.map((region) => (
-                  <div key={region.id} className="p-3.5 bg-slate-800/80 rounded-2xl border border-slate-700/80 flex items-center justify-between">
-                    <div>
-                      <h4 className="font-bold text-white text-xs">{region.region} ({region.city})</h4>
-                      <span className="text-[11px] text-emerald-400 font-semibold">{region.searchesLast7Days} buscas nos últimos 7 dias</span>
-                    </div>
-                    <span className="text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded uppercase">
-                      {region.status}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="lg:col-span-5 bg-white/10 backdrop-blur-md p-6 rounded-3xl border border-white/10 text-center space-y-5">
-              <div className="w-14 h-14 bg-emerald-500 text-slate-900 rounded-2xl flex items-center justify-center mx-auto shadow-lg font-black text-2xl">
-                R$
-              </div>
-              <h3 className="text-xl font-bold">Simule seus Ganhos como Anfitrião</h3>
-              <p className="text-xs text-slate-300">
-                Garagens na região Central e Paulista faturam em média <strong className="text-emerald-400 font-extrabold">R$ 680 a R$ 1.200 / mês</strong> com 0 esforço.
-              </p>
-
-              <button
-                onClick={() => {
-                  setActiveRole('PROPRIETÁRIO');
-                  setIsAddSpotModalOpen(true);
-                }}
-                className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm py-3.5 px-4 rounded-2xl shadow-lg transition transform hover:scale-[1.02] flex items-center justify-center gap-2"
-              >
-                <DollarSign className="w-5 h-5" />
-                <span>Cadastrar minha garagem agora</span>
-              </button>
-            </div>
-
-          </div>
-
-        </div>
-      </section>
-
-      {/* HOW IT WORKS / USER BENEFITS */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-2xl mx-auto mb-12">
-          <h2 className="text-3xl font-black text-slate-900">Como funciona o VagaGo?</h2>
-          <p className="text-slate-600 text-sm mt-2">
-            Simplicidade absoluta para quem precisa estacionar e para quem quer lucrar.
+        <div className="text-center max-w-2xl mx-auto mb-12 space-y-2">
+          <span className="text-xs font-bold uppercase text-sky-600 tracking-wider">Vantagens para Motoristas</span>
+          <h2 className="text-3xl sm:text-4xl font-black text-slate-900">
+            Por que estacionar com o VagaGo?
+          </h2>
+          <p className="text-slate-600 text-sm">
+            Acabe com a dor de cabeça de rodar procurando vaga ou pagar preços abusivos no centro.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="p-6 bg-white rounded-3xl border border-slate-200 shadow-sm text-center space-y-3">
-            <div className="w-12 h-12 bg-sky-100 text-sky-600 rounded-2xl flex items-center justify-center mx-auto font-black text-lg">
-              1
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          <div className="p-7 bg-white rounded-3xl border border-slate-200 shadow-sm space-y-3.5 hover:border-sky-300 transition">
+            <div className="w-14 h-14 bg-sky-50 text-sky-600 rounded-2xl flex items-center justify-center">
+              <DollarSign className="w-8 h-8" />
             </div>
-            <h3 className="font-extrabold text-slate-900 text-base">Localize a Vaga ideal</h3>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Pesquise pelo endereço ou bairro de destino e veja todas as opções com preço por hora ou mensalidade.
+            <h3 className="font-black text-slate-900 text-lg">Até 40% Mais Barato</h3>
+            <p className="text-slate-600 text-xs leading-relaxed">
+              Pague valores justos por hora, diária ou mês. Sem surpresas ou cobranças abusivas de estacionamentos convencionais.
             </p>
           </div>
 
-          <div className="p-6 bg-white rounded-3xl border border-slate-200 shadow-sm text-center space-y-3">
-            <div className="w-12 h-12 bg-sky-100 text-sky-600 rounded-2xl flex items-center justify-center mx-auto font-black text-lg">
-              2
+          <div className="p-7 bg-white rounded-3xl border border-slate-200 shadow-sm space-y-3.5 hover:border-emerald-300 transition">
+            <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center">
+              <ShieldCheck className="w-8 h-8" />
             </div>
-            <h3 className="font-extrabold text-slate-900 text-base">Reserve e Pague via PIX</h3>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Escolha seu veículo, selecione os horários de entrada/saída e confirme o pagamento em segundos.
+            <h3 className="font-black text-slate-900 text-lg">Garagem Segura e Coberta</h3>
+            <p className="text-slate-600 text-xs leading-relaxed">
+              Deixe seu carro protegido do sol e da chuva em garagens privativas com portão eletrônico, câmeras 24h e anfitriões verificados.
             </p>
           </div>
 
-          <div className="p-6 bg-white rounded-3xl border border-slate-200 shadow-sm text-center space-y-3">
-            <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto font-black text-lg">
-              3
+          <div className="p-7 bg-white rounded-3xl border border-slate-200 shadow-sm space-y-3.5 hover:border-purple-300 transition">
+            <div className="w-14 h-14 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center">
+              <Zap className="w-8 h-8" />
             </div>
-            <h3 className="font-extrabold text-slate-900 text-base">Chegue e Estacione</h3>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Apresente o QR Code no portão eletrônico ou portaria e desfrute de um estacionamento seguro.
+            <h3 className="font-black text-slate-900 text-lg">Vaga Garantida no Destino</h3>
+            <p className="text-slate-600 text-xs leading-relaxed">
+              Reserve antes de sair de casa com navegação integrada no GPS. Chegue no seu compromisso em Itabuna sempre no horário.
             </p>
           </div>
+
+        </div>
+      </section>
+
+      {/* HOW IT WORKS FOR DRIVERS */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-white p-8 sm:p-12 rounded-3xl border border-slate-200 shadow-sm space-y-10">
+          
+          <div className="text-center max-w-2xl mx-auto space-y-2">
+            <span className="text-xs font-bold uppercase text-emerald-600 tracking-wider">Passo a Passo</span>
+            <h2 className="text-3xl font-black text-slate-900">Como funciona para motoristas?</h2>
+            <p className="text-slate-600 text-sm">
+              Em menos de 1 minuto você encontra e garante sua vaga.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200/80 text-center space-y-3">
+              <div className="w-12 h-12 bg-sky-600 text-white font-black rounded-2xl flex items-center justify-center mx-auto text-lg shadow-md shadow-sky-600/20">
+                1
+              </div>
+              <h3 className="font-extrabold text-slate-900 text-base">Localize no Mapa</h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Digite o bairro ou use o GPS para ver garagens disponíveis perto de você com valores transparentes por hora.
+              </p>
+            </div>
+
+            <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200/80 text-center space-y-3">
+              <div className="w-12 h-12 bg-sky-600 text-white font-black rounded-2xl flex items-center justify-center mx-auto text-lg shadow-md shadow-sky-600/20">
+                2
+              </div>
+              <h3 className="font-extrabold text-slate-900 text-base">Reserve e Pague via PIX</h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Escolha seu veículo, defina o tempo de permanência e aproveite o pagamento instantâneo e 100% seguro.
+              </p>
+            </div>
+
+            <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200/80 text-center space-y-3">
+              <div className="w-12 h-12 bg-emerald-600 text-white font-black rounded-2xl flex items-center justify-center mx-auto text-lg shadow-md shadow-emerald-600/20">
+                3
+              </div>
+              <h3 className="font-extrabold text-slate-900 text-base">Chegue e Estacione</h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Abra o portão com o código de acesso ou QR Code liberado pelo app e estacione sem preocupações.
+              </p>
+            </div>
+          </div>
+
+          <div className="text-center pt-2">
+            <button
+              type="button"
+              onClick={() => setActiveTab('search')}
+              className="bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white font-black text-sm py-4 px-8 rounded-2xl shadow-lg shadow-sky-600/30 transition cursor-pointer"
+            >
+              Buscar Vaga em Itabuna Agora
+            </button>
+          </div>
+
+        </div>
+      </section>
+
+      {/* DRIVER CTA BANNER */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-gradient-to-r from-sky-600 via-sky-700 to-slate-900 text-white rounded-3xl p-8 sm:p-12 text-center space-y-6 shadow-xl">
+          <div className="max-w-2xl mx-auto space-y-3">
+            <h2 className="text-3xl sm:text-4xl font-black">
+              Chega de perder tempo procurando vaga!
+            </h2>
+            <p className="text-sky-100 text-sm">
+              Encontre uma garagem privativa, economize dinheiro e estacione com total tranquilidade em Itabuna.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('search')}
+            className="bg-white hover:bg-slate-100 text-sky-950 font-black text-sm py-4 px-8 rounded-2xl shadow-xl transition transform hover:scale-105 cursor-pointer"
+          >
+            Encontrar Garagem Perto de Mim
+          </button>
         </div>
       </section>
 
@@ -433,12 +454,25 @@ export const LandingPage = () => {
               <img src="/logo-vagago.png" alt="VagaGo" className="h-10 w-auto bg-white p-1 rounded-lg" />
               <div>
                 <div className="font-black text-lg">VagaGo</div>
-                <div className="text-xs text-slate-400">Sua vaga parada pode gerar dinheiro.</div>
+                <div className="text-xs text-slate-400">Estacionamento inteligente, seguro e econômico.</div>
               </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-6 text-xs text-slate-400">
-              <a href="#" className="hover:text-white transition">Sobre o VagaGo</a>
+              <button
+                type="button"
+                onClick={() => setActiveTab('host_landing')}
+                className="text-emerald-400 hover:text-emerald-300 font-bold transition cursor-pointer"
+              >
+                🏠 Seja um Anfitrião (Alugue sua vaga)
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('search')}
+                className="hover:text-white transition cursor-pointer"
+              >
+                Encontrar Vagas
+              </button>
               <a href="#" className="hover:text-white transition">Termos de Uso</a>
               <a href="#" className="hover:text-white transition">Privacidade</a>
               <a href="#" className="hover:text-white transition">Suporte 24h</a>
@@ -455,3 +489,4 @@ export const LandingPage = () => {
     </div>
   );
 };
+

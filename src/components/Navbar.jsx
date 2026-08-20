@@ -92,21 +92,65 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
 
             </div>
 
-            {/* Navigation links by Role */}
+            {/* Navigation links by Authentication & Role */}
             <nav className="hidden md:flex items-center space-x-1 lg:space-x-2 text-xs font-semibold">
-              {activeRole === 'CLIENTE' && (
+              
+              {/* 1. Unauthenticated Visitor Navigation (Default Public View) */}
+              {!isAuthenticated && (
                 <>
                   <button
+                    type="button"
                     onClick={() => setActiveTab('landing')}
-                    className={`px-3 py-2 rounded-lg transition ${
+                    className={`px-3 py-2 rounded-xl transition cursor-pointer ${
                       activeTab === 'landing' ? 'bg-sky-50 text-sky-700 font-bold' : 'text-slate-600 hover:bg-slate-100'
                     }`}
                   >
                     Início
                   </button>
                   <button
+                    type="button"
                     onClick={() => setActiveTab('search')}
-                    className={`px-3 py-2 rounded-lg transition flex items-center gap-1.5 ${
+                    className={`px-3 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
+                      activeTab === 'search' ? 'bg-sky-50 text-sky-700 font-bold' : 'text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Search className="w-3.5 h-3.5 text-sky-600" />
+                    Encontrar vaga
+                  </button>
+                  
+                  {/* Highlighted Host Landing Link */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('host_landing')}
+                    className={`px-3.5 py-1.5 rounded-xl border transition flex items-center gap-1.5 ml-2 cursor-pointer ${
+                      activeTab === 'host_landing'
+                        ? 'bg-emerald-600 text-white font-extrabold border-emerald-600 shadow-xs'
+                        : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold border-emerald-200'
+                    }`}
+                    title="Alugue sua garagem parada e ganhe renda extra"
+                  >
+                    <Car className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Seja um Anfitrião</span>
+                  </button>
+                </>
+              )}
+
+              {/* 2. Authenticated DRIVER (Cliente) Navigation */}
+              {isAuthenticated && activeRole === 'CLIENTE' && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('landing')}
+                    className={`px-3 py-2 rounded-xl transition cursor-pointer ${
+                      activeTab === 'landing' ? 'bg-sky-50 text-sky-700 font-bold' : 'text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    Início
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('search')}
+                    className={`px-3 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
                       activeTab === 'search' ? 'bg-sky-50 text-sky-700 font-bold' : 'text-slate-600 hover:bg-slate-100'
                     }`}
                   >
@@ -114,8 +158,9 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
                     Encontrar vaga
                   </button>
                   <button
+                    type="button"
                     onClick={() => setActiveTab('client_dashboard')}
-                    className={`px-3 py-2 rounded-lg transition flex items-center gap-1.5 ${
+                    className={`px-3 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
                       activeTab === 'client_dashboard' ? 'bg-sky-50 text-sky-700 font-bold' : 'text-slate-600 hover:bg-slate-100'
                     }`}
                   >
@@ -123,8 +168,9 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
                     Minhas reservas
                   </button>
                   <button
+                    type="button"
                     onClick={() => setActiveTab('favorites')}
-                    className={`px-3 py-2 rounded-lg transition flex items-center gap-1.5 ${
+                    className={`px-3 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
                       activeTab === 'favorites' ? 'bg-sky-50 text-sky-700 font-bold' : 'text-slate-600 hover:bg-slate-100'
                     }`}
                   >
@@ -133,11 +179,12 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
                   </button>
 
                   <button
+                    type="button"
                     onClick={() => {
                       switchRole('PROPRIETÁRIO');
                       setActiveTab('owner_dashboard');
                     }}
-                    className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold px-3 py-1.5 rounded-lg border border-emerald-200 transition flex items-center gap-1.5 ml-1 cursor-pointer"
+                    className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold px-3 py-1.5 rounded-xl border border-emerald-200 transition flex items-center gap-1.5 ml-1 cursor-pointer"
                     title="Acessar painel para alugar sua garagem e gerar renda"
                   >
                     <LayoutDashboard className="w-3.5 h-3.5 text-emerald-600" />
@@ -146,11 +193,13 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
                 </>
               )}
 
-              {activeRole === 'PROPRIETÁRIO' && (
+              {/* 3. Authenticated HOST (Proprietário) Navigation */}
+              {isAuthenticated && activeRole === 'PROPRIETÁRIO' && (
                 <>
                   <button
+                    type="button"
                     onClick={() => setActiveTab('owner_dashboard')}
-                    className={`px-3 py-2 rounded-lg transition flex items-center gap-1.5 ${
+                    className={`px-3 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
                       activeTab === 'owner_dashboard' ? 'bg-emerald-50 text-emerald-700 font-bold' : 'text-slate-600 hover:bg-slate-100'
                     }`}
                   >
@@ -158,8 +207,9 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
                     Painel do Anfitrião
                   </button>
                   <button
+                    type="button"
                     onClick={() => setActiveTab('owner_spots')}
-                    className={`px-3 py-2 rounded-lg transition flex items-center gap-1.5 ${
+                    className={`px-3 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
                       activeTab === 'owner_spots' ? 'bg-emerald-50 text-emerald-700 font-bold' : 'text-slate-600 hover:bg-slate-100'
                     }`}
                   >
@@ -167,8 +217,9 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
                     Minhas Garagens
                   </button>
                   <button
+                    type="button"
                     onClick={() => setActiveTab('owner_finance')}
-                    className={`px-3 py-2 rounded-lg transition flex items-center gap-1.5 ${
+                    className={`px-3 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
                       activeTab === 'owner_finance' ? 'bg-emerald-50 text-emerald-700 font-bold' : 'text-slate-600 hover:bg-slate-100'
                     }`}
                   >
@@ -177,11 +228,12 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
                   </button>
 
                   <button
+                    type="button"
                     onClick={() => {
                       switchRole('CLIENTE');
-                      setActiveTab('search');
+                      setActiveTab('landing');
                     }}
-                    className="bg-sky-50 hover:bg-sky-100 text-sky-800 font-bold px-3 py-1.5 rounded-lg border border-sky-200 transition flex items-center gap-1.5 ml-1 cursor-pointer"
+                    className="bg-sky-50 hover:bg-sky-100 text-sky-800 font-bold px-3 py-1.5 rounded-xl border border-sky-200 transition flex items-center gap-1.5 ml-1 cursor-pointer"
                     title="Trocar para visão de motorista buscando vagas"
                   >
                     <Search className="w-3.5 h-3.5 text-sky-600" />
@@ -190,11 +242,13 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
                 </>
               )}
 
-              {activeRole === 'ADMINISTRADOR' && (
+              {/* 4. Authenticated ADMIN Navigation */}
+              {isAuthenticated && activeRole === 'ADMINISTRADOR' && (
                 <>
                   <button
+                    type="button"
                     onClick={() => setActiveTab('admin_dashboard')}
-                    className={`px-3 py-2 rounded-lg transition flex items-center gap-1.5 ${
+                    className={`px-3 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
                       activeTab === 'admin_dashboard' ? 'bg-purple-50 text-purple-700 font-bold' : 'text-slate-600 hover:bg-slate-100'
                     }`}
                   >
@@ -203,11 +257,12 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
                   </button>
 
                   <button
+                    type="button"
                     onClick={() => {
                       switchRole('CLIENTE');
-                      setActiveTab('search');
+                      setActiveTab('landing');
                     }}
-                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1 cursor-pointer"
+                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1 cursor-pointer"
                   >
                     <span>Ver como Cliente</span>
                   </button>
@@ -220,8 +275,9 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
             <div className="flex items-center gap-3">
               {/* Notification Button */}
               <button
+                type="button"
                 onClick={() => setIsNotifOpen(true)}
-                className="relative p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-full transition"
+                className="relative p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-full transition cursor-pointer"
                 title="Notificações"
               >
                 <Bell className="w-5 h-5" />
@@ -238,8 +294,9 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
                   
                   {/* Wallet Pill */}
                   <button
+                    type="button"
                     onClick={onOpenDepositModal}
-                    className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-black px-2.5 py-1 rounded-full border border-emerald-200 flex items-center gap-1 transition"
+                    className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-black px-2.5 py-1 rounded-full border border-emerald-200 flex items-center gap-1 transition cursor-pointer"
                     title="VagaGo Wallet - Recarregar Créditos"
                   >
                     <span>R$ {Number(currentUser?.credits || 0).toFixed(2)}</span>
@@ -256,11 +313,12 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
                       <span className={`w-1.5 h-1.5 rounded-full ${
                         activeRole === 'CLIENTE' ? 'bg-sky-500' : activeRole === 'PROPRIETÁRIO' ? 'bg-emerald-500' : 'bg-purple-500'
                       }`} />
-                      {activeRole}
+                      {activeRole === 'PROPRIETÁRIO' ? 'Anfitrião' : activeRole === 'CLIENTE' ? 'Motorista' : 'Admin'}
                     </div>
                   </div>
 
                   <button
+                    type="button"
                     onClick={logout}
                     className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition ml-1 cursor-pointer"
                     title="Sair da Conta (Logout)"
@@ -272,6 +330,7 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
               ) : (
                 <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
                   <button
+                    type="button"
                     onClick={openLoginModal}
                     className="text-xs font-extrabold text-slate-700 hover:text-sky-600 px-3 py-2 rounded-xl hover:bg-slate-100 transition flex items-center gap-1 cursor-pointer"
                   >
@@ -280,6 +339,7 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
                   </button>
 
                   <button
+                    type="button"
                     onClick={openRegisterModal}
                     className="bg-sky-600 hover:bg-sky-500 text-white text-xs font-extrabold px-3.5 py-2 rounded-xl shadow-xs transition flex items-center gap-1 cursor-pointer"
                   >
@@ -289,12 +349,11 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
                 </div>
               )}
 
-
-
               {/* Mobile Menu Button */}
               <button
+                type="button"
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="md:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg"
+                className="md:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
               >
                 {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
@@ -306,44 +365,140 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
         {/* Mobile Navigation Drawer */}
         {isMobileMenuOpen && (
           <div className="md:hidden bg-white border-b border-slate-200 px-4 py-3 space-y-2 shadow-lg animate-in slide-in-from-top-2">
-            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Menu {activeRole}</div>
             
-            {activeRole === 'CLIENTE' && (
+            {/* Unauthenticated Mobile Menu */}
+            {!isAuthenticated && (
               <>
+                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Navegação Principal</div>
                 <button
+                  type="button"
                   onClick={() => { setActiveTab('landing'); setIsMobileMenuOpen(false); }}
                   className="w-full text-left px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-sky-50 rounded-lg flex items-center gap-2"
                 >
                   <Search className="w-4 h-4 text-sky-600" /> Início / Buscar Vagas
                 </button>
                 <button
+                  type="button"
+                  onClick={() => { setActiveTab('search'); setIsMobileMenuOpen(false); }}
+                  className="w-full text-left px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-sky-50 rounded-lg flex items-center gap-2"
+                >
+                  <MapPin className="w-4 h-4 text-sky-600" /> Encontrar no Mapa
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab('host_landing'); setIsMobileMenuOpen(false); }}
+                  className="w-full text-left px-3 py-2 text-sm font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-lg flex items-center gap-2"
+                >
+                  <Car className="w-4 h-4 text-emerald-600" /> Seja um Anfitrião (Alugue sua Vaga)
+                </button>
+                
+                <div className="pt-2 border-t border-slate-100 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { openLoginModal(); setIsMobileMenuOpen(false); }}
+                    className="flex-1 py-2 text-center text-xs font-extrabold text-slate-700 bg-slate-100 rounded-xl"
+                  >
+                    Entrar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { openRegisterModal(); setIsMobileMenuOpen(false); }}
+                    className="flex-1 py-2 text-center text-xs font-extrabold text-white bg-sky-600 rounded-xl"
+                  >
+                    Criar Conta
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Authenticated DRIVER Mobile Menu */}
+            {isAuthenticated && activeRole === 'CLIENTE' && (
+              <>
+                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Menu do Motorista</div>
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab('landing'); setIsMobileMenuOpen(false); }}
+                  className="w-full text-left px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-sky-50 rounded-lg flex items-center gap-2"
+                >
+                  <Search className="w-4 h-4 text-sky-600" /> Início / Buscar Vagas
+                </button>
+                <button
+                  type="button"
                   onClick={() => { setActiveTab('client_dashboard'); setIsMobileMenuOpen(false); }}
                   className="w-full text-left px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-sky-50 rounded-lg flex items-center gap-2"
                 >
                   <Calendar className="w-4 h-4 text-sky-600" /> Minhas Reservas & QR Code
                 </button>
                 <button
+                  type="button"
                   onClick={() => { setActiveTab('favorites'); setIsMobileMenuOpen(false); }}
                   className="w-full text-left px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-sky-50 rounded-lg flex items-center gap-2"
                 >
                   <Heart className="w-4 h-4 text-rose-500" /> Vagas Favoritas
                 </button>
+
+                <div className="pt-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      switchRole('PROPRIETÁRIO');
+                      setActiveTab('owner_dashboard');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-lg flex items-center gap-2"
+                  >
+                    <LayoutDashboard className="w-4 h-4 text-emerald-600" /> Alternar para Modo Anfitrião
+                  </button>
+                </div>
               </>
             )}
 
-            {activeRole === 'PROPRIETÁRIO' && (
+            {/* Authenticated HOST Mobile Menu */}
+            {isAuthenticated && activeRole === 'PROPRIETÁRIO' && (
               <>
+                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Menu do Anfitrião</div>
                 <button
+                  type="button"
                   onClick={() => { setActiveTab('owner_dashboard'); setIsMobileMenuOpen(false); }}
                   className="w-full text-left px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-emerald-50 rounded-lg flex items-center gap-2"
                 >
                   <LayoutDashboard className="w-4 h-4 text-emerald-600" /> Painel do Anfitrião
                 </button>
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab('owner_spots'); setIsMobileMenuOpen(false); }}
+                  className="w-full text-left px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-emerald-50 rounded-lg flex items-center gap-2"
+                >
+                  <Car className="w-4 h-4 text-emerald-600" /> Minhas Garagens
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab('owner_finance'); setIsMobileMenuOpen(false); }}
+                  className="w-full text-left px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-emerald-50 rounded-lg flex items-center gap-2"
+                >
+                  <DollarSign className="w-4 h-4 text-emerald-600" /> Financeiro & Saques
+                </button>
+
+                <div className="pt-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      switchRole('CLIENTE');
+                      setActiveTab('landing');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm font-bold text-sky-800 bg-sky-50 hover:bg-sky-100 rounded-lg flex items-center gap-2"
+                  >
+                    <Search className="w-4 h-4 text-sky-600" /> Alternar para Modo Motorista
+                  </button>
+                </div>
               </>
             )}
 
-            {activeRole === 'ADMINISTRADOR' && (
+            {/* Authenticated ADMIN Mobile Menu */}
+            {isAuthenticated && activeRole === 'ADMINISTRADOR' && (
               <button
+                type="button"
                 onClick={() => { setActiveTab('admin_dashboard'); setIsMobileMenuOpen(false); }}
                 className="w-full text-left px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-purple-50 rounded-lg flex items-center gap-2"
               >
@@ -353,6 +508,7 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
           </div>
         )}
       </header>
+
 
       <NotificationsDrawer isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} />
     </>

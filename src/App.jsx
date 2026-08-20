@@ -3,6 +3,7 @@ import { AppProvider, useApp } from './context/AppContext';
 import { Navbar } from './components/Navbar';
 
 import { LandingPage } from './components/LandingPage';
+import { HostLandingPage } from './components/HostLandingPage';
 import { SearchPage } from './components/SearchPage';
 import { SpotDetailsModal } from './components/SpotDetailsModal';
 import { BookingFlowModal } from './components/BookingFlowModal';
@@ -17,6 +18,7 @@ import { ClientDashboard } from './components/ClientDashboard';
 import { OwnerDashboard } from './components/OwnerDashboard';
 import { AdminPanel } from './components/AdminPanel';
 import { RotateCcw, Sparkles } from 'lucide-react';
+
 
 // Error Boundary to prevent blank white screens on any mobile or desktop device
 class ErrorBoundary extends Component {
@@ -82,6 +84,7 @@ const MainContent = () => {
 
       <div className="flex-1">
         {activeTab === 'landing' && <LandingPage />}
+        {activeTab === 'host_landing' && <HostLandingPage />}
         {(activeTab === 'search' || activeTab === 'favorites') && <SearchPage />}
         {activeTab === 'client_dashboard' && (
           <ClientDashboard
@@ -93,6 +96,7 @@ const MainContent = () => {
         {(activeTab === 'owner_dashboard' || activeTab === 'owner_spots' || activeTab === 'owner_finance') && <OwnerDashboard />}
         {activeTab === 'admin_dashboard' && <AdminPanel />}
       </div>
+
 
       {/* Global Modals */}
       <AuthModal />

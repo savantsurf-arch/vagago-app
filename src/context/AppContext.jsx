@@ -211,11 +211,14 @@ export const AppProvider = ({ children }) => {
     setIsAuthenticated(false);
     setCurrentUser(null);
     setAuthToken(null);
+    setActiveRole('CLIENTE');
     localStorage.removeItem('vagago_isAuthenticated');
     localStorage.removeItem('vagago_authToken');
     localStorage.removeItem('vagago_currentUser_email');
+    localStorage.setItem('vagago_activeRole', 'CLIENTE');
     setActiveTab('landing');
   };
+
 
 
   const resetPassword = (emailInput, newPassword) => {
