@@ -8,11 +8,13 @@ export const ReferralModal = () => {
 
   if (!isReferralModalOpen) return null;
 
-  const referralCode = currentUser.referralCode || "VAGAGO20";
+  const referralCode = currentUser?.referralCode || "VAGAGO20";
   const shareUrl = `https://vagago.com.br/invite/${referralCode}`;
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(shareUrl);
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(shareUrl);
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -78,8 +80,9 @@ export const ReferralModal = () => {
 
           <div className="p-3 bg-amber-50 rounded-2xl border border-amber-100 flex items-center justify-between text-xs text-amber-900 font-semibold">
             <span>Seu saldo atual de créditos:</span>
-            <span className="text-base font-extrabold text-amber-600">R$ {currentUser.credits || 0},00</span>
+            <span className="text-base font-extrabold text-amber-600">R$ {currentUser?.credits || 0},00</span>
           </div>
+
 
           <button
             onClick={handleCopy}

@@ -42,10 +42,10 @@ export const SearchPage = () => {
 
   const [isFilterMobileOpen, setIsFilterMobileOpen] = useState(false);
   const [sortBy, setSortBy] = useState('BEST'); // 'BEST', 'NEAREST', 'CHEAPEST', 'TOP_RATED'
-  const [sharingSpot, setSharingSpot] = useState(null);
+  const safeFilters = searchFilters || {};
 
   // Filter application logic including Distance Radius & Access Hours
-  const filteredSpots = parkingSpaces.filter(spot => {
+  const filteredSpots = (parkingSpaces || []).filter(spot => {
     if (!spot) return false;
     if (spot.status === 'Pausada' || spot.isAvailable === false) return false;
 
@@ -55,25 +55,25 @@ export const SearchPage = () => {
     if (distanceRadius === '2km' && spot.calculatedDistKm > 2.0) return false;
     if (distanceRadius === '5km' && spot.calculatedDistKm > 5.0) return false;
 
-
     // Access Hours Filter
-    if (searchFilters.accessHours === '24H' && !spot.is24h && !spot.availableHours.includes('24')) return false;
-    if (searchFilters.accessHours === 'COMMERCIAL' && (spot.is24h || spot.availableHours.includes('24'))) return false;
+    if (safeFilters.accessHours === '24H' && !spot.is24h && !spot.availableHours?.includes('24')) return false;
+    if (safeFilters.accessHours === 'COMMERCIAL' && (spot.is24h || spot.availableHours?.includes('24'))) return false;
 
     // Price filter
-    if (searchFilters.maxPrice && spot.priceHourly > searchFilters.maxPrice) return false;
+    if (safeFilters.maxPrice && spot.priceHourly > safeFilters.maxPrice) return false;
     
     // Feature filters
-    if (searchFilters.coveredOnly && !spot.isCovered) return false;
-    if (searchFilters.hasCamera && !spot.features.includes('Câmeras 24h')) return false;
-    if (searchFilters.hasEVCharger && !spot.features.some(f => f.includes('Carregador') || f.includes('EV'))) return false;
-    if (searchFilters.hasGate && !spot.features.includes('Portão Eletrônico')) return false;
+    if (safeFilters.coveredOnly && !spot.isCovered) return false;
+    if (safeFilters.hasCamera && !spot.features?.includes('Câmeras 24h')) return false;
+    if (safeFilters.hasEVCharger && !spot.features?.some(f => f.includes('Carregador') || f.includes('EV'))) return false;
+    if (safeFilters.hasGate && !spot.features?.includes('Portão Eletrônico')) return false;
 
     // Vehicle compatibility
-    if (searchFilters.vehicleType !== 'Todos' && !spot.allowedVehicles.includes(searchFilters.vehicleType)) return false;
+    if (safeFilters.vehicleType && safeFilters.vehicleType !== 'Todos' && !spot.allowedVehicles?.includes(safeFilters.vehicleType)) return false;
 
     return true;
   });
+
 
   // Sort logic for "Estacionar Perto de Mim"
   const sortedSpots = [...filteredSpots].sort((a, b) => {

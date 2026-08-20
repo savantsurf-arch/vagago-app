@@ -43,8 +43,13 @@ export const LandingPage = () => {
   } = useApp();
 
 
+  const safeFilters = searchFilters || {
+    dateType: 'hoje',
+    billingType: 'hora'
+  };
+
   const handleSearchSubmit = (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     setActiveTab('search');
   };
 
@@ -134,9 +139,9 @@ export const LandingPage = () => {
                     <button
                       type="button"
                       key={mode}
-                      onClick={() => setSearchFilters({ ...searchFilters, dateType: mode })}
+                      onClick={() => setSearchFilters({ ...safeFilters, dateType: mode })}
                       className={`px-3 py-1.5 rounded-full text-xs font-bold transition capitalize ${
-                        searchFilters.dateType === mode
+                        safeFilters.dateType === mode
                           ? 'bg-sky-600 text-white shadow-xs'
                           : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                       }`}
@@ -157,9 +162,9 @@ export const LandingPage = () => {
                     <button
                       type="button"
                       key={item.id}
-                      onClick={() => setSearchFilters({ ...searchFilters, billingType: item.id })}
+                      onClick={() => setSearchFilters({ ...safeFilters, billingType: item.id })}
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
-                        searchFilters.billingType === item.id
+                        safeFilters.billingType === item.id
                           ? 'bg-slate-900 text-white'
                           : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                       }`}
@@ -170,6 +175,7 @@ export const LandingPage = () => {
                 </div>
 
               </div>
+
 
               {/* Submit CTA */}
               <button
@@ -250,47 +256,65 @@ export const LandingPage = () => {
           </div>
 
           {/* Cards List (5 cols) */}
-          <div className="lg:col-span-5 space-y-4 flex flex-col justify-between">
-            {parkingSpaces.slice(0, 3).map((spot) => (
-              <div
-                key={spot.id}
-                onClick={() => openSpotDetails(spot)}
-                className="p-4 bg-white hover:bg-slate-50 rounded-2xl border border-slate-200 hover:border-sky-300 shadow-sm hover:shadow-md transition cursor-pointer flex gap-4 items-center group"
-              >
-                <img
-                  src={spot.photos[0]}
-                  alt={spot.title}
-                  className="w-24 h-24 rounded-xl object-cover shrink-0 group-hover:scale-105 transition"
-                />
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-extrabold text-sky-600 bg-sky-50 px-2 py-0.5 rounded-full uppercase">
-                      {spot.distance}
-                    </span>
-                    <span className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                      <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                      {spot.rating}
-                    </span>
-                  </div>
-
-                  <h3 className="font-bold text-slate-900 text-sm mt-1 truncate group-hover:text-sky-600 transition">
-                    {spot.title}
-                  </h3>
-
-                  <p className="text-xs text-slate-500 truncate mt-0.5">{spot.address}</p>
-
-                  <div className="flex items-baseline gap-2 mt-2 pt-2 border-t border-slate-100">
-                    <span className="text-base font-black text-slate-900">R$ {Number(spot.priceHourly || 6).toFixed(2)}/h</span>
-                    <span className="text-xs text-slate-400 font-semibold">• R$ {Number(spot.priceDaily || 28).toFixed(2)}/dia</span>
-                  </div>
-
-                </div>
-
-                <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-sky-600 group-hover:translate-x-1 transition shrink-0" />
+          <div className="lg:col-span-5 space-y-4 flex flex-col justify-center">
+            {parkingSpaces.length === 0 ? (
+              <div className="p-8 bg-white rounded-3xl border border-dashed border-slate-300 text-center space-y-3 shadow-sm">
+                <Car className="w-12 h-12 text-slate-300 mx-auto" />
+                <h4 className="font-extrabold text-slate-800 text-base">Nenhuma garagem cadastrada ainda</h4>
+                <p className="text-xs text-slate-500 max-w-xs mx-auto">
+                  Seja o primeiro a cadastrar sua garagem em Itabuna e comece a lucrar alugando seu espaço!
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setIsAddSpotModalOpen(true)}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-md transition cursor-pointer"
+                >
+                  + Cadastrar Primeira Garagem
+                </button>
               </div>
-            ))}
+            ) : (
+              parkingSpaces.slice(0, 3).map((spot) => (
+                <div
+                  key={spot.id}
+                  onClick={() => openSpotDetails(spot)}
+                  className="p-4 bg-white hover:bg-slate-50 rounded-2xl border border-slate-200 hover:border-sky-300 shadow-sm hover:shadow-md transition cursor-pointer flex gap-4 items-center group"
+                >
+                  <img
+                    src={(spot.photos && spot.photos[0]) || spot.facadePhoto || "https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=1000&q=80"}
+                    alt={spot.title}
+                    className="w-24 h-24 rounded-xl object-cover shrink-0 group-hover:scale-105 transition"
+                  />
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-extrabold text-sky-600 bg-sky-50 px-2 py-0.5 rounded-full uppercase">
+                        {spot.distance || "Centro"}
+                      </span>
+                      <span className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                        <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                        {spot.rating || 5.0}
+                      </span>
+                    </div>
+
+                    <h3 className="font-bold text-slate-900 text-sm mt-1 truncate group-hover:text-sky-600 transition">
+                      {spot.title}
+                    </h3>
+
+                    <p className="text-xs text-slate-500 truncate mt-0.5">{spot.address}</p>
+
+                    <div className="flex items-baseline gap-2 mt-2 pt-2 border-t border-slate-100">
+                      <span className="text-base font-black text-slate-900">R$ {Number(spot.priceHourly || 6).toFixed(2)}/h</span>
+                      <span className="text-xs text-slate-400 font-semibold">• R$ {Number(spot.priceDaily || 28).toFixed(2)}/dia</span>
+                    </div>
+
+                  </div>
+
+                  <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-sky-600 group-hover:translate-x-1 transition shrink-0" />
+                </div>
+              ))
+            )}
           </div>
+
 
         </div>
       </section>

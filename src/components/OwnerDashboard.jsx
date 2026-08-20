@@ -694,7 +694,8 @@ export const OwnerDashboard = () => {
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
           <form onSubmit={handleWithdrawSubmit} className="bg-white p-6 rounded-3xl max-w-sm w-full space-y-4">
             <h3 className="font-extrabold text-slate-900 text-base">Solicitar Saque PIX</h3>
-            <p className="text-xs text-slate-500">Chave cadastrada: <strong className="text-slate-800">{currentUser.pixKey}</strong></p>
+            <p className="text-xs text-slate-500">Chave cadastrada: <strong className="text-slate-800">{currentUser?.pixKey || currentUser?.email || "Chave PIX do Anfitrião"}</strong></p>
+
 
             <div>
               <label className="text-xs font-bold text-slate-700 block mb-1">Valor do Saque (R$)</label>

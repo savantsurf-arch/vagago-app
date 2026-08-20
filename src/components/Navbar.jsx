@@ -233,7 +233,7 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
               </button>
 
               {/* User State & Login/Logout Buttons */}
-              {isAuthenticated ? (
+              {isAuthenticated && currentUser ? (
                 <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
                   
                   {/* Wallet Pill */}
@@ -242,16 +242,16 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
                     className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-black px-2.5 py-1 rounded-full border border-emerald-200 flex items-center gap-1 transition"
                     title="VagaGo Wallet - Recarregar Créditos"
                   >
-                    <span>R$ {currentUser.credits?.toFixed(2) || '20.00'}</span>
+                    <span>R$ {Number(currentUser?.credits || 0).toFixed(2)}</span>
                   </button>
 
                   <img
-                    src={currentUser.avatar}
-                    alt={currentUser.name}
+                    src={currentUser?.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=250&q=80"}
+                    alt={currentUser?.name || "Usuário"}
                     className="w-8 h-8 rounded-full object-cover ring-2 ring-sky-500/20"
                   />
                   <div className="hidden sm:block text-left">
-                    <div className="text-xs font-bold text-slate-800 leading-tight">{currentUser.name}</div>
+                    <div className="text-xs font-bold text-slate-800 leading-tight">{currentUser?.name || "Usuário"}</div>
                     <div className="text-[10px] font-semibold text-slate-500 flex items-center gap-1">
                       <span className={`w-1.5 h-1.5 rounded-full ${
                         activeRole === 'CLIENTE' ? 'bg-sky-500' : activeRole === 'PROPRIETÁRIO' ? 'bg-emerald-500' : 'bg-purple-500'
@@ -262,7 +262,7 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
 
                   <button
                     onClick={logout}
-                    className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition ml-1"
+                    className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition ml-1 cursor-pointer"
                     title="Sair da Conta (Logout)"
                   >
                     <LogOut className="w-4 h-4" />
@@ -288,6 +288,7 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
                   </button>
                 </div>
               )}
+
 
 
               {/* Mobile Menu Button */}
