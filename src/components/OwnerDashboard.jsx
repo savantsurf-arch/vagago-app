@@ -157,9 +157,10 @@ export const OwnerDashboard = () => {
                 ⭐ SuperHost Verificado
               </span>
 
-              <span className="text-slate-400 text-xs hidden sm:inline">• PIX: {safeUser.pixKey || "juliana.itabuna@pix.com.br"}</span>
+              <span className="text-slate-400 text-xs hidden sm:inline">• PIX: {safeUser.pixKey || safeUser.email || "pix@vagago.com.br"}</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black mt-1">{safeUser.name}</h1>
+            <h1 className="text-2xl sm:text-3xl font-black mt-1">{safeUser.name || "Meu Painel de Anfitrião"}</h1>
+
             <p className="text-xs text-emerald-100/80">Sua vaga gerando renda passiva 24h por dia em Itabuna - BA</p>
           </div>
 

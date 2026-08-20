@@ -8,13 +8,13 @@ export const INITIAL_VEHICLES = [];
 export const INITIAL_PARKING_SPACES = [
   {
     id: "spc_ita_1",
-    ownerId: "usr_2",
-    ownerEmail: "juliana@proprietario.com",
-    ownerName: "Juliana Santos (Itabuna)",
+    ownerId: "host_itabuna_1",
+    ownerEmail: "anfitriao1@vagago.com.br",
+    ownerName: "Anfitrião VagaGo (Praça Adami)",
     ownerPhone: "(73) 99123-4567",
     ownerRating: 4.9,
     isSuperHost: true,
-    ownerAvatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
+    ownerAvatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80",
     title: "Garagem Privativa Centro Itabuna (Praça Adami)",
     description: "Garagem coberta, iluminada e com segurança 24 horas a 50 metros da Praça Adami no Centro de Itabuna.",
     address: "Av. Cinquentenário, 450 - Centro",
@@ -44,7 +44,7 @@ export const INITIAL_PARKING_SPACES = [
     totalBoxes: 5,
     boxes: [
       { id: 1, name: "Box 01", status: "Livre", currentVehicle: null },
-      { id: 2, name: "Box 02", status: "Ocupado", currentVehicle: "Honda Civic (ABC-1D23)" },
+      { id: 2, name: "Box 02", status: "Livre", currentVehicle: null },
       { id: 3, name: "Box 03", status: "Livre", currentVehicle: null },
       { id: 4, name: "Box 04", status: "Livre", currentVehicle: null },
       { id: 5, name: "Box 05", status: "Livre", currentVehicle: null }
@@ -77,13 +77,13 @@ export const INITIAL_PARKING_SPACES = [
   },
   {
     id: "spc_ita_2",
-    ownerId: "70154527-86d3-41c0-9bdc-a575228e76ce",
-    ownerEmail: "carlos@proprietario.com",
-    ownerName: "Carlos Alberto Mendes (Itabuna)",
+    ownerId: "host_itabuna_2",
+    ownerEmail: "anfitriao2@vagago.com.br",
+    ownerName: "Anfitrião VagaGo (Shopping Jequitibá)",
     ownerPhone: "(73) 98844-3322",
     ownerRating: 4.8,
     isSuperHost: true,
-    ownerAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80",
+    ownerAvatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80",
     title: "Vaga Privativa Shopping Jequitibá Itabuna",
     description: "Vaga rápida e ultra segura ao lado do Shopping Jequitibá e do HBR Medical Center em Itabuna.",
     address: "Av. José Soares Pinheiro, 2141 - Centro",
@@ -135,13 +135,13 @@ export const INITIAL_PARKING_SPACES = [
   },
   {
     id: "spc_ita_3",
-    ownerId: "usr_2",
-    ownerEmail: "juliana@proprietario.com",
-    ownerName: "Mariana Barreto",
+    ownerId: "host_itabuna_3",
+    ownerEmail: "anfitriao3@vagago.com.br",
+    ownerName: "Anfitrião VagaGo (São Caetano)",
     ownerPhone: "(73) 99911-2233",
     ownerRating: 5.0,
     isSuperHost: true,
-    ownerAvatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80",
+    ownerAvatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80",
     title: "Garagem São Caetano Residenciais",
     description: "Vaga espaçosa no bairro São Caetano em Itabuna. Perfeita para moradores ou visitantes da zona sul de Itabuna.",
     address: "Av. Princesa Isabel, 890 - São Caetano",
@@ -191,12 +191,13 @@ export const INITIAL_PARKING_SPACES = [
   },
   {
     id: "spc_ita_4",
-    ownerId: "usr_2",
-    ownerName: "Roberto Fátima (Itabuna)",
+    ownerId: "host_itabuna_4",
+    ownerEmail: "anfitriao4@vagago.com.br",
+    ownerName: "Anfitrião VagaGo (Bairro Fátima)",
     ownerPhone: "(73) 98822-3311",
     ownerRating: 4.7,
     isSuperHost: true,
-    ownerAvatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80",
+    ownerAvatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80",
     title: "Vaga Coberta Bairro Fátima Itabuna",
     description: "Garagem coberta em casa de vila no Bairro Fátima, a pouquíssimos minutos do centro de Itabuna.",
     address: "Rua Saturnino José Soares, 120 - Fátima",
@@ -245,6 +246,7 @@ export const INITIAL_PARKING_SPACES = [
     monthlyPlanAvailable: true
   }
 ];
+
 
 export const INITIAL_BOOKINGS = [];
 

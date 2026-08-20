@@ -82,9 +82,10 @@ export function mapSupabaseRowToSpot(row) {
   return {
     id: row.id,
     ownerId: row.owner_id,
-    ownerName: row.owner_name || 'Carlos Alberto Mendes (Anfitrião)',
+    ownerName: row.owner_name || 'Anfitrião VagaGo',
     ownerPhone: row.owner_phone || '(73) 99123-4567',
-    ownerAvatar: row.owner_avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+    ownerAvatar: row.owner_avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+
     title: row.title,
     description: row.description,
     address: row.address,

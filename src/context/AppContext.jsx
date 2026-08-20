@@ -206,12 +206,17 @@ export const AppProvider = ({ children }) => {
     try {
       const saved = localStorage.getItem('vagago_parkingSpaces');
       if (saved) {
+        if (saved.includes('Carlos') || saved.includes('juliana@proprietario.com') || saved.includes('carlos@proprietario.com')) {
+          localStorage.removeItem('vagago_parkingSpaces');
+          return INITIAL_PARKING_SPACES;
+        }
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch (e) {}
     return INITIAL_PARKING_SPACES;
   });
+
 
   const [bookings, setBookings] = useState(() => {
     try {
@@ -655,17 +660,18 @@ export const AppProvider = ({ children }) => {
     const state = spotData.state || "BA";
 
     const safeUser = currentUser || {
-      id: 'usr_2',
-      name: 'Juliana Santos',
-      email: 'juliana@proprietario.com',
+      id: `usr_${Date.now()}`,
+      name: 'Anfitrião VagaGo',
+      email: 'anfitriao@vagago.com.br',
       phone: '(73) 99123-4567',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80'
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=250&q=80'
     };
 
     if (spotData.id) {
       const updated = {
         ...spotData,
         ownerEmail: spotData.ownerEmail || safeUser.email,
+        ownerName: spotData.ownerName || safeUser.name,
         lat,
         lng,
         entranceLat: entranceLat || spotData.entranceLat,
@@ -680,10 +686,10 @@ export const AppProvider = ({ children }) => {
       const newSpot = {
         id: `spc_${Date.now()}`,
         ownerId: safeUser.id,
-        ownerEmail: safeUser.email || "juliana@proprietario.com",
-        ownerName: safeUser.name || "Juliana Santos",
+        ownerEmail: safeUser.email || "anfitriao@vagago.com.br",
+        ownerName: safeUser.name || "Anfitrião VagaGo",
         ownerPhone: safeUser.phone || "(73) 99123-4567",
-        ownerAvatar: safeUser.avatar,
+        ownerAvatar: safeUser.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=250&q=80",
         ownerRating: 5.0,
         rating: 5.0,
         reviewsCount: 0,
@@ -701,6 +707,7 @@ export const AppProvider = ({ children }) => {
         ],
         ...spotData
       };
+
       
       registerGlobalParkingSpace(newSpot);
       setParkingSpaces(prev => [newSpot, ...prev]);
@@ -758,13 +765,14 @@ export const AppProvider = ({ children }) => {
   const requestWithdrawal = (amount) => {
     const newWtd = {
       id: `wtd_${Date.now()}`,
-      ownerId: currentUser.id,
-      ownerName: currentUser.name,
+      ownerId: currentUser?.id || `usr_${Date.now()}`,
+      ownerName: currentUser?.name || "Anfitrião VagaGo",
       amount,
-      pixKey: currentUser.pixKey || "carlos.mendes@pix.com.br",
+      pixKey: currentUser?.pixKey || currentUser?.email || "pix@vagago.com.br",
       status: "Pendente",
       requestedAt: new Date().toISOString().split('T')[0]
     };
+
     setWithdrawals(prev => [newWtd, ...prev]);
   };
 

@@ -5,8 +5,9 @@ import { X, Send, MessageSquare, Phone, ShieldCheck, CheckCheck } from 'lucide-r
 export const HostChatModal = ({ isOpen, onClose, spot, ownerName, ownerPhone }) => {
   const { currentUser } = useApp();
 
-  const hostName = ownerName || spot?.ownerName || 'Juliana Santos (Anfitriã)';
+  const hostName = ownerName || spot?.ownerName || 'Anfitrião VagaGo';
   const hostPhone = ownerPhone || spot?.ownerPhone || '(73) 99123-4567';
+
 
   const [messages, setMessages] = useState([
     {

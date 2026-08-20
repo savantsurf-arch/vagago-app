@@ -239,7 +239,8 @@ export const SpotDetailsModal = () => {
                         </span>
                       )}
                     </div>
-                    <h4 className="font-bold text-slate-900 text-sm">{selectedSpot.ownerName || "Juliana Santos"}</h4>
+                    <h4 className="font-bold text-slate-900 text-sm">{selectedSpot.ownerName || "Anfitrião VagaGo"}</h4>
+
                     <div className="flex items-center gap-1 text-slate-500 text-xs mt-0.5">
                       <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
                       <span>{selectedSpot.ownerRating || 5.0} Nota Geral</span>

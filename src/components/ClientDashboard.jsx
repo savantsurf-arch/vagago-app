@@ -296,10 +296,11 @@ export const ClientDashboard = ({
 
                       <button
                         type="button"
-                        onClick={() => { setChatSpot({ title: b.spaceTitle, ownerName: 'Juliana Santos (Anfitriã)', ownerPhone: '(73) 99123-4567' }); setIsChatOpen(true); }}
+                        onClick={() => { setChatSpot({ title: b.spaceTitle, ownerName: b.ownerName || 'Anfitrião VagaGo', ownerPhone: b.ownerPhone || '(73) 99123-4567' }); setIsChatOpen(true); }}
                         className="bg-sky-50 hover:bg-sky-100 text-sky-700 text-xs font-bold px-3 py-2 rounded-xl flex items-center gap-1.5 transition border border-sky-200 cursor-pointer"
                         title="Falar com o Anfitrião no Chat ou WhatsApp"
                       >
+
                         <MessageSquare className="w-3.5 h-3.5 text-sky-600" />
                         <span>Chat Anfitrião</span>
                       </button>

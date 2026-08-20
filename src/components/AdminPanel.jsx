@@ -228,7 +228,8 @@ export const AdminPanel = () => {
                         {spot.status || 'Aprovado'}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500">{spot.address} • Anfitrião: <strong className="text-slate-700">{spot.ownerName || 'Juliana Santos'}</strong></p>
+                    <p className="text-xs text-slate-500">{spot.address} • Anfitrião: <strong className="text-slate-700">{spot.ownerName || 'Anfitrião VagaGo'}</strong></p>
+
                     <div className="text-[11px] text-emerald-700 font-bold mt-0.5">
                       R$ {Number(spot.priceHourly || 6).toFixed(2)}/h • R$ {Number(spot.priceMonthly || 280).toFixed(2)}/mês
                     </div>
