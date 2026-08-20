@@ -31,8 +31,29 @@ const AppContext = createContext();
 
 
 export const AppProvider = ({ children }) => {
+  // Enforce zero-state database cleanup for manual testing
+  const VAGAGO_DB_VERSION = 'v2_clean_zero_state';
+  if (typeof window !== 'undefined') {
+    try {
+      if (localStorage.getItem('vagago_db_version') !== VAGAGO_DB_VERSION) {
+        localStorage.removeItem('vagago_parkingSpaces');
+        localStorage.removeItem('vagago_users');
+        localStorage.removeItem('vagago_bookings');
+        localStorage.removeItem('vagago_vehicles');
+        localStorage.removeItem('vagago_notifications');
+        localStorage.removeItem('vagago_reviews');
+        localStorage.removeItem('vagago_withdrawals');
+        localStorage.removeItem('vagago_isAuthenticated');
+        localStorage.removeItem('vagago_currentUser_email');
+        localStorage.removeItem('vagago_authToken');
+        localStorage.setItem('vagago_db_version', VAGAGO_DB_VERSION);
+      }
+    } catch (e) {}
+  }
+
   // Clear legacy mock users on first run
   const LEGACY_EMAILS = ['matheus@cliente.com', 'juliana@proprietario.com', 'carlos@proprietario.com', 'admin@vagago.com.br'];
+
 
   // Users dataset - Only real registered users
   const [users, setUsers] = useState(() => {
