@@ -951,79 +951,120 @@ export const AddSpotModal = () => {
             <div className="space-y-4">
               <div>
                 <h3 className="font-black text-slate-900 text-base">Definição de Preços e Cobrança</h3>
-                <p className="text-xs text-slate-500">Escolha os valores para cada modalidade de locação.</p>
+                <p className="text-xs text-slate-500">Escolha os valores para cada modalidade com transparência total de repasse.</p>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                <div className="p-3 rounded-2xl bg-emerald-50/60 border border-emerald-200 space-y-1">
-                  <label className="block text-xs font-extrabold text-emerald-900">Por Hora (R$/h) *</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Preço Por Hora */}
+                <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-black text-emerald-900">Preço por Hora (R$/h) *</label>
+                    <span className="bg-emerald-200/80 text-emerald-800 text-[10px] font-black px-2 py-0.5 rounded-md">Principal</span>
+                  </div>
                   <input
                     type="number"
                     step="0.50"
+                    min="1"
                     value={formData.priceHourly}
                     onChange={(e) => setFormData({ ...formData, priceHourly: parseFloat(e.target.value) || 0 })}
-                    className="w-full bg-white border border-emerald-300 rounded-xl px-3 py-2 text-sm font-black text-emerald-900 outline-hidden"
+                    className="w-full bg-white border border-emerald-300 rounded-xl px-3 py-2 text-base font-black text-emerald-900 outline-hidden shadow-2xs"
                   />
-                  <span className="text-[10px] text-emerald-700 font-bold block">Você recebe R$ {(formData.priceHourly * 0.9).toFixed(2)}/h</span>
+                  <div className="text-[11px] space-y-0.5 pt-1 border-t border-emerald-200/60 text-slate-600">
+                    <div className="flex justify-between">
+                      <span>Motorista paga:</span>
+                      <strong className="text-slate-800">R$ {Number(formData.priceHourly || 0).toFixed(2)}/h</strong>
+                    </div>
+                    <div className="flex justify-between text-rose-600">
+                      <span>Taxa da plataforma (10%):</span>
+                      <strong>- R$ {(Number(formData.priceHourly || 0) * 0.1).toFixed(2)}/h</strong>
+                    </div>
+                    <div className="flex justify-between text-emerald-800 font-extrabold pt-0.5">
+                      <span>Você recebe líquido (90%):</span>
+                      <span>R$ {(Number(formData.priceHourly || 0) * 0.9).toFixed(2)}/h</span>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-                  <label className="block text-xs font-extrabold text-slate-800">Por Período (Comercial)</label>
+                {/* Preço Por Diária */}
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-black text-slate-800">Preço por Diária (24h)</label>
+                    <span className="bg-slate-200 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-md">24 Horas</span>
+                  </div>
+                  <input
+                    type="number"
+                    step="1.00"
+                    min="5"
+                    value={formData.priceDaily}
+                    onChange={(e) => setFormData({ ...formData, priceDaily: parseFloat(e.target.value) || 0 })}
+                    className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-base font-black text-slate-800 outline-hidden shadow-2xs"
+                  />
+                  <div className="text-[11px] space-y-0.5 pt-1 border-t border-slate-200 text-slate-600">
+                    <div className="flex justify-between">
+                      <span>Motorista paga:</span>
+                      <strong className="text-slate-800">R$ {Number(formData.priceDaily || 0).toFixed(2)}</strong>
+                    </div>
+                    <div className="flex justify-between text-rose-600">
+                      <span>Taxa da plataforma (10%):</span>
+                      <strong>- R$ {(Number(formData.priceDaily || 0) * 0.1).toFixed(2)}</strong>
+                    </div>
+                    <div className="flex justify-between text-emerald-800 font-extrabold pt-0.5">
+                      <span>Você recebe líquido (90%):</span>
+                      <span>R$ {(Number(formData.priceDaily || 0) * 0.9).toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Preço Por Período Comercial */}
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-black text-slate-800">Por Período Comercial</label>
+                    <span className="text-[10px] text-slate-500">Ex: 08:00 às 18:00</span>
+                  </div>
                   <input
                     type="number"
                     step="1.00"
                     value={formData.pricePeriod}
                     onChange={(e) => setFormData({ ...formData, pricePeriod: parseFloat(e.target.value) || 0 })}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-black text-slate-800 outline-hidden"
+                    className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-black text-slate-800 outline-hidden"
                   />
-                  <span className="text-[10px] text-slate-500 block">Ex: 08:00 às 18:00</span>
+                  <span className="text-[10px] text-slate-500 block">Você recebe R$ {(Number(formData.pricePeriod || 0) * 0.9).toFixed(2)} líquido</span>
                 </div>
 
-                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-                  <label className="block text-xs font-extrabold text-slate-800">Por Diária (24h)</label>
-                  <input
-                    type="number"
-                    step="1.00"
-                    value={formData.priceDaily}
-                    onChange={(e) => setFormData({ ...formData, priceDaily: parseFloat(e.target.value) || 0 })}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-black text-slate-800 outline-hidden"
-                  />
-                  <span className="text-[10px] text-slate-500 block">Você recebe R$ {(formData.priceDaily * 0.9).toFixed(2)}</span>
-                </div>
-
-                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-                  <label className="block text-xs font-extrabold text-slate-800">Por Semana</label>
-                  <input
-                    type="number"
-                    step="5.00"
-                    value={formData.priceWeekly}
-                    onChange={(e) => setFormData({ ...formData, priceWeekly: parseFloat(e.target.value) || 0 })}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-black text-slate-800 outline-hidden"
-                  />
-                  <span className="text-[10px] text-slate-500 block">7 dias corridos</span>
-                </div>
-
-                <div className="p-3 rounded-2xl bg-sky-50/60 border border-sky-200 space-y-1 sm:col-span-2">
-                  <label className="block text-xs font-extrabold text-sky-900">Mensalista (R$/mês)</label>
+                {/* Preço Mensalista */}
+                <div className="p-4 rounded-2xl bg-sky-50/70 border border-sky-200 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-black text-sky-950">Mensalista (R$/mês)</label>
+                    <span className="bg-sky-200/80 text-sky-900 text-[10px] font-black px-2 py-0.5 rounded-md">Recorrência</span>
+                  </div>
                   <input
                     type="number"
                     step="10.00"
                     value={formData.priceMonthly}
                     onChange={(e) => setFormData({ ...formData, priceMonthly: parseFloat(e.target.value) || 0 })}
-                    className="w-full bg-white border border-sky-300 rounded-xl px-3 py-2 text-sm font-black text-sky-900 outline-hidden"
+                    className="w-full bg-white border border-sky-300 rounded-xl px-3 py-2 text-base font-black text-sky-950 outline-hidden shadow-2xs"
                   />
-                  <span className="text-[10px] text-sky-700 font-bold block">Renda recorrente garantida no mês!</span>
+                  <div className="text-[11px] space-y-0.5 pt-1 border-t border-sky-200 text-slate-600">
+                    <div className="flex justify-between">
+                      <span>Mensalidade bruta:</span>
+                      <strong className="text-slate-800">R$ {Number(formData.priceMonthly || 0).toFixed(2)}/mês</strong>
+                    </div>
+                    <div className="flex justify-between text-emerald-800 font-extrabold">
+                      <span>Você recebe líquido (90%):</span>
+                      <span>R$ {(Number(formData.priceMonthly || 0) * 0.9).toFixed(2)}/mês</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Informação de Taxa */}
+              {/* Banner de Transparência */}
               <div className="p-3.5 bg-slate-100 rounded-2xl border border-slate-200 text-xs text-slate-700 flex items-center justify-between">
                 <div>
-                  <span className="font-extrabold block">Transparência Financeira:</span>
-                  <span className="text-[11px] text-slate-500">Taxa de serviço VagaGo: 10% apenas quando houver locação confirmada.</span>
+                  <span className="font-extrabold block">Transparência Financeira VagaGo:</span>
+                  <span className="text-[11px] text-slate-500">Taxa fixa de 10% cobrada somente sobre reservas concluídas. Sem mensalidade ou taxas ocultas.</span>
                 </div>
                 <span className="bg-emerald-100 text-emerald-800 font-black px-2.5 py-1 rounded-xl text-xs">
-                  90% Líquido Locador
+                  90% Líquido ao Locador
                 </span>
               </div>
             </div>
@@ -1204,14 +1245,17 @@ export const AddSpotModal = () => {
               type="button"
               onClick={handleFinalPublish}
               disabled={isSubmitting}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs px-7 py-3 rounded-xl transition cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-600/30"
+              className="bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 text-white font-black text-xs px-7 py-3 rounded-xl transition cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-600/30"
             >
               {isSubmitting ? (
-                <span>Publicando...</span>
+                <span className="flex items-center gap-2">
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>{editingSpot ? 'Salvando alterações...' : 'Publicando vaga...'}</span>
+                </span>
               ) : (
                 <>
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>PUBLICAR VAGA NO VAGAGO</span>
+                  <span>{editingSpot ? 'SALVAR ALTERAÇÕES DA VAGA' : 'PUBLICAR VAGA NO VAGAGO'}</span>
                 </>
               )}
             </button>

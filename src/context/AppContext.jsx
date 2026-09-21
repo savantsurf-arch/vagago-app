@@ -805,6 +805,14 @@ export const AppProvider = ({ children }) => {
   const pauseParkingSpace = async (spotId) => {
     setParkingSpaces(prev => prev.map(s => s.id === spotId ? { ...s, status: 'Pausada', isAvailable: false } : s));
     try {
+      const saved = localStorage.getItem('vagago_parkingSpaces');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const updated = parsed.map(s => s.id === spotId ? { ...s, status: 'Pausada', isAvailable: false } : s);
+        localStorage.setItem('vagago_parkingSpaces', JSON.stringify(updated));
+      }
+    } catch (e) {}
+    try {
       if (isSupabaseConfigured) {
         await supabase.from('parking_spaces').update({ status: 'Pausada', is_available: false }).eq('id', spotId);
       }
@@ -813,6 +821,14 @@ export const AppProvider = ({ children }) => {
 
   const activateParkingSpace = async (spotId) => {
     setParkingSpaces(prev => prev.map(s => s.id === spotId ? { ...s, status: 'Ativa', isAvailable: true } : s));
+    try {
+      const saved = localStorage.getItem('vagago_parkingSpaces');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const updated = parsed.map(s => s.id === spotId ? { ...s, status: 'Ativa', isAvailable: true } : s);
+        localStorage.setItem('vagago_parkingSpaces', JSON.stringify(updated));
+      }
+    } catch (e) {}
     try {
       if (isSupabaseConfigured) {
         await supabase.from('parking_spaces').update({ status: 'Ativa', is_available: true }).eq('id', spotId);
@@ -1384,7 +1400,7 @@ export const AppProvider = ({ children }) => {
     setBookings(prev => prev.map(b => (b.id === bookingId || b.bookingNumber === bookingId) ? { ...b, bookingStatus: 'Concluído', checkOutTime: new Date().toLocaleString('pt-BR') } : b));
   };
 
-  const requestWithdrawal = (amount) => {
+  const requestWithdrawal = async (amount) => {
     const newWtd = {
       id: `wtd_${Date.now()}`,
       ownerId: currentUser?.id || `usr_${Date.now()}`,
@@ -1395,7 +1411,29 @@ export const AppProvider = ({ children }) => {
       requestedAt: new Date().toISOString().split('T')[0]
     };
 
-    setWithdrawals(prev => [newWtd, ...prev]);
+    setWithdrawals(prev => {
+      const updated = [newWtd, ...prev];
+      try {
+        localStorage.setItem('vagago_withdrawals', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+
+    try {
+      if (isSupabaseConfigured) {
+        await supabase.from('withdrawals').insert([{
+          id: newWtd.id,
+          owner_id: currentUser?.id,
+          owner_name: currentUser?.name || "Anfitrião VagaGo",
+          amount: Number(amount),
+          pix_key: newWtd.pixKey,
+          status: 'Pendente',
+          created_at: new Date().toISOString()
+        }]);
+      }
+    } catch (e) {
+      console.warn("Notice saving withdrawal to Supabase:", e);
+    }
   };
 
   const approveWithdrawal = (id) => {
