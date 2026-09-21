@@ -14,7 +14,9 @@ import {
   Key,
   ShieldCheck,
   Image as ImageIcon,
-  Check
+  Check,
+  Loader2,
+  Trash2
 } from 'lucide-react';
 
 const PRESET_AVATARS = [
@@ -42,6 +44,7 @@ export const EditProfileModal = () => {
   const [pixKey, setPixKey] = useState('');
   const [isCompressing, setIsCompressing] = useState(false);
   const [compressionNotice, setCompressionNotice] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -55,10 +58,11 @@ export const EditProfileModal = () => {
       setPhone(currentUser.phone || '');
       setAvatar(currentUser.avatar || PRESET_AVATARS[0]);
       setBio(currentUser.bio || '');
-      setPixKey(currentUser.pixKey || '');
+      setPixKey(currentUser.pixKey || currentUser.pix_key || '');
       setSuccessMsg('');
       setErrorMsg('');
       setCompressionNotice('');
+      setIsSaving(false);
     }
   }, [isEditProfileModalOpen, currentUser]);
 
@@ -79,6 +83,19 @@ export const EditProfileModal = () => {
   // Image upload and WebP compression handler
   const handleImageFile = async (file) => {
     if (!file) return;
+    
+    // Validate image format
+    if (!file.type.startsWith('image/')) {
+      setErrorMsg('Por favor, selecione um arquivo de imagem válido (JPG, PNG ou WebP).');
+      return;
+    }
+
+    // Validate size (max 8MB)
+    if (file.size > 8 * 1024 * 1024) {
+      setErrorMsg('A imagem é muito grande. Escolha uma foto de até 8MB.');
+      return;
+    }
+
     try {
       setIsCompressing(true);
       setErrorMsg('');
@@ -105,8 +122,9 @@ export const EditProfileModal = () => {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
+    if (isSaving) return;
     setErrorMsg('');
 
     if (!name || name.trim().length < 3) {
@@ -114,21 +132,29 @@ export const EditProfileModal = () => {
       return;
     }
 
-    if (typeof updateUserProfile === 'function') {
-      updateUserProfile({
-        name: name.trim(),
-        phone: phone.trim(),
-        avatar,
-        bio: bio.trim(),
-        pixKey: pixKey.trim()
-      });
-    }
+    try {
+      setIsSaving(true);
+      if (typeof updateUserProfile === 'function') {
+        await updateUserProfile({
+          name: name.trim(),
+          phone: phone.trim(),
+          avatar,
+          bio: bio.trim(),
+          pixKey: pixKey.trim(),
+          pix_key: pixKey.trim()
+        });
+      }
 
-    setSuccessMsg('Perfil atualizado com sucesso!');
-    setTimeout(() => {
-      setSuccessMsg('');
-      setIsEditProfileModalOpen(false);
-    }, 1200);
+      setSuccessMsg('Perfil atualizado com sucesso.');
+      setTimeout(() => {
+        setSuccessMsg('');
+        setIsEditProfileModalOpen(false);
+      }, 1200);
+    } catch (err) {
+      setErrorMsg('Não conseguimos atualizar seu perfil. Tente novamente.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -247,6 +273,22 @@ export const EditProfileModal = () => {
                     }}
                   />
 
+                  {/* Remover Foto Customizada */}
+                  {avatar !== PRESET_AVATARS[0] && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAvatar(PRESET_AVATARS[0]);
+                        setCompressionNotice('');
+                      }}
+                      className="bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 font-bold px-3 py-2 rounded-xl flex items-center gap-1 transition cursor-pointer text-[11px]"
+                      title="Restaurar foto padrão"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Remover foto</span>
+                    </button>
+                  )}
+
                 </div>
 
                 {compressionNotice ? (
@@ -298,8 +340,9 @@ export const EditProfileModal = () => {
               type="text"
               placeholder="Seu nome completo"
               value={name}
+              disabled={isSaving}
               onChange={(e) => setName(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-sky-500 outline-none"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-sky-500 outline-none disabled:opacity-60"
               required
             />
           </div>
@@ -314,8 +357,9 @@ export const EditProfileModal = () => {
               type="text"
               placeholder="(73) 99123-4567"
               value={phone}
+              disabled={isSaving}
               onChange={(e) => handlePhoneChange(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-sky-500 outline-none"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-sky-500 outline-none disabled:opacity-60"
             />
           </div>
 
@@ -329,8 +373,9 @@ export const EditProfileModal = () => {
               type="text"
               placeholder="CPF, E-mail, Telefone ou Chave Aleatória"
               value={pixKey}
+              disabled={isSaving}
               onChange={(e) => setPixKey(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-sky-500 outline-none"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-sky-500 outline-none disabled:opacity-60"
             />
           </div>
 
@@ -338,14 +383,15 @@ export const EditProfileModal = () => {
           <div className="space-y-1.5">
             <label className="font-bold text-slate-800 flex items-center gap-1.5">
               <FileText className="w-3.5 h-3.5 text-purple-600" />
-              <span>Biografia / Descrição</span>
+              <span>Biografia / Apresentação</span>
             </label>
             <textarea
               rows={3}
               placeholder="Escreva uma breve descrição sobre você, hábitos de estacionamento ou detalhes do seu perfil..."
               value={bio}
+              disabled={isSaving}
               onChange={(e) => setBio(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-sky-500 outline-none resize-none leading-relaxed"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-sky-500 outline-none resize-none leading-relaxed disabled:opacity-60"
             />
             <span className="text-[10px] text-slate-400 block text-right">
               {bio.length}/250 caracteres
@@ -368,17 +414,28 @@ export const EditProfileModal = () => {
           <div className="flex items-center gap-3 pt-3 border-t border-slate-100">
             <button
               type="button"
+              disabled={isSaving}
               onClick={() => setIsEditProfileModalOpen(false)}
-              className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition cursor-pointer"
+              className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-xl transition cursor-pointer disabled:opacity-60"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="flex-1 bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white font-extrabold py-3 rounded-xl shadow-lg shadow-sky-600/30 transition flex items-center justify-center gap-1.5 cursor-pointer"
+              disabled={isSaving}
+              className="flex-1 bg-sky-600 hover:bg-sky-500 active:bg-sky-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-extrabold py-3.5 rounded-xl shadow-lg shadow-sky-600/30 transition flex items-center justify-center gap-1.5 cursor-pointer"
             >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Salvar Alterações</span>
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Salvando...</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Salvar Alterações</span>
+                </>
+              )}
             </button>
           </div>
 

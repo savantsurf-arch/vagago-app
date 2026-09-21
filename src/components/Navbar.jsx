@@ -310,9 +310,11 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
 
                   <button
                     type="button"
-                    onClick={openEditProfileModal}
-                    className="flex items-center gap-2 group p-1 hover:bg-slate-100 rounded-xl transition cursor-pointer"
-                    title="Editar Meu Perfil (Nome, Foto, Telefone e Bio)"
+                    onClick={() => setActiveTab('profile')}
+                    className={`flex items-center gap-2 group p-1.5 rounded-xl transition cursor-pointer ${
+                      activeTab === 'profile' ? 'bg-sky-50 ring-2 ring-sky-500 shadow-xs' : 'hover:bg-slate-100'
+                    }`}
+                    title="Meu Perfil e Veículos"
                   >
                     <img
                       src={currentUser?.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=250&q=80"}
@@ -465,6 +467,15 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
                 >
                   <Heart className="w-4 h-4 text-rose-500" /> Vagas Favoritas
                 </button>
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab('profile'); setIsMobileMenuOpen(false); }}
+                  className={`w-full text-left px-3 py-2 text-sm font-semibold rounded-lg flex items-center gap-2 ${
+                    activeTab === 'profile' ? 'bg-sky-50 text-sky-700 font-bold' : 'text-slate-700 hover:bg-sky-50'
+                  }`}
+                >
+                  <User className="w-4 h-4 text-sky-600" /> Meu Perfil & Veículos
+                </button>
 
                 <div className="pt-2 border-t border-slate-100">
                   <button
@@ -506,6 +517,15 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
                   className="w-full text-left px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-emerald-50 rounded-lg flex items-center gap-2"
                 >
                   <DollarSign className="w-4 h-4 text-emerald-600" /> Financeiro & Saques
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab('profile'); setIsMobileMenuOpen(false); }}
+                  className={`w-full text-left px-3 py-2 text-sm font-semibold rounded-lg flex items-center gap-2 ${
+                    activeTab === 'profile' ? 'bg-emerald-50 text-emerald-700 font-bold' : 'text-slate-700 hover:bg-emerald-50'
+                  }`}
+                >
+                  <User className="w-4 h-4 text-emerald-600" /> Meu Perfil & Veículos
                 </button>
               </>
             )}

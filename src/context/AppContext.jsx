@@ -1117,22 +1117,149 @@ export const AppProvider = ({ children }) => {
     return completeBooking;
   };
 
-  const addVehicle = (vehicleData) => {
-
+  const addVehicle = async (vehicleData) => {
     const safeUserId = currentUser?.id || 'usr_1';
+    const isFirst = vehicles.filter(v => v && (v.userId === safeUserId || v.user_id === safeUserId)).length === 0;
+    const shouldBeDefault = isFirst || Boolean(vehicleData.isDefault);
+
+    let updatedList = vehicles;
+    if (shouldBeDefault) {
+      updatedList = vehicles.map(v => (v.userId === safeUserId || v.user_id === safeUserId) ? { ...v, isDefault: false, is_default: false } : v);
+    }
+
+    const cleanPlate = (vehicleData.plate || '').toUpperCase().trim();
     const newVeh = {
       id: `veh_${Date.now()}`,
       userId: safeUserId,
-      isDefault: vehicles.length === 0 || Boolean(vehicleData.isDefault),
-      plate: (vehicleData.plate || 'ABC-1D23').toUpperCase(),
-      brand: vehicleData.brand || 'Toyota',
-      model: vehicleData.model || 'Corolla',
-      color: vehicleData.color || 'Prata',
+      user_id: safeUserId,
+      isDefault: shouldBeDefault,
+      is_default: shouldBeDefault,
+      plate: cleanPlate,
+      brand: vehicleData.brand?.trim() || 'Toyota',
+      model: vehicleData.model?.trim() || 'Corolla',
+      color: vehicleData.color?.trim() || 'Prata',
       type: vehicleData.type || 'Carro Passeio',
-      ...vehicleData
+      createdAt: new Date().toISOString()
     };
-    setVehicles(prev => [newVeh, ...prev]);
+
+    setVehicles([newVeh, ...updatedList]);
+
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from('vehicles').insert([{
+          brand: newVeh.brand,
+          model: newVeh.model,
+          plate: newVeh.plate,
+          color: newVeh.color,
+          type: newVeh.type,
+          is_default: Boolean(newVeh.isDefault),
+          user_id: safeUserId.length === 36 ? safeUserId : null
+        }]);
+      } catch (e) {
+        console.warn("Notice syncing new vehicle to Supabase:", e);
+      }
+    }
+
     return newVeh;
+  };
+
+  const updateVehicle = async (vehicleId, updatedData) => {
+    const cleanPlate = updatedData.plate ? updatedData.plate.toUpperCase().trim() : undefined;
+    const safeUserId = currentUser?.id || 'usr_1';
+
+    setVehicles(prev => {
+      let base = prev;
+      if (updatedData.isDefault) {
+        base = prev.map(v => (v.userId === safeUserId || v.user_id === safeUserId) ? { ...v, isDefault: false, is_default: false } : v);
+      }
+      return base.map(v => {
+        if (v.id === vehicleId) {
+          return {
+            ...v,
+            ...updatedData,
+            plate: cleanPlate || v.plate,
+            isDefault: updatedData.isDefault !== undefined ? Boolean(updatedData.isDefault) : v.isDefault,
+            is_default: updatedData.isDefault !== undefined ? Boolean(updatedData.isDefault) : v.isDefault,
+            updatedAt: new Date().toISOString()
+          };
+        }
+        return v;
+      });
+    });
+
+    if (isSupabaseConfigured) {
+      try {
+        const payload = {};
+        if (updatedData.brand) payload.brand = updatedData.brand;
+        if (updatedData.model) payload.model = updatedData.model;
+        if (cleanPlate) payload.plate = cleanPlate;
+        if (updatedData.color) payload.color = updatedData.color;
+        if (updatedData.type) payload.type = updatedData.type;
+        if (updatedData.isDefault !== undefined) payload.is_default = Boolean(updatedData.isDefault);
+
+        await supabase.from('vehicles').update(payload).or(`id.eq.${vehicleId},plate.eq.${cleanPlate || updatedData.plate}`);
+      } catch (e) {
+        console.warn("Notice updating vehicle in Supabase:", e);
+      }
+    }
+  };
+
+  const deleteVehicle = async (vehicleId) => {
+    const targetVeh = vehicles.find(v => v.id === vehicleId);
+    if (!targetVeh) return { success: false, reason: 'Veículo não encontrado.' };
+
+    // Validar se o veículo possui reservas ativas ou em andamento
+    const activeConflict = bookings.find(b => {
+      if (b.bookingStatus === 'Cancelado' || b.bookingStatus === 'Recusado' || b.status === 'cancelled') return false;
+      const bPlate = b.vehicle?.plate;
+      return (b.vehicle?.id === vehicleId || (bPlate && bPlate.toUpperCase() === targetVeh.plate.toUpperCase()));
+    });
+
+    if (activeConflict) {
+      return {
+        success: false,
+        reason: `Este veículo está vinculado à reserva ativa #${activeConflict.bookingNumber}. Não é possível excluí-lo enquanto a reserva estiver em andamento.`
+      };
+    }
+
+    // Exclui com segurança do cadastro ativo, preservando histórico de comprovantes
+    setVehicles(prev => {
+      const remaining = prev.filter(v => v.id !== vehicleId);
+      if (targetVeh.isDefault && remaining.length > 0) {
+        remaining[0].isDefault = true;
+        remaining[0].is_default = true;
+      }
+      return remaining;
+    });
+
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from('vehicles').delete().or(`id.eq.${vehicleId},plate.eq.${targetVeh.plate}`);
+      } catch (e) {
+        console.warn("Notice deleting vehicle from Supabase:", e);
+      }
+    }
+
+    return { success: true };
+  };
+
+  const setDefaultVehicle = async (vehicleId) => {
+    const safeUserId = currentUser?.id || 'usr_1';
+    setVehicles(prev => prev.map(v => {
+      if (v.userId === safeUserId || v.user_id === safeUserId) {
+        return { ...v, isDefault: v.id === vehicleId, is_default: v.id === vehicleId };
+      }
+      return v;
+    }));
+
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from('vehicles').update({ is_default: false }).or(`user_id.eq.${safeUserId}`);
+        await supabase.from('vehicles').update({ is_default: true }).eq('id', vehicleId);
+      } catch (e) {
+        console.warn("Notice setting default vehicle in Supabase:", e);
+      }
+    }
   };
 
 
@@ -1392,7 +1519,14 @@ export const AppProvider = ({ children }) => {
     setParkingSpaces([...getGlobalParkingSpaces()]);
   };
 
-
+  const safeUserId = currentUser?.id || 'usr_1';
+  const userVehicles = (vehicles || []).filter(v => v && (
+    v.userId === safeUserId ||
+    v.user_id === safeUserId ||
+    (!v.userId && !v.user_id) ||
+    v.userId === 'usr_1' ||
+    safeUserId === 'usr_1'
+  ));
 
   return (
 
@@ -1487,6 +1621,10 @@ export const AppProvider = ({ children }) => {
       depositWalletCredits,
       toggleEventPricing,
       addVehicle,
+      updateVehicle,
+      deleteVehicle,
+      setDefaultVehicle,
+      userVehicles,
       saveParkingSpace,
       deleteParkingSpace,
 

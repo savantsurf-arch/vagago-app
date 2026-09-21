@@ -16,6 +16,7 @@ import { ExtendBookingModal } from './components/ExtendBookingModal';
 import { WalletDepositModal } from './components/WalletDepositModal';
 import { EditProfileModal } from './components/EditProfileModal';
 import { ClientDashboard } from './components/ClientDashboard';
+import { ProfilePage } from './components/ProfilePage';
 
 import { OwnerDashboard } from './components/OwnerDashboard';
 import { AdminPanel } from './components/AdminPanel';
@@ -131,7 +132,7 @@ const MainContent = () => {
           />
         )}
         {(activeTab === 'owner_dashboard' || activeTab === 'owner_spots' || activeTab === 'owner_finance' || activeTab === 'owner_reservas') && <OwnerDashboard />}
-
+        {activeTab === 'profile' && <ProfilePage />}
         {activeTab === 'admin_dashboard' && <AdminPanel />}
       </div>
 
