@@ -71,14 +71,12 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-2xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20 gap-4">
+          <div className="flex items-center justify-between h-18 sm:h-20 gap-4">
             
-            {/* Left side: Logo + Navigation Links Aligned Immediately Next to Logo */}
-            <div className="flex items-center gap-4 md:gap-6">
-              
-              {/* Horizontal Logo (Enlarged) */}
+            {/* Left side: Logo */}
+            <div className="flex items-center">
               <button
                 type="button"
                 onClick={() => setActiveTab('landing')}
@@ -87,15 +85,15 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
                 <img
                   src="/logo-vagago.png"
                   alt="VagaGo"
-                  className="h-11 sm:h-13 md:h-14 w-auto object-contain transition transform group-hover:scale-105"
+                  className="h-10 sm:h-12 w-auto object-contain transition transform group-hover:scale-105"
                 />
               </button>
+            </div>
 
+            {/* Right side: Navigation links + Actions */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              <nav className="hidden md:flex items-center space-x-1 lg:space-x-2 text-xs font-semibold mr-1">
 
-
-
-              {/* Navigation links by Authentication & Role - Aligned to Left */}
-              <nav className="hidden md:flex items-center space-x-1 lg:space-x-2 text-xs font-semibold">
                 
                 {/* 1. Unauthenticated Visitor Navigation */}
                 {!isAuthenticated && (
@@ -281,16 +279,11 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
 
               </nav>
 
-            </div>
-
-
-            {/* Right side Actions & User */}
-            <div className="flex items-center gap-3">
               {/* Notification Button */}
               <button
                 type="button"
                 onClick={() => setIsNotifOpen(true)}
-                className="relative p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-full transition cursor-pointer"
+                className="relative p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition cursor-pointer"
                 title="Notificações"
               >
                 <Bell className="w-5 h-5" />
@@ -352,11 +345,11 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
 
 
               ) : (
-                <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
+                <div className="flex items-center gap-1.5 sm:gap-2 pl-1 sm:pl-2 border-l border-slate-200">
                   <button
                     type="button"
                     onClick={openLoginModal}
-                    className="text-xs font-extrabold text-slate-700 hover:text-sky-600 px-3 py-2 rounded-xl hover:bg-slate-100 transition flex items-center gap-1 cursor-pointer"
+                    className="text-xs font-bold text-slate-700 hover:text-sky-600 px-2.5 sm:px-3 py-2 rounded-xl hover:bg-slate-100 transition flex items-center gap-1 cursor-pointer"
                   >
                     <LogIn className="w-4 h-4 text-sky-600" />
                     <span>Entrar</span>
@@ -365,7 +358,7 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
                   <button
                     type="button"
                     onClick={openRegisterModal}
-                    className="bg-sky-600 hover:bg-sky-500 text-white text-xs font-extrabold px-3.5 py-2 rounded-xl shadow-xs transition flex items-center gap-1 cursor-pointer"
+                    className="bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white text-xs font-extrabold px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl shadow-xs hover:shadow-sm transition flex items-center gap-1 cursor-pointer"
                   >
                     <UserPlus className="w-4 h-4 text-sky-200" />
                     <span>Criar Conta</span>
