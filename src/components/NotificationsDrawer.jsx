@@ -3,9 +3,22 @@ import { useApp } from '../context/AppContext';
 import { Bell, CheckCircle2, Clock, X, AlertCircle, RefreshCw } from 'lucide-react';
 
 export const NotificationsDrawer = ({ isOpen, onClose }) => {
-  const { notifications, markNotificationAsRead, setActiveTab, setIsBookingFlowOpen, parkingSpaces, setSelectedSpot } = useApp();
+  const { notifications, currentUser, markNotificationAsRead, setActiveTab, setIsBookingFlowOpen, parkingSpaces, setSelectedSpot } = useApp();
 
   if (!isOpen) return null;
+
+  const safeUser = currentUser || {};
+  const myNotifications = (notifications || []).filter(n => {
+    if (!n) return false;
+    // Broadcast notification (if no specific user target)
+    if (!n.userId && !n.userEmail && !n.targetUserId) return true;
+    // Direct user target
+    return (
+      (n.userId && (n.userId === safeUser.id || n.userId === safeUser.email)) ||
+      (n.targetUserId && n.targetUserId === safeUser.id) ||
+      (n.userEmail && safeUser.email && n.userEmail.toLowerCase() === safeUser.email.toLowerCase())
+    );
+  });
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden bg-slate-900/50 backdrop-blur-xs flex justify-end">
@@ -29,13 +42,13 @@ export const NotificationsDrawer = ({ isOpen, onClose }) => {
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {notifications.length === 0 ? (
+          {myNotifications.length === 0 ? (
             <div className="text-center py-12 text-slate-400">
               <Bell className="w-10 h-10 mx-auto mb-2 opacity-30" />
               <p>Nenhuma notificação por enquanto.</p>
             </div>
           ) : (
-            notifications.map((n) => (
+            myNotifications.map((n) => (
               <div
                 key={n.id}
                 onClick={() => markNotificationAsRead(n.id)}
@@ -45,6 +58,7 @@ export const NotificationsDrawer = ({ isOpen, onClose }) => {
                     : 'bg-white border-slate-100'
                 }`}
               >
+
                 {!n.read && (
                   <span className="absolute top-3 right-3 w-2 h-2 rounded-full bg-sky-500" />
                 )}

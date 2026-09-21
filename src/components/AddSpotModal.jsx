@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import {
   X,
@@ -20,9 +20,13 @@ import {
   Info,
   Trash2,
   Check,
-  AlertCircle
+  AlertCircle,
+  Camera,
+  UploadCloud,
+  RefreshCw
 } from 'lucide-react';
 import { geocodeAddress } from '../services/geoUtils';
+import { compressImageToWebP } from '../services/imageUtils';
 
 export const AddSpotModal = () => {
   const {
@@ -33,10 +37,14 @@ export const AddSpotModal = () => {
     saveParkingSpace
   } = useApp();
 
+  const cameraInputRef = useRef(null);
+  const galleryInputRef = useRef(null);
+
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCompressing, setIsCompressing] = useState(false);
+  const [compressionFeedback, setCompressionFeedback] = useState('');
   const [formError, setFormError] = useState('');
-  const [newPhotoUrl, setNewPhotoUrl] = useState('');
   const [customRuleInput, setCustomRuleInput] = useState('');
 
   const [formData, setFormData] = useState({
@@ -53,20 +61,18 @@ export const AddSpotModal = () => {
     entranceInstructions: '',
 
     // Step 2: Características & Dimensões
-    vehicleTypes: ['Carro', 'SUV'],
+    vehicleTypes: ['Carro'],
     isCovered: true,
     spotType: 'Livre', // 'Livre' ou 'Presa'
-    features: ['Portão Eletrônico', 'Câmeras 24h', 'Iluminação LED'],
+    features: ['Portão Eletrônico', 'Iluminação LED'],
     dimensions: {
       length: '5.0m',
       width: '2.5m',
       maxHeight: '2.20m'
     },
 
-    // Step 3: Fotos
-    photos: [
-      "https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=1000&q=80"
-    ],
+    // Step 3: Fotos (Sem fotos fakes / limpo)
+    photos: [],
     coverPhotoIndex: 0,
 
     // Step 4: Descrição
@@ -76,7 +82,7 @@ export const AddSpotModal = () => {
     // Step 5: Regras
     rules: [
       'Estacionar de ré na marcação',
-      'Apresentar comprovante ou QR Code na portaria',
+      'Apresentar comprovante ou QR Code na entrada',
       'Não fumar no local'
     ],
 
@@ -100,40 +106,40 @@ export const AddSpotModal = () => {
   useEffect(() => {
     setFormError('');
     setCurrentStep(1);
+    setCompressionFeedback('');
     if (editingSpot) {
       setFormData({
         ...editingSpot,
         dimensions: editingSpot.dimensions || { length: '5.0m', width: '2.5m', maxHeight: editingSpot.heightLimit || '2.20m' },
         rules: editingSpot.rules || ['Estacionar de ré na marcação'],
         availableDays: editingSpot.availableDays || ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
-        instantBooking: editingSpot.instantBooking !== false
+        instantBooking: editingSpot.instantBooking !== false,
+        photos: editingSpot.photos || []
       });
     } else {
       setFormData({
-        zipCode: '45600-000',
-        address: 'Av. Cinquentenário',
-        number: '500',
+        zipCode: '',
+        address: '',
+        number: '',
         complement: '',
-        neighborhood: 'Centro',
+        neighborhood: '',
         city: 'Itabuna',
         state: 'BA',
         lat: -14.7966,
         lng: -39.2789,
-        entranceInstructions: 'Portão eletrônico à direita, logo após a farmácia.',
-        vehicleTypes: ['Carro', 'SUV'],
+        entranceInstructions: '',
+        vehicleTypes: ['Carro'],
         isCovered: true,
         spotType: 'Livre',
-        features: ['Portão Eletrônico', 'Câmeras 24h', 'Iluminação LED'],
+        features: ['Portão Eletrônico', 'Iluminação LED'],
         dimensions: { length: '5.0m', width: '2.5m', maxHeight: '2.20m' },
-        photos: [
-          "https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=1000&q=80"
-        ],
+        photos: [],
         coverPhotoIndex: 0,
         title: '',
         description: '',
         rules: [
           'Estacionar de ré na marcação',
-          'Apresentar comprovante ou QR Code na portaria',
+          'Apresentar comprovante ou QR Code na entrada',
           'Não fumar no local'
         ],
         priceHourly: 6.00,
@@ -174,6 +180,38 @@ export const AddSpotModal = () => {
       } catch (e) {
         console.warn('CEP lookup error:', e);
       }
+    }
+  };
+
+  // Image Upload Handler with High-Fidelity WebP Compression
+  const handleImageUpload = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    setIsCompressing(true);
+    setFormError('');
+    setCompressionFeedback('Otimizando fotos em alta resolução WebP...');
+
+    try {
+      const compressedResults = await Promise.all(
+        files.map(file => compressImageToWebP(file, 1600, 0.88))
+      );
+
+      const newPhotos = compressedResults.map(r => r.dataUrl);
+      const totalSaved = compressedResults.reduce((acc, r) => acc + (r.savingsPercent || 0), 0) / compressedResults.length;
+
+      setFormData(prev => ({
+        ...prev,
+        photos: [...prev.photos, ...newPhotos]
+      }));
+
+      setCompressionFeedback(`✓ ${files.length} foto(s) convertidas para WebP (economia média de ${Math.round(totalSaved)}% de espaço sem perder nitidez).`);
+    } catch (err) {
+      setFormError('Erro ao processar as fotos. Tente enviar arquivos JPG ou PNG.');
+    } finally {
+      setIsCompressing(false);
+      if (cameraInputRef.current) cameraInputRef.current.value = '';
+      if (galleryInputRef.current) galleryInputRef.current.value = '';
     }
   };
 
@@ -221,21 +259,12 @@ export const AddSpotModal = () => {
     }));
   };
 
-  const handleAddPhoto = () => {
-    if (!newPhotoUrl.trim()) return;
-    setFormData(prev => ({
-      ...prev,
-      photos: [...prev.photos, newPhotoUrl.trim()]
-    }));
-    setNewPhotoUrl('');
-  };
-
   const handleRemovePhoto = (photoIdx) => {
     setFormData(prev => {
       const updated = prev.photos.filter((_, idx) => idx !== photoIdx);
       return {
         ...prev,
-        photos: updated.length ? updated : ["https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=1000&q=80"],
+        photos: updated,
         coverPhotoIndex: 0
       };
     });
@@ -249,28 +278,97 @@ export const AddSpotModal = () => {
     });
   };
 
-  // Step Validation
+  // Rigorous Step Validation to Guarantee Real User Data
   const validateAndNext = () => {
     setFormError('');
+
+    // Step 1: Localização
     if (currentStep === 1) {
-      if (!formData.address.trim()) {
-        setFormError('Por favor, informe o logradouro / endereço da vaga.');
+      const cleanAddress = (formData.address || '').trim();
+      const cleanNumber = (formData.number || '').trim();
+      const cleanNeighborhood = (formData.neighborhood || '').trim();
+
+      if (!cleanAddress || cleanAddress.length < 5) {
+        setFormError('Informe o endereço/rua real da garagem (mínimo 5 letras).');
         return;
       }
-    } else if (currentStep === 4) {
-      if (!formData.title.trim()) {
-        setFormError('Por favor, defina um título para o anúncio da garagem.');
+      if (!cleanNumber) {
+        setFormError('Informe o número do imóvel ou lote da garagem.');
         return;
       }
-    } else if (currentStep === 6) {
-      if (!formData.priceHourly || formData.priceHourly <= 0) {
-        setFormError('Por favor, defina um valor por hora válido.');
+      if (!cleanNeighborhood) {
+        setFormError('Informe o bairro em Itabuna onde a garagem está localizada.');
+        return;
+      }
+    }
+
+    // Step 2: Características & Veículos
+    else if (currentStep === 2) {
+      if (!formData.vehicleTypes || formData.vehicleTypes.length === 0) {
+        setFormError('Selecione ao menos 1 tipo de veículo permitido para estacionar.');
+        return;
+      }
+    }
+
+    // Step 3: Fotos
+    else if (currentStep === 3) {
+      if (!formData.photos || formData.photos.length === 0) {
+        setFormError('Adicione ao menos 1 foto real da sua garagem (tire com a câmera ou escolha da galeria).');
+        return;
+      }
+    }
+
+    // Step 4: Descrição
+    else if (currentStep === 4) {
+      const cleanTitle = (formData.title || '').trim();
+      if (!cleanTitle || cleanTitle.length < 6) {
+        setFormError('Informe um título real para o anúncio com pelo menos 6 caracteres (Ex: Vaga Coberta ao lado da Av. Cinquentenário).');
+        return;
+      }
+      const genericNames = ['garagem', 'vaga', 'minha garagem', 'teste', 'vaga teste', 'minha vaga'];
+      if (genericNames.includes(cleanTitle.toLowerCase())) {
+        setFormError('O título não pode ser genérico. Escreva um título claro que identifique a sua vaga para os motoristas.');
+        return;
+      }
+      const cleanDesc = (formData.description || '').trim();
+      if (!cleanDesc || cleanDesc.length < 15) {
+        setFormError('Escreva uma descrição detalhada com pelo menos 15 caracteres (Ex: Garagem privativa espaçosa com portão automático e câmeras).');
+        return;
+      }
+    }
+
+    // Step 5: Regras
+    else if (currentStep === 5) {
+      if (!formData.rules || formData.rules.length === 0) {
+        setFormError('Adicione ao menos uma regra de uso ou boa convivência.');
+        return;
+      }
+    }
+
+    // Step 6: Preço
+    else if (currentStep === 6) {
+      const hourly = Number(formData.priceHourly);
+      if (!hourly || hourly <= 0) {
+        setFormError('Informe um valor por hora válido maior que R$ 0,00.');
+        return;
+      }
+      if (hourly > 500) {
+        setFormError('O valor por hora não pode exceder R$ 500,00.');
+        return;
+      }
+    }
+
+    // Step 7: Disponibilidade
+    else if (currentStep === 7) {
+      if (!formData.availableDays || formData.availableDays.length === 0) {
+        setFormError('Selecione ao menos 1 dia da semana em que a vaga está disponível para reservas.');
         return;
       }
     }
 
     setCurrentStep(prev => Math.min(8, prev + 1));
   };
+
 
   const handleFinalPublish = async () => {
     setIsSubmitting(true);
@@ -620,62 +718,127 @@ export const AddSpotModal = () => {
             <div className="space-y-4">
               <div>
                 <h3 className="font-black text-slate-900 text-base">Fotos da Garagem</h3>
-                <p className="text-xs text-slate-500">Adicione fotos reais da fachada, portão e área interna da vaga.</p>
+                <p className="text-xs text-slate-500">
+                  Adicione fotos reais da fachada, portão e área interna da vaga.
+                </p>
               </div>
 
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Cole o link da imagem (URL https://...)"
-                  value={newPhotoUrl}
-                  onChange={(e) => setNewPhotoUrl(e.target.value)}
-                  className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium focus:ring-2 focus:ring-emerald-500 outline-hidden"
-                />
+              {/* Hidden File Inputs for Native Camera and File Picker */}
+              <input
+                type="file"
+                ref={cameraInputRef}
+                accept="image/*"
+                capture="environment"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+              <input
+                type="file"
+                ref={galleryInputRef}
+                accept="image/*"
+                multiple
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+
+              {/* Upload Action Buttons */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button
                   type="button"
-                  onClick={handleAddPhoto}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1"
+                  disabled={isCompressing}
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="p-4 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 disabled:opacity-50 text-white rounded-2xl font-extrabold text-xs transition flex items-center justify-center gap-2.5 shadow-md shadow-emerald-600/20 cursor-pointer"
                 >
-                  <Plus className="w-4 h-4" />
-                  <span>Adicionar</span>
+                  <Camera className="w-5 h-5 text-white shrink-0" />
+                  <div className="text-left">
+                    <div className="font-black">Tirar Foto com a Câmera</div>
+                    <div className="text-[10px] text-emerald-100 font-medium">Abre a câmera no celular</div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={isCompressing}
+                  onClick={() => galleryInputRef.current?.click()}
+                  className="p-4 bg-sky-50 hover:bg-sky-100 active:bg-sky-200 disabled:opacity-50 text-sky-900 border border-sky-200 rounded-2xl font-extrabold text-xs transition flex items-center justify-center gap-2.5 cursor-pointer"
+                >
+                  <UploadCloud className="w-5 h-5 text-sky-600 shrink-0" />
+                  <div className="text-left">
+                    <div className="font-black">Enviar Fotos da Galeria / PC</div>
+                    <div className="text-[10px] text-sky-700 font-medium">Selecione uma ou mais imagens</div>
+                  </div>
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">
-                {formData.photos.map((url, idx) => (
-                  <div key={idx} className="relative group rounded-2xl overflow-hidden border border-slate-200 bg-slate-100 aspect-video">
-                    <img src={url} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
-                    
-                    <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2 p-2">
-                      <button
-                        type="button"
-                        onClick={() => setFormData({ ...formData, coverPhotoIndex: idx })}
-                        className={`text-[10px] font-bold px-2 py-1 rounded-lg cursor-pointer ${
-                          formData.coverPhotoIndex === idx ? 'bg-emerald-500 text-white' : 'bg-white text-slate-800'
-                        }`}
-                      >
-                        {formData.coverPhotoIndex === idx ? '⭐ Capa' : 'Definir Capa'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleRemovePhoto(idx)}
-                        className="bg-rose-600 text-white p-1 rounded-lg cursor-pointer"
-                        title="Remover foto"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+              {/* Processing / Compression Live Status */}
+              {isCompressing && (
+                <div className="p-3.5 bg-sky-50 border border-sky-200 text-sky-900 rounded-xl text-xs font-bold flex items-center gap-2 animate-pulse">
+                  <RefreshCw className="w-4 h-4 text-sky-600 animate-spin shrink-0" />
+                  <span>Compactando fotos em alta fidelidade WebP (mantendo nitidez e economizando espaço)...</span>
+                </div>
+              )}
 
-                    {formData.coverPhotoIndex === idx && (
-                      <span className="absolute top-2 left-2 bg-emerald-600 text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow-xs">
-                        Foto Principal
-                      </span>
-                    )}
+              {compressionFeedback && !isCompressing && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-bold flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>{compressionFeedback}</span>
+                </div>
+              )}
+
+              {/* Photo Gallery Previews */}
+              {formData.photos.length === 0 ? (
+                <div className="p-8 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-300 text-center space-y-2">
+                  <Camera className="w-8 h-8 text-slate-400 mx-auto" />
+                  <div className="text-xs font-extrabold text-slate-700">Nenhuma foto adicionada ainda</div>
+                  <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
+                    Use os botões acima para tirar foto com a câmera ou escolher do seu aparelho. Mínimo de 1 foto para publicar.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="text-xs font-bold text-slate-700 flex items-center justify-between">
+                    <span>Fotos Selecionadas ({formData.photos.length})</span>
+                    <span className="text-[11px] text-slate-400">Passe o mouse ou toque para definir a Foto Principal</span>
                   </div>
-                ))}
-              </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {formData.photos.map((url, idx) => (
+                      <div key={idx} className="relative group rounded-2xl overflow-hidden border border-slate-200 bg-slate-100 aspect-video shadow-xs">
+                        <img src={url} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
+                        
+                        <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2 p-2">
+                          <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, coverPhotoIndex: idx })}
+                            className={`text-[10px] font-bold px-2 py-1 rounded-lg cursor-pointer ${
+                              formData.coverPhotoIndex === idx ? 'bg-emerald-500 text-white' : 'bg-white text-slate-800 hover:bg-slate-100'
+                            }`}
+                          >
+                            {formData.coverPhotoIndex === idx ? '⭐ Principal' : 'Definir Principal'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRemovePhoto(idx)}
+                            className="bg-rose-600 hover:bg-rose-500 text-white p-1 rounded-lg transition cursor-pointer"
+                            title="Remover foto"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        {formData.coverPhotoIndex === idx && (
+                          <span className="absolute top-2 left-2 bg-emerald-600 text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow-xs">
+                            ⭐ Foto Principal
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
+
 
           {/* ==================== ETAPA 4: DESCRIÇÃO ==================== */}
           {currentStep === 4 && (

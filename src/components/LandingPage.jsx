@@ -451,12 +451,13 @@ export const LandingPage = () => {
           
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 pb-8 border-b border-slate-800">
             <div className="flex items-center gap-3">
-              <img src="/logo-vagago.png" alt="VagaGo" className="h-10 w-auto bg-white p-1 rounded-lg" />
+              <img src="/logo-vagago.png" alt="VagaGo" className="h-11 sm:h-12 w-auto object-contain" />
               <div>
                 <div className="font-black text-lg">VagaGo</div>
                 <div className="text-xs text-slate-400">Estacionamento inteligente, seguro e econômico.</div>
               </div>
             </div>
+
 
             <div className="flex flex-wrap items-center gap-6 text-xs text-slate-400">
               <button
@@ -473,9 +474,13 @@ export const LandingPage = () => {
               >
                 Encontrar Vagas
               </button>
-              <a href="#" className="hover:text-white transition">Termos de Uso</a>
-              <a href="#" className="hover:text-white transition">Privacidade</a>
-              <a href="#" className="hover:text-white transition">Suporte 24h</a>
+              <button
+                type="button"
+                onClick={() => setActiveTab('terms')}
+                className="hover:text-white transition cursor-pointer"
+              >
+                Termos de Uso & Privacidade (LGPD)
+              </button>
             </div>
           </div>
 
@@ -485,6 +490,7 @@ export const LandingPage = () => {
 
         </div>
       </footer>
+
 
     </div>
   );

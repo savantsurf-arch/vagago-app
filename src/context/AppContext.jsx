@@ -9,6 +9,8 @@ import {
   INITIAL_COUPONS,
   INITIAL_REVIEWS,
   INITIAL_WITHDRAWALS,
+  INITIAL_DAYS_OFF,
+  ITABUNA_NEIGHBORHOODS,
   getGlobalParkingSpaces,
   registerGlobalParkingSpace
 } from '../services/mockData';
@@ -22,7 +24,17 @@ import {
   calculateSmartParkOptions
 } from '../services/geoUtils';
 import { supabase, isSupabaseConfigured, fetchUsersFromSupabase } from '../services/supabaseClient';
-import { fetchSpacesFromSupabase, publishSpaceToSupabase, deleteSpaceFromSupabase, registerUserInSupabase } from '../services/supabaseService';
+import {
+  fetchSpacesFromSupabase,
+  publishSpaceToSupabase,
+  deleteSpaceFromSupabase,
+  registerUserInSupabase,
+  publishBookingToSupabase,
+  fetchBookingsFromSupabase,
+  updateBookingStatusInSupabase,
+  subscribeToBookingsRealtime
+} from '../services/supabaseService';
+
 
 
 
@@ -61,13 +73,13 @@ export const AppProvider = ({ children }) => {
       const saved = localStorage.getItem('vagago_users');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
+        if (Array.isArray(parsed) && parsed.length > 0) {
           const filtered = parsed.filter(u => u && !LEGACY_EMAILS.includes(u.email?.toLowerCase()));
-          return filtered;
+          if (filtered.length > 0) return filtered;
         }
       }
     } catch (e) {}
-    return [];
+    return INITIAL_USERS;
   });
 
   // Active Role State
@@ -112,6 +124,39 @@ export const AppProvider = ({ children }) => {
 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState('login'); // login, register, forgot
+  const [suggestedAccountType, setSuggestedAccountType] = useState('CLIENTE');
+  const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
+
+  const openLoginModal = () => {
+    setAuthModalMode('login');
+    setIsAuthModalOpen(true);
+  };
+
+  const openRegisterModal = (preferredRole) => {
+    const detected = preferredRole || (activeTab === 'host_landing' || activeRole === 'PROPRIETÁRIO' ? 'PROPRIETÁRIO' : 'CLIENTE');
+    setSuggestedAccountType(detected);
+    setAuthModalMode('register');
+    setIsAuthModalOpen(true);
+  };
+
+  const openEditProfileModal = () => {
+    setIsEditProfileModalOpen(true);
+  };
+
+  const updateUserProfile = (updatedData) => {
+    if (!currentUser) return null;
+    const updated = {
+      ...currentUser,
+      ...updatedData
+    };
+    setCurrentUser(updated);
+    setUsers(prev => prev.map(u => (u.email?.toLowerCase() === currentUser.email?.toLowerCase() || u.id === currentUser.id) ? updated : u));
+    try {
+      localStorage.setItem('vagago_currentUser_email', updated.email || currentUser.email);
+    } catch (e) {}
+    return updated;
+  };
+
 
   // Sync Role & Save Users
   useEffect(() => {
@@ -137,6 +182,7 @@ export const AppProvider = ({ children }) => {
   // Auth Methods - Clean Real Authentication
   const login = async (emailInput, passwordInput) => {
     const cleanEmail = (emailInput || '').trim().toLowerCase();
+
     if (!cleanEmail) return false;
 
     // Search in local registered users
@@ -161,13 +207,20 @@ export const AppProvider = ({ children }) => {
     }
 
     setCurrentUser(foundUser);
-    setActiveRole(foundUser.role || 'CLIENTE');
+    const userRole = foundUser.role || 'CLIENTE';
+    setActiveRole(userRole);
     setIsAuthenticated(true);
     const token = `jwt_token_${Date.now()}`;
     setAuthToken(token);
     localStorage.setItem('vagago_isAuthenticated', 'true');
     localStorage.setItem('vagago_authToken', token);
     localStorage.setItem('vagago_currentUser_email', foundUser.email);
+    localStorage.setItem('vagago_activeRole', userRole);
+
+    if (userRole === 'PROPRIETÁRIO') {
+      setActiveTab('owner_dashboard');
+    }
+
     return true;
   };
 
@@ -197,6 +250,11 @@ export const AppProvider = ({ children }) => {
     localStorage.setItem('vagago_isAuthenticated', 'true');
     localStorage.setItem('vagago_authToken', token);
     localStorage.setItem('vagago_currentUser_email', cleanEmail);
+    localStorage.setItem('vagago_activeRole', newUser.role);
+
+    if (newUser.role === 'PROPRIETÁRIO') {
+      setActiveTab('owner_dashboard');
+    }
 
     try {
       await registerUserInSupabase(newUser);
@@ -206,6 +264,7 @@ export const AppProvider = ({ children }) => {
 
     return newUser;
   };
+
 
   const logout = () => {
     setIsAuthenticated(false);
@@ -310,7 +369,7 @@ export const AppProvider = ({ children }) => {
 
   const [demandRegions] = useState(INITIAL_DEMAND_REGIONS);
 
-  const [withdrawals, setWithdrawals] = useState(() => {
+    const [withdrawals, setWithdrawals] = useState(() => {
     try {
       const saved = localStorage.getItem('vagago_withdrawals');
       if (saved) {
@@ -319,6 +378,18 @@ export const AppProvider = ({ children }) => {
       }
     } catch (e) {}
     return INITIAL_WITHDRAWALS;
+  });
+
+  // DAYS OFF — Dias de Isenção de Taxa da Plataforma (0% comissão VagaGo para novas reservas)
+  const [daysOff, setDaysOff] = useState(() => {
+    try {
+      const saved = localStorage.getItem('vagago_daysOff');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return INITIAL_DAYS_OFF;
   });
 
 
@@ -359,11 +430,17 @@ export const AppProvider = ({ children }) => {
     } catch (e) {}
   }, [notifications]);
 
-  useEffect(() => {
+    useEffect(() => {
     try {
       localStorage.setItem('vagago_coupons', JSON.stringify(coupons));
     } catch (e) {}
   }, [coupons]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('vagago_daysOff', JSON.stringify(daysOff));
+    } catch (e) {}
+  }, [daysOff]);
 
   useEffect(() => {
     try {
@@ -372,7 +449,7 @@ export const AppProvider = ({ children }) => {
   }, [withdrawals]);
 
 
-  // REAL-TIME SYNC - Synchronize newly published spaces across all browser tabs & devices
+  // REAL-TIME SYNC - Synchronize newly published spaces and bookings across all browser tabs & devices
   useEffect(() => {
     const handleStorageChange = (e) => {
       if (e.key === 'vagago_parkingSpaces' && e.newValue) {
@@ -381,19 +458,47 @@ export const AppProvider = ({ children }) => {
           setParkingSpaces(updatedSpaces);
         } catch (err) {}
       }
+      if (e.key === 'vagago_bookings' && e.newValue) {
+        try {
+          const updatedBookings = JSON.parse(e.newValue);
+          if (Array.isArray(updatedBookings)) {
+            setBookings(updatedBookings);
+          }
+        } catch (err) {}
+      }
+      if (e.key === 'vagago_notifications' && e.newValue) {
+        try {
+          const updatedNotifs = JSON.parse(e.newValue);
+          if (Array.isArray(updatedNotifs)) {
+            setNotifications(updatedNotifs);
+          }
+        } catch (err) {}
+      }
     };
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // SUPABASE CLOUD & REALTIME SYNC EFFECT - Fetch cloud spaces and users on mount
+  // SUPABASE CLOUD & REALTIME SYNC EFFECT - Fetch cloud spaces, users and bookings on mount
   useEffect(() => {
-    let channel;
+    let spacesChannel;
+    let bookingsChannel;
+
     const syncCloudData = async () => {
       const cloudSpaces = await fetchSpacesFromSupabase();
       if (cloudSpaces && cloudSpaces.length > 0) {
         setParkingSpaces(cloudSpaces);
         cloudSpaces.forEach(s => registerGlobalParkingSpace(s));
+      }
+
+      const cloudBookings = await fetchBookingsFromSupabase();
+      if (cloudBookings && cloudBookings.length > 0) {
+        setBookings(prev => {
+          const mergedMap = new Map();
+          prev.forEach(b => mergedMap.set(b.id || b.bookingNumber, b));
+          cloudBookings.forEach(cb => mergedMap.set(cb.id || cb.bookingNumber, cb));
+          return Array.from(mergedMap.values());
+        });
       }
 
       const cloudUsers = await fetchUsersFromSupabase();
@@ -424,10 +529,9 @@ export const AppProvider = ({ children }) => {
 
     syncCloudData();
 
-
     if (isSupabaseConfigured) {
       try {
-        channel = supabase
+        spacesChannel = supabase
           .channel('public:parking_spaces')
           .on('postgres_changes', { event: '*', schema: 'public', table: 'parking_spaces' }, async () => {
             const updatedCloudSpaces = await fetchSpacesFromSupabase();
@@ -437,15 +541,32 @@ export const AppProvider = ({ children }) => {
             }
           })
           .subscribe();
+
+        bookingsChannel = subscribeToBookingsRealtime(
+          (newBooking) => {
+            setBookings(prev => {
+              const exists = prev.some(b => b.id === newBooking.id || b.bookingNumber === newBooking.bookingNumber);
+              if (exists) return prev;
+              return [newBooking, ...prev];
+            });
+          },
+          (updatedBooking) => {
+            setBookings(prev =>
+              prev.map(b => (b.id === updatedBooking.id || b.bookingNumber === updatedBooking.bookingNumber) ? updatedBooking : b)
+            );
+          }
+        );
       } catch (e) {
         console.warn("Realtime subscription notice:", e);
       }
     }
 
     return () => {
-      if (channel) supabase.removeChannel(channel);
+      if (spacesChannel) supabase.removeChannel(spacesChannel);
+      if (bookingsChannel) supabase.removeChannel(bookingsChannel);
     };
   }, []);
+
 
 
 
@@ -477,7 +598,7 @@ export const AppProvider = ({ children }) => {
     );
   };
 
-  // Selected & Modal State
+    // Selected & Modal State
   const [selectedSpot, setSelectedSpot] = useState(null);
   const [isSpotDetailsOpen, setIsSpotDetailsOpen] = useState(false);
   const [isBookingFlowOpen, setIsBookingFlowOpen] = useState(false);
@@ -485,7 +606,56 @@ export const AppProvider = ({ children }) => {
   const [isAddSpotModalOpen, setIsAddSpotModalOpen] = useState(false);
   const [isReferralModalOpen, setIsReferralModalOpen] = useState(false);
   const [editingSpot, setEditingSpot] = useState(null);
-  const [activeTab, setActiveTab] = useState('landing');
+
+  // URL / Route synchronization supporting dedicated /admin and #admin
+  const [activeTab, setActiveTabState] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname.toLowerCase();
+      const hash = window.location.hash.toLowerCase();
+      if (path === '/admin' || path === '/admin/' || hash === '#admin' || hash === '#/admin') {
+        return 'admin_dashboard';
+      }
+    }
+    return 'landing';
+  });
+  const [isPageLoading, setIsPageLoading] = useState(false);
+
+  const setActiveTab = (newTab) => {
+    if (newTab === activeTab) return;
+    setIsPageLoading(true);
+    setActiveTabState(newTab);
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (newTab === 'admin_dashboard') {
+        window.history.pushState(null, '', '#admin');
+      } else if (window.location.hash === '#admin') {
+        window.history.pushState(null, '', window.location.pathname);
+      }
+    }
+    setTimeout(() => {
+      setIsPageLoading(false);
+    }, 260);
+  };
+
+  // Listen to popstate & hashchange for direct navigation to /admin
+  useEffect(() => {
+    const handleUrlSync = () => {
+      if (typeof window !== 'undefined') {
+        const path = window.location.pathname.toLowerCase();
+        const hash = window.location.hash.toLowerCase();
+        if (path === '/admin' || path === '/admin/' || hash === '#admin' || hash === '#/admin') {
+          setActiveTabState('admin_dashboard');
+        }
+      }
+    };
+    window.addEventListener('popstate', handleUrlSync);
+    window.addEventListener('hashchange', handleUrlSync);
+    return () => {
+      window.removeEventListener('popstate', handleUrlSync);
+      window.removeEventListener('hashchange', handleUrlSync);
+    };
+  }, []);
+
 
   // Search State - Defaulted to Itabuna, BA
   const [searchLocation, setSearchLocation] = useState('Itabuna, BA');
@@ -545,28 +715,9 @@ export const AppProvider = ({ children }) => {
 
   // Persistence Effects
   useEffect(() => {
-    if (isSupabaseConfigured) {
-      async function loadSupabaseData() {
-        try {
-          const { data: dbSpots } = await supabase.from('parking_spaces').select('*');
-          if (dbSpots && dbSpots.length > 0) {
-            setParkingSpaces(dbSpots);
-          }
-          const { data: dbBookings } = await supabase.from('bookings').select('*');
-          if (dbBookings && dbBookings.length > 0) {
-            setBookings(dbBookings);
-          }
-        } catch (err) {
-          console.warn("Supabase fetch error, fallback to local storage:", err);
-        }
-      }
-      loadSupabaseData();
-    }
-  }, []);
-
-  useEffect(() => {
     localStorage.setItem('vagago_users', JSON.stringify(users));
   }, [users]);
+
 
 
   useEffect(() => {
@@ -672,16 +823,20 @@ export const AppProvider = ({ children }) => {
   const approveBooking = (bookingId) => {
     const found = bookings.find(b => b.id === bookingId || b.bookingNumber === bookingId);
     if (found) {
-      setBookings(prev => prev.map(b => (b.id === bookingId || b.bookingNumber === bookingId) ? { ...b, bookingStatus: 'Confirmado' } : b));
+      setBookings(prev => prev.map(b => (b.id === bookingId || b.bookingNumber === bookingId) ? { ...b, bookingStatus: 'Confirmado', status: 'confirmed' } : b));
+      updateBookingStatusInSupabase(bookingId, 'Confirmado');
       setNotifications(prev => [
         {
           id: `not_${Date.now()}`,
-          userId: found.userId,
+          userId: found.userId || found.driverId,
+          userEmail: found.userEmail || found.driverEmail,
+          targetUserId: found.userId || found.driverId,
           type: 'booking_approved',
           title: '✅ Reserva Aprovada pelo Locador!',
           message: `Sua reserva da vaga "${found.spaceTitle}" foi confirmada para ${found.date} das ${found.startTime} às ${found.endTime}.`,
           read: false,
-          timestamp: 'Agora mesmo'
+          timestamp: 'Agora mesmo',
+          createdAt: new Date().toISOString()
         },
         ...prev
       ]);
@@ -691,13 +846,15 @@ export const AppProvider = ({ children }) => {
   const rejectBooking = (bookingId) => {
     const found = bookings.find(b => b.id === bookingId || b.bookingNumber === bookingId);
     if (found) {
-      setBookings(prev => prev.map(b => (b.id === bookingId || b.bookingNumber === bookingId) ? { ...b, bookingStatus: 'Recusado' } : b));
+      setBookings(prev => prev.map(b => (b.id === bookingId || b.bookingNumber === bookingId) ? { ...b, bookingStatus: 'Recusado', status: 'cancelled' } : b));
+      updateBookingStatusInSupabase(bookingId, 'Recusado');
       if (found.paymentMethod === 'Carteira VagaGo' && found.totalPrice) {
-        const refundUser = users.find(u => u.id === found.userId);
+        const refundUserId = found.userId || found.driverId;
+        const refundUser = users.find(u => u.id === refundUserId);
         if (refundUser) {
           const newCredits = (refundUser.credits || 0) + found.totalPrice;
-          setUsers(prev => prev.map(u => u.id === found.userId ? { ...u, credits: newCredits } : u));
-          if (currentUser && currentUser.id === found.userId) {
+          setUsers(prev => prev.map(u => u.id === refundUserId ? { ...u, credits: newCredits } : u));
+          if (currentUser && currentUser.id === refundUserId) {
             setCurrentUser(prev => ({ ...prev, credits: newCredits }));
           }
         }
@@ -705,12 +862,15 @@ export const AppProvider = ({ children }) => {
       setNotifications(prev => [
         {
           id: `not_${Date.now()}`,
-          userId: found.userId,
+          userId: found.userId || found.driverId,
+          userEmail: found.userEmail || found.driverEmail,
+          targetUserId: found.userId || found.driverId,
           type: 'booking_rejected',
           title: '❌ Solicitação de Reserva Não Aprovada',
-          message: `O locador não pôde aceitar sua reserva para "${found.spaceTitle}". ${found.paymentMethod === 'Carteira VagaGo' ? 'Seu saldo foi reembolsado.' : ''}`,
+          message: `O anfitrião não pôde aceitar sua reserva para "${found.spaceTitle}". ${found.paymentMethod === 'Carteira VagaGo' ? 'Seu saldo foi reembolsado.' : ''}`,
           read: false,
-          timestamp: 'Agora mesmo'
+          timestamp: 'Agora mesmo',
+          createdAt: new Date().toISOString()
         },
         ...prev
       ]);
@@ -759,41 +919,156 @@ export const AppProvider = ({ children }) => {
       throw new Error(availCheck.reason);
     }
 
-    const targetSpot = parkingSpaces.find(s => s.id === newBookingData.spaceId);
-    const requiresApproval = targetSpot?.requireApproval || targetSpot?.instantBooking === false;
+    // Resolve target spot directly from all available parking spaces
+    const targetSpot = parkingSpaces.find(s => s.id === newBookingData.spaceId) ||
+      getGlobalParkingSpaces().find(s => s.id === newBookingData.spaceId) || {};
 
-    const bookingId = `bk_${Date.now()}`;
+    const requiresApproval = Boolean(targetSpot?.requireApproval || targetSpot?.instantBooking === false);
+
+        const bookingId = `bk_${Date.now()}`;
     const bookingNumber = `VG-${Math.floor(10000 + Math.random() * 90000)}`;
+
+    // Verifica se hoje é um Day Off (Isenção total da taxa da plataforma para reservas feitas hoje)
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isDayOffToday = (daysOff || []).some(d => d.active && d.date === todayStr);
+
     const subtotalVal = Number(newBookingData.subtotal || newBookingData.totalPrice || 10);
-    const platformFee = Number((subtotalVal * 0.10).toFixed(2));
+    const platformFee = isDayOffToday ? 0.00 : Number((subtotalVal * 0.10).toFixed(2));
     const ownerPayout = Number((subtotalVal - platformFee).toFixed(2));
 
     const safeUser = currentUser || {
       id: `usr_${Date.now()}`,
-      name: 'Locatário VagaGo',
+      name: 'Motorista VagaGo',
+      email: 'motorista@vagago.com.br',
       phone: '(73) 98765-4321',
       avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=250&q=80',
       credits: 20
     };
+
+    const hostId = targetSpot.ownerId || targetSpot.owner_id || newBookingData.ownerId || newBookingData.host_id || 'usr_2';
+    const hostName = targetSpot.ownerName || targetSpot.owner_name || newBookingData.ownerName || newBookingData.hostName || 'Anfitrião VagaGo';
+    const hostEmail = targetSpot.ownerEmail || targetSpot.owner_email || newBookingData.ownerEmail || newBookingData.hostEmail || '';
+    const hostPhone = targetSpot.ownerPhone || targetSpot.owner_phone || newBookingData.ownerPhone || newBookingData.hostPhone || '(73) 99123-4567';
+    const hostAvatar = targetSpot.ownerAvatar || targetSpot.owner_avatar || newBookingData.ownerAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=250&q=80';
+
+    const driverId = safeUser.id;
+    const driverName = safeUser.name;
+    const driverEmail = safeUser.email || '';
+    const driverPhone = safeUser.phone || '(73) 98765-4321';
+    const driverAvatar = safeUser.avatar;
 
     const initialStatus = requiresApproval ? 'Aguardando Aprovação' : 'Confirmado';
 
     const completeBooking = {
       id: bookingId,
       bookingNumber,
-      userId: safeUser.id,
-      userName: safeUser.name,
-      userPhone: safeUser.phone || "(73) 98765-4321",
-      userAvatar: safeUser.avatar,
+      booking_number: bookingNumber,
+
+      // Driver Identifiers (cross-compatible camelCase & snake_case)
+      driverId,
+      driver_id: driverId,
+      userId: driverId,
+      user_id: driverId,
+      driverName,
+      driver_name: driverName,
+      userName: driverName,
+      user_name: driverName,
+      driverEmail,
+      driver_email: driverEmail,
+      userEmail: driverEmail,
+      user_email: driverEmail,
+      driverPhone,
+      driver_phone: driverPhone,
+      userPhone: driverPhone,
+      user_phone: driverPhone,
+      driverAvatar,
+      driver_avatar: driverAvatar,
+      userAvatar: driverAvatar,
+      user_avatar: driverAvatar,
+
+      // Host Identifiers (cross-compatible camelCase & snake_case)
+      hostId,
+      host_id: hostId,
+      ownerId: hostId,
+      owner_id: hostId,
+      hostName,
+      host_name: hostName,
+      ownerName: hostName,
+      owner_name: hostName,
+      hostEmail,
+      host_email: hostEmail,
+      ownerEmail: hostEmail,
+      owner_email: hostEmail,
+      hostPhone,
+      host_phone: hostPhone,
+      ownerPhone: hostPhone,
+      owner_phone: hostPhone,
+      hostAvatar,
+      host_avatar: hostAvatar,
+      ownerAvatar: hostAvatar,
+      owner_avatar: hostAvatar,
+
+      // Space Identifiers
+      parkingId: targetSpot.id || newBookingData.spaceId,
+      parking_id: targetSpot.id || newBookingData.spaceId,
+      spaceId: targetSpot.id || newBookingData.spaceId,
+      space_id: targetSpot.id || newBookingData.spaceId,
+      parkingTitle: targetSpot.title || newBookingData.spaceTitle || 'Garagem em Itabuna',
+      parking_title: targetSpot.title || newBookingData.spaceTitle || 'Garagem em Itabuna',
+      spaceTitle: targetSpot.title || newBookingData.spaceTitle || 'Garagem em Itabuna',
+      space_title: targetSpot.title || newBookingData.spaceTitle || 'Garagem em Itabuna',
+      parkingAddress: targetSpot.address || newBookingData.spaceAddress || 'Itabuna - BA',
+      parking_address: targetSpot.address || newBookingData.spaceAddress || 'Itabuna - BA',
+      spaceAddress: targetSpot.address || newBookingData.spaceAddress || 'Itabuna - BA',
+      space_address: targetSpot.address || newBookingData.spaceAddress || 'Itabuna - BA',
+
+      // Dates & Times
+      startDate: newBookingData.date || newBookingData.startDate,
+      start_date: newBookingData.date || newBookingData.startDate,
+      date: newBookingData.date || newBookingData.startDate,
+      startTime: newBookingData.startTime,
+      start_time: newBookingData.startTime,
+      endDate: newBookingData.endDate || newBookingData.date || newBookingData.startDate,
+      end_date: newBookingData.endDate || newBookingData.date || newBookingData.startDate,
+      endTime: newBookingData.endTime,
+      end_time: newBookingData.endTime,
+      totalHours: Number(newBookingData.totalHours || 1),
+      total_hours: Number(newBookingData.totalHours || 1),
+
+      // Financials
+      subtotal: subtotalVal,
       platformFee,
+      platform_fee: platformFee,
       ownerPayout,
+      owner_payout: ownerPayout,
+      discountAmount: Number(newBookingData.discountAmount || 0),
+      discount_amount: Number(newBookingData.discountAmount || 0),
+      totalPrice: Number(newBookingData.totalPrice || subtotalVal),
+      total_price: Number(newBookingData.totalPrice || subtotalVal),
+      amount: Number(newBookingData.totalPrice || subtotalVal),
+
+      // Status
+      paymentMethod: newBookingData.paymentMethod || 'PIX',
+      payment_method: newBookingData.paymentMethod || 'PIX',
       paymentStatus: 'Aprovado',
+      payment_status: 'Aprovado',
       bookingStatus: initialStatus,
-      qrCodeData: `VAGAGO-${bookingNumber}-${newBookingData.spaceId || 'SP1'}`,
-      createdAt: new Date().toISOString(),
+      booking_status: initialStatus,
+      status: requiresApproval ? 'pending' : 'confirmed',
+
+      // Access & Vehicle
+      qrCodeData: `VAGAGO-${bookingNumber}-${targetSpot.id || newBookingData.spaceId || 'SP1'}`,
+      qr_code_data: `VAGAGO-${bookingNumber}-${targetSpot.id || newBookingData.spaceId || 'SP1'}`,
+      secretAccessInstructions: targetSpot.entranceInstructions || newBookingData.secretAccessInstructions || "🔐 Instruções de portão liberadas após a confirmação.",
+      vehicle: newBookingData.vehicle || { plate: 'ABC-1D23', brand: 'Carro', model: 'Passeio', type: 'Carro' },
       checkInTime: null,
+      check_in_time: null,
       checkOutTime: null,
-      ...newBookingData
+      check_out_time: null,
+      createdAt: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     };
 
     // Deduct credits if paid via VagaGo Wallet
@@ -805,16 +1080,36 @@ export const AppProvider = ({ children }) => {
 
     setBookings(prev => [completeBooking, ...prev]);
 
-    // Send notification to host (Locador)
+    // Persist to Supabase Cloud
+    publishBookingToSupabase(completeBooking);
+
+    // Send instant notification to host (Anfitrião)
     setNotifications(prev => [
       {
         id: `not_${Date.now()}`,
-        userId: newBookingData.ownerId,
-        type: 'new_booking_request',
-        title: requiresApproval ? '🔔 Nova Solicitação de Reserva Pendente!' : '🎉 Nova Reserva Confirmada!',
-        message: `${safeUser.name} reservou sua garagem "${newBookingData.spaceTitle}" para ${newBookingData.date} (${newBookingData.startTime} às ${newBookingData.endTime}). Valor líquido a receber: R$ ${ownerPayout.toFixed(2)}`,
+        userId: hostId,
+        userEmail: hostEmail,
+        targetUserId: hostId,
+        type: requiresApproval ? 'new_booking_request' : 'booking_confirmed',
+        title: requiresApproval ? '🔔 Nova Solicitação de Reserva Pendente!' : '🎉 Nova Reserva Recebida!',
+        message: `Nova reserva recebida! ${driverName} reservou sua vaga para ${newBookingData.date} às ${newBookingData.startTime}.`,
         read: false,
-        timestamp: 'Agora mesmo'
+        timestamp: 'Agora mesmo',
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: `not_${Date.now() + 1}`,
+        userId: driverId,
+        userEmail: driverEmail,
+        targetUserId: driverId,
+        type: requiresApproval ? 'booking_pending' : 'booking_confirmed',
+        title: requiresApproval ? '⏳ Reserva Solicitada com Sucesso!' : '✅ Reserva Confirmada!',
+        message: requiresApproval
+          ? `Sua solicitação de vaga em "${targetSpot.title || 'Garagem'}" foi enviada ao anfitrião ${hostName}.`
+          : `Sua vaga em "${targetSpot.title || 'Garagem'}" está confirmada para ${newBookingData.date} às ${newBookingData.startTime}!`,
+        read: false,
+        timestamp: 'Agora mesmo',
+        createdAt: new Date().toISOString()
       },
       ...prev
     ]);
@@ -822,9 +1117,8 @@ export const AppProvider = ({ children }) => {
     return completeBooking;
   };
 
-
-
   const addVehicle = (vehicleData) => {
+
     const safeUserId = currentUser?.id || 'usr_1';
     const newVeh = {
       id: `veh_${Date.now()}`,
@@ -1026,7 +1320,8 @@ export const AppProvider = ({ children }) => {
   const cancelBooking = (bookingId) => {
     const found = bookings.find(b => b.id === bookingId || b.bookingNumber === bookingId);
     if (found) {
-      setBookings(prev => prev.map(b => (b.id === bookingId || b.bookingNumber === bookingId) ? { ...b, bookingStatus: 'Cancelado' } : b));
+      setBookings(prev => prev.map(b => (b.id === bookingId || b.bookingNumber === bookingId) ? { ...b, bookingStatus: 'Cancelado', status: 'cancelled' } : b));
+      updateBookingStatusInSupabase(bookingId, 'Cancelado');
       // Refund credits
       if (currentUser && found.totalPrice) {
         const refundedCredits = (currentUser.credits || 0) + found.totalPrice;
@@ -1035,6 +1330,7 @@ export const AppProvider = ({ children }) => {
       }
     }
   };
+
 
   const depositWalletCredits = async (amount) => {
     if (currentUser && amount > 0) {
@@ -1061,11 +1357,23 @@ export const AppProvider = ({ children }) => {
     setCoupons(prev => [{ id: `cp_${Date.now()}`, status: 'Ativo', usageCount: 0, ...couponData }, ...prev]);
   };
 
+  const markNotificationAsRead = (notifId) => {
+    setNotifications(prev =>
+      prev.map(n => n.id === notifId ? { ...n, read: true } : n)
+    );
+  };
+
+  const markAllNotificationsAsRead = () => {
+    setNotifications(prev =>
+      prev.map(n => ({ ...n, read: true }))
+    );
+  };
 
   const openSpotDetails = (spot) => {
     setSelectedSpot(spot);
     setIsSpotDetailsOpen(true);
   };
+
 
   const openBookingFlow = (spot) => {
     if (!isAuthenticated) {
@@ -1080,19 +1388,10 @@ export const AppProvider = ({ children }) => {
     setIsBookingFlowOpen(true);
   };
 
-  const openLoginModal = () => {
-    setAuthModalMode('login');
-    setIsAuthModalOpen(true);
-  };
-
-  const openRegisterModal = () => {
-    setAuthModalMode('register');
-    setIsAuthModalOpen(true);
-  };
-
   const syncGlobalParkingSpaces = () => {
     setParkingSpaces([...getGlobalParkingSpaces()]);
   };
+
 
 
   return (
@@ -1116,6 +1415,8 @@ export const AppProvider = ({ children }) => {
       setAuthModalMode,
       openLoginModal,
       openRegisterModal,
+      suggestedAccountType,
+
 
 
       parkingSpaces: enrichedParkingSpaces,
@@ -1130,8 +1431,11 @@ export const AppProvider = ({ children }) => {
       favorites,
       toggleFavorite,
       notifications,
+      markNotificationAsRead,
+      markAllNotificationsAsRead,
       coupons,
       addCoupon,
+
       reviews,
       demandRegions,
       withdrawals,
@@ -1155,12 +1459,22 @@ export const AppProvider = ({ children }) => {
       setIsAddSpotModalOpen,
       isReferralModalOpen,
       setIsReferralModalOpen,
+      isEditProfileModalOpen,
+      setIsEditProfileModalOpen,
+      openEditProfileModal,
+      updateUserProfile,
       editingSpot,
       setEditingSpot,
+
       activeTab,
       setActiveTab,
+      isPageLoading,
       searchLocation,
       setSearchLocation: handleSearchLocationChange,
+      searchFilters,
+      setSearchFilters,
+
+
       checkAvailability,
       pauseParkingSpace,
       activateParkingSpace,

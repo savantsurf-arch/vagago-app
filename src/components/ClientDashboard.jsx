@@ -30,7 +30,8 @@ import { AddVehicleModal } from './AddVehicleModal';
 import { HostChatModal } from './HostChatModal';
 import { ReviewModal } from './ReviewModal';
 import { GateOpenerModal } from './GateOpenerModal';
-import { MessageSquare, Star, Zap } from 'lucide-react';
+import { MessageSquare, Star, Zap, UserCog } from 'lucide-react';
+
 
 export const ClientDashboard = ({
   onOpenLogisticsTracker = () => {},
@@ -41,6 +42,7 @@ export const ClientDashboard = ({
     currentUser,
     isAuthenticated,
     openLoginModal,
+    openEditProfileModal,
     bookings = [],
     cancelBooking,
     vehicles = [],
@@ -52,9 +54,11 @@ export const ClientDashboard = ({
     setIsScannerOpen
   } = useApp();
 
-  const [activeTabLocal, setActiveTabLocal] = useState('reservas'); // reservas, veiculos, carteira, perfil
+
+  const [clientTab, setClientTab] = useState('reservas'); // reservas, veiculos, carteira, perfil
   const [selectedVehicle, setSelectedVehicle] = useState(null);
-  const [isAddVehicleOpen, setIsAddVehicleOpen] = useState(false);
+  const [isAddVehicleModalOpen, setIsAddVehicleModalOpen] = useState(false);
+  const [selectedBookingForQR, setSelectedBookingForQR] = useState(null);
   const [isReviewOpen, setIsReviewOpen] = useState(false);
   const [reviewBooking, setReviewBooking] = useState(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -62,6 +66,7 @@ export const ClientDashboard = ({
   const [shareNotice, setShareNotice] = useState('');
   const [isGateOpen, setIsGateOpen] = useState(false);
   const [gateBooking, setGateBooking] = useState(null);
+
 
   if (!isAuthenticated) {
     return (
@@ -90,14 +95,24 @@ export const ClientDashboard = ({
 
 
   const safeBookings = Array.isArray(bookings) ? bookings : [];
-  const safeFavorites = Array.isArray(favorites) ? favorites : [];
+  const clientBookings = safeBookings.filter(b => b && (
+    b.userId === safeUser.id || 
+    b.user_id === safeUser.id || 
+    b.driverId === safeUser.id || 
+    b.driver_id === safeUser.id || 
+    (b.userEmail && safeUser.email && b.userEmail.toLowerCase() === safeUser.email.toLowerCase()) ||
+    (b.user_email && safeUser.email && b.user_email.toLowerCase() === safeUser.email.toLowerCase()) ||
+    (b.driverEmail && safeUser.email && b.driverEmail.toLowerCase() === safeUser.email.toLowerCase()) ||
+    (b.driver_email && safeUser.email && b.driver_email.toLowerCase() === safeUser.email.toLowerCase())
+  ));
 
-  const clientBookings = safeBookings.filter(b => b && (b.userId === safeUser.id || b.userEmail === safeUser.email));
-  const activeBookings = clientBookings.filter(b => b && b.bookingStatus !== 'Cancelado');
-  const upcomingBooking = activeBookings.find(b => b && (b.bookingStatus === 'Confirmado' || b.bookingStatus === 'Em Andamento'));
+  const safeFavorites = Array.isArray(favorites) ? favorites : [];
+  const activeBookings = clientBookings.filter(b => b && b.bookingStatus !== 'Cancelado' && b.status !== 'cancelled');
+  const upcomingBooking = activeBookings.find(b => b && (b.bookingStatus === 'Confirmado' || b.bookingStatus === 'Em Andamento' || b.status === 'confirmed'));
   
-  const totalSpent = activeBookings.reduce((sum, b) => sum + Number(b.totalPrice || 0), 0);
+  const totalSpent = activeBookings.reduce((sum, b) => sum + Number(b.totalPrice || b.amount || 0), 0);
   const favoriteSpots = parkingSpaces.filter(s => s && safeFavorites.includes(s.id));
+
 
   const handleShareBooking = (booking) => {
     if (!booking) return;
@@ -121,17 +136,37 @@ export const ClientDashboard = ({
       {/* Header Greeting */}
       <div className="bg-gradient-to-r from-sky-600 to-sky-700 text-white rounded-3xl p-6 sm:p-8 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <img
-            src={safeUser.avatar}
-            alt={safeUser.name}
-            className="w-16 h-16 rounded-full object-cover ring-4 ring-white/20 shadow-md"
-          />
+          <div className="relative group cursor-pointer" onClick={openEditProfileModal}>
+            <img
+              src={safeUser.avatar}
+              alt={safeUser.name}
+              className="w-16 h-16 rounded-full object-cover ring-4 ring-white/20 shadow-md group-hover:ring-white/50 transition"
+            />
+            <div className="absolute inset-0 bg-slate-900/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+              <UserCog className="w-5 h-5 text-white" />
+            </div>
+          </div>
           <div>
-            <span className="text-xs font-bold text-sky-200 uppercase tracking-wider">Painel do Cliente</span>
-            <h1 className="text-2xl sm:text-3xl font-black">Olá, {safeUser.name}!</h1>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-sky-200 uppercase tracking-wider">Painel do Motorista</span>
+              <button
+                type="button"
+                onClick={openEditProfileModal}
+                className="bg-white/15 hover:bg-white/25 text-white text-[11px] font-extrabold px-2.5 py-0.5 rounded-lg border border-white/20 transition flex items-center gap-1 cursor-pointer"
+                title="Editar Nome, Foto, Telefone e Bio"
+              >
+                <UserCog className="w-3.5 h-3.5 text-sky-200" />
+                <span>Editar Perfil</span>
+              </button>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-black mt-0.5">Olá, {safeUser.name}!</h1>
             <p className="text-xs text-sky-100 mt-0.5">{safeUser.email} • {safeUser.phone}</p>
+            {safeUser.bio && (
+              <p className="text-xs text-sky-100/90 mt-1 italic max-w-md line-clamp-2">"{safeUser.bio}"</p>
+            )}
           </div>
         </div>
+
 
         <div className="flex items-center gap-2 w-full md:w-auto">
           {/* Wallet Banner */}
@@ -257,28 +292,39 @@ export const ClientDashboard = ({
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-xs font-black bg-slate-100 text-slate-800 px-2 py-0.5 rounded">
-                      {b.bookingNumber}
+                      #{b.bookingNumber}
                     </span>
                     <span className={`text-[11px] font-extrabold px-2.5 py-0.5 rounded-full uppercase ${
-                      b.bookingStatus === 'Confirmado' ? 'bg-emerald-100 text-emerald-800' :
-                      b.bookingStatus === 'Em Andamento' ? 'bg-amber-100 text-amber-800' :
-                      b.bookingStatus === 'Cancelado' ? 'bg-rose-100 text-rose-800' : 'bg-slate-100 text-slate-600'
+                      b.bookingStatus === 'Confirmado' || b.status === 'confirmed' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
+                      b.bookingStatus === 'Em Andamento' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+                      b.bookingStatus === 'Aguardando Aprovação' || b.status === 'pending' ? 'bg-amber-100 text-amber-900 border border-amber-300' :
+                      b.bookingStatus === 'Cancelado' || b.status === 'cancelled' ? 'bg-rose-100 text-rose-800 border border-rose-200' : 'bg-slate-100 text-slate-600'
                     }`}>
-                      {b.bookingStatus}
+                      {b.bookingStatus || (b.status === 'confirmed' ? 'Confirmado' : 'Aguardando Aprovação')}
+                    </span>
+                    <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200">
+                      R$ {Number(b.totalPrice || b.amount || 10).toFixed(2)}
                     </span>
                   </div>
 
                   <h4 className="font-extrabold text-slate-900 text-base">{b.spaceTitle}</h4>
-                  <p className="text-xs text-slate-500">{b.spaceAddress}</p>
+                  <p className="text-xs text-slate-500">📍 {b.spaceAddress}</p>
                   
                   <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600 pt-1">
-                    <span>Data: <strong>{b.date}</strong></span>
+                    <span>Anfitrião: <strong className="text-slate-800">{b.ownerName || b.hostName || 'Anfitrião VagaGo'}</strong></span>
+                    <span>•</span>
+                    <span>Data: <strong>{b.date || b.startDate}</strong></span>
                     <span>•</span>
                     <span>Horário: <strong>{b.startTime} às {b.endTime}</strong></span>
-                    <span>•</span>
-                    <span>Veículo: <strong>{b.vehicle.brand} ({b.vehicle.plate})</strong></span>
+                    {b.vehicle && (
+                      <>
+                        <span>•</span>
+                        <span>Veículo: <strong>{b.vehicle.brand} ({b.vehicle.plate})</strong></span>
+                      </>
+                    )}
                   </div>
                 </div>
+
 
                 <div className="flex flex-wrap items-center gap-2 self-end md:self-center shrink-0">
                   {b.bookingStatus !== 'Cancelado' && (
@@ -296,14 +342,14 @@ export const ClientDashboard = ({
 
                       <button
                         type="button"
-                        onClick={() => { setChatSpot({ title: b.spaceTitle, ownerName: b.ownerName || 'Anfitrião VagaGo', ownerPhone: b.ownerPhone || '(73) 99123-4567' }); setIsChatOpen(true); }}
+                        onClick={() => { setChatSpot(b); setIsChatOpen(true); }}
                         className="bg-sky-50 hover:bg-sky-100 text-sky-700 text-xs font-bold px-3 py-2 rounded-xl flex items-center gap-1.5 transition border border-sky-200 cursor-pointer"
-                        title="Falar com o Anfitrião no Chat ou WhatsApp"
+                        title="Falar com o Anfitrião com moderação Vagago Concierge"
                       >
-
                         <MessageSquare className="w-3.5 h-3.5 text-sky-600" />
                         <span>Chat Anfitrião</span>
                       </button>
+
 
                       <button
                         type="button"
@@ -337,13 +383,14 @@ export const ClientDashboard = ({
 
                       <button
                         type="button"
-                        onClick={() => onOpenLogisticsTracker(b)}
-                        className="bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold px-3 py-2 rounded-xl flex items-center gap-1.5 transition shadow-xs"
-                        title="Acompanhar Rota e ETA no Google Maps"
+                        onClick={() => openExternalNavigation(b.lat || -14.7966, b.lng || -39.2789, b.spaceAddress || b.spaceTitle)}
+                        className="bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold px-3 py-2 rounded-xl flex items-center gap-1.5 transition shadow-xs cursor-pointer"
+                        title="Abrir rota no Google Maps ou Waze"
                       >
                         <Navigation className="w-4 h-4 text-sky-200" />
-                        <span>Acompanhar Trajeto</span>
+                        <span>Abrir no GPS (Maps)</span>
                       </button>
+
 
                       <button
                         type="button"
@@ -478,8 +525,9 @@ export const ClientDashboard = ({
             </div>
 
             <p className="text-[11px] text-slate-500">
-              Veículo autorizado: <strong className="text-slate-800">{selectedBookingForQR.vehicle.plate}</strong>
+              Veículo autorizado: <strong className="text-slate-800">{selectedBookingForQR.vehicle?.plate || 'Veículo Registrado'}</strong>
             </p>
+
 
             <button
               type="button"
@@ -499,7 +547,11 @@ export const ClientDashboard = ({
         spot={chatSpot}
         ownerName={chatSpot?.ownerName}
         ownerPhone={chatSpot?.ownerPhone}
+        booking={chatSpot}
+        onOpenExtendModal={onOpenExtendModal}
+        onOpenGateModal={(b) => { setGateBooking(b); setIsGateOpen(true); }}
       />
+
 
       <ReviewModal
         isOpen={isReviewOpen}

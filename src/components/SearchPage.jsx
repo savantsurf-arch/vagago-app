@@ -46,35 +46,67 @@ export const SearchPage = () => {
   const [sharingSpot, setSharingSpot] = useState(null);
   const safeFilters = searchFilters || {};
 
-  // Filter application logic including Distance Radius & Access Hours
+  // Filter application logic including Location, Distance Radius, Access Hours, Price, Features, and Vehicle
   const filteredSpots = (parkingSpaces || []).filter(spot => {
     if (!spot) return false;
     if (spot.status === 'Pausada' || spot.isAvailable === false) return false;
 
-    // Distance radius filter
-    if (distanceRadius === '500m' && spot.calculatedDistKm > 0.5) return false;
-    if (distanceRadius === '1km' && spot.calculatedDistKm > 1.0) return false;
-    if (distanceRadius === '2km' && spot.calculatedDistKm > 2.0) return false;
-    if (distanceRadius === '5km' && spot.calculatedDistKm > 5.0) return false;
+    // 1. Text Location Search Filter (case/accent insensitive)
+    if (searchLocation && searchLocation.trim()) {
+      const cleanQuery = searchLocation.toLowerCase().replace(/, itabuna - ba/gi, '').replace(/itabuna/gi, '').trim();
+      if (cleanQuery.length > 1) {
+        const spotText = `${spot.title || ''} ${spot.address || ''} ${spot.neighborhood || ''} ${spot.description || ''}`.toLowerCase();
+        // Check if spot matches query terms
+        const queryTerms = cleanQuery.split(/[\s-]+/).filter(t => t.length > 1);
+        const matchesQuery = queryTerms.some(term => spotText.includes(term));
+        if (!matchesQuery) return false;
+      }
+    }
 
-    // Access Hours Filter
-    if (safeFilters.accessHours === '24H' && !spot.is24h && !spot.availableHours?.includes('24')) return false;
-    if (safeFilters.accessHours === 'COMMERCIAL' && (spot.is24h || spot.availableHours?.includes('24'))) return false;
+    // 2. Distance radius filter
+    const dist = spot.calculatedDistKm ?? 0.5;
+    if (distanceRadius === '500m' && dist > 0.5) return false;
+    if (distanceRadius === '1km' && dist > 1.0) return false;
+    if (distanceRadius === '2km' && dist > 2.0) return false;
+    if (distanceRadius === '5km' && dist > 5.0) return false;
 
-    // Price filter
-    if (safeFilters.maxPrice && spot.priceHourly > safeFilters.maxPrice) return false;
+    // 3. Access Hours Filter
+    const is24hSpot = spot.is24h === true || spot.availableHours?.includes('24') || (spot.features || []).some(f => f.toLowerCase().includes('24'));
+    if (safeFilters.accessHours === '24H' && !is24hSpot) return false;
+    if (safeFilters.accessHours === 'COMMERCIAL' && is24hSpot) return false;
+
+    // 4. Price filter
+    const spotPrice = Number(spot.priceHourly || 6);
+    if (safeFilters.maxPrice && spotPrice > safeFilters.maxPrice) return false;
     
-    // Feature filters
-    if (safeFilters.coveredOnly && !spot.isCovered) return false;
-    if (safeFilters.hasCamera && !spot.features?.includes('Câmeras 24h')) return false;
-    if (safeFilters.hasEVCharger && !spot.features?.some(f => f.includes('Carregador') || f.includes('EV'))) return false;
-    if (safeFilters.hasGate && !spot.features?.includes('Portão Eletrônico')) return false;
+    // 5. Feature filters (Robust string checks)
+    const featuresList = (spot.features || []).map(f => (f || '').toLowerCase());
+    
+    if (safeFilters.coveredOnly && !spot.isCovered && !featuresList.some(f => f.includes('cobert'))) return false;
+    if (safeFilters.hasCamera && !featuresList.some(f => f.includes('câmera') || f.includes('camera'))) return false;
+    if (safeFilters.hasEVCharger && !featuresList.some(f => f.includes('elétric') || f.includes('eletric') || f.includes('ev') || f.includes('carregador'))) return false;
+    if (safeFilters.hasGate && !featuresList.some(f => f.includes('portão') || f.includes('portao') || f.includes('tag') || f.includes('eletrônic') || f.includes('eletronic'))) return false;
 
-    // Vehicle compatibility
-    if (safeFilters.vehicleType && safeFilters.vehicleType !== 'Todos' && !spot.allowedVehicles?.includes(safeFilters.vehicleType)) return false;
+    // 6. Vehicle compatibility filter
+    if (safeFilters.vehicleType && safeFilters.vehicleType !== 'Todos') {
+      const targetType = safeFilters.vehicleType.toLowerCase();
+      const allowedList = (spot.allowedVehicles || ['Todos', 'Carro', 'Moto', 'SUV']).map(v => (v || '').toLowerCase());
+      
+      const isCompatible = allowedList.some(v => {
+        if (v.includes('todos')) return true;
+        if (targetType === 'carro' && (v.includes('carro') || v.includes('sedan') || v.includes('hatch') || v.includes('pequeno'))) return true;
+        if (targetType === 'moto' && v.includes('moto')) return true;
+        if (targetType === 'suv' && (v.includes('suv') || v.includes('caminhonete') || v.includes('pickup'))) return true;
+        if (targetType === 'caminhonete' && (v.includes('caminhonete') || v.includes('pickup') || v.includes('suv'))) return true;
+        return v.includes(targetType);
+      });
+
+      if (!isCompatible) return false;
+    }
 
     return true;
   });
+
 
 
   // Sort logic for "Estacionar Perto de Mim"
@@ -319,13 +351,14 @@ export const SearchPage = () => {
             <input
               type="range"
               min="3"
-              max="30"
+              max="50"
               step="1"
-              value={safeFilters.maxPrice || 30}
+              value={safeFilters.maxPrice || 50}
               onChange={(e) => setSearchFilters({ ...safeFilters, maxPrice: Number(e.target.value) })}
-              className="w-full accent-sky-600"
+              className="w-full accent-sky-600 cursor-pointer"
             />
           </div>
+
 
           {/* Amenities & Security Toggles */}
           <div className="space-y-2 pt-2 border-t border-slate-100 text-xs font-semibold text-slate-700">

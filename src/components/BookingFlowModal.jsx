@@ -32,8 +32,11 @@ export const BookingFlowModal = () => {
     createBooking,
     checkAvailability,
     coupons = [],
-    currentUser
+    currentUser,
+    setActiveTab,
+    switchRole
   } = useApp();
+
 
   const safeUser = currentUser || { credits: 20 };
   const safeVehicles = Array.isArray(vehicles) ? vehicles : [];
@@ -123,9 +126,17 @@ export const BookingFlowModal = () => {
       spaceId: selectedSpot.id,
       spaceTitle: selectedSpot.title,
       spaceAddress: selectedSpot.address,
-      ownerId: selectedSpot.ownerId,
-      ownerName: selectedSpot.ownerName,
+      ownerId: selectedSpot.ownerId || selectedSpot.owner_id,
+      ownerName: selectedSpot.ownerName || selectedSpot.owner_name,
+      ownerEmail: selectedSpot.ownerEmail || selectedSpot.owner_email,
+      ownerPhone: selectedSpot.ownerPhone || selectedSpot.owner_phone,
+      ownerAvatar: selectedSpot.ownerAvatar || selectedSpot.owner_avatar,
+      hostId: selectedSpot.ownerId || selectedSpot.owner_id,
+      hostName: selectedSpot.ownerName || selectedSpot.owner_name,
+      hostEmail: selectedSpot.ownerEmail || selectedSpot.owner_email,
+      hostPhone: selectedSpot.ownerPhone || selectedSpot.owner_phone,
       date: selectedDate,
+      startDate: selectedDate,
       startTime,
       endTime,
       totalHours,
@@ -133,9 +144,10 @@ export const BookingFlowModal = () => {
       discountAmount: discount,
       totalPrice,
       paymentMethod,
-      secretAccessInstructions: selectedSpot.secretAccessInstructions || "🔐 Instruções de portão liberadas após a confirmação.",
+      secretAccessInstructions: selectedSpot.entranceInstructions || selectedSpot.secretAccessInstructions || "🔐 Instruções de portão liberadas após a confirmação.",
       vehicle: vehicleData
     };
+
 
     try {
       const result = typeof createBooking === 'function' ? createBooking(bookingPayload) : {
@@ -629,8 +641,9 @@ export const BookingFlowModal = () => {
                 </div>
                 <div className="flex justify-between border-b border-slate-200 pb-2">
                   <span className="text-slate-500">Veículo & Placa:</span>
-                  <span className="font-bold text-slate-900">{completedBooking.vehicle.brand} {completedBooking.vehicle.model} ({completedBooking.vehicle.plate})</span>
+                  <span className="font-bold text-slate-900">{completedBooking.vehicle?.brand || 'Veículo'} {completedBooking.vehicle?.model || ''} ({completedBooking.vehicle?.plate || 'Placa'})</span>
                 </div>
+
                 <div className="flex justify-between">
                   <span className="text-slate-500">Valor Pago ({completedBooking.paymentMethod}):</span>
                   <span className="font-extrabold text-emerald-600 text-sm">R$ {completedBooking.totalPrice.toFixed(2)}</span>
@@ -641,11 +654,19 @@ export const BookingFlowModal = () => {
                 onClick={() => {
                   setIsBookingFlowOpen(false);
                   setStep(1);
+                  if (typeof switchRole === 'function') {
+                    switchRole('CLIENTE');
+                  }
+                  if (typeof setActiveTab === 'function') {
+                    setActiveTab('client_dashboard');
+                  }
                 }}
-                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm py-3 px-4 rounded-2xl transition"
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm py-3.5 px-4 rounded-2xl transition shadow-lg cursor-pointer flex items-center justify-center gap-2"
               >
-                Concluir e Ver Minhas Reservas
+                <span>Concluir e Ver Minhas Reservas</span>
+                <ArrowRight className="w-4 h-4" />
               </button>
+
 
             </div>
           )}

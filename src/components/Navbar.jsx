@@ -22,8 +22,11 @@ import {
   LogOut,
   LogIn,
   UserPlus,
-  RotateCcw
+  RotateCcw,
+  Home,
+  UserCog
 } from 'lucide-react';
+
 
 export const Navbar = ({ onOpenDepositModal = () => {} }) => {
 
@@ -37,6 +40,7 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
     setIsAuthModalOpen,
     openLoginModal,
     openRegisterModal,
+    openEditProfileModal,
     notifications = [],
     favorites = [],
     setIsReferralModalOpen,
@@ -45,231 +49,240 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
     syncGlobalParkingSpaces
   } = useApp();
 
+
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const safeNotifications = Array.isArray(notifications) ? notifications : [];
   const safeFavorites = Array.isArray(favorites) ? favorites : [];
-  const unreadCount = safeNotifications.filter(n => n && !n.read).length;
+  const safeUser = currentUser || {};
+  const myNotifications = safeNotifications.filter(n => {
+    if (!n) return false;
+    if (!n.userId && !n.userEmail && !n.targetUserId) return true;
+    return (
+      (n.userId && (n.userId === safeUser.id || n.userId === safeUser.email)) ||
+      (n.targetUserId && n.targetUserId === safeUser.id) ||
+      (n.userEmail && safeUser.email && n.userEmail.toLowerCase() === safeUser.email.toLowerCase())
+    );
+  });
+  const unreadCount = myNotifications.filter(n => !n.read).length;
+
 
 
   return (
     <>
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 gap-4">
+          <div className="flex items-center justify-between h-20 gap-4">
             
-            {/* Logo & Slogan */}
-            <div className="flex items-center gap-6">
+            {/* Left side: Logo + Navigation Links Aligned Immediately Next to Logo */}
+            <div className="flex items-center gap-4 md:gap-6">
+              
+              {/* Horizontal Logo (Enlarged) */}
               <button
+                type="button"
                 onClick={() => setActiveTab('landing')}
-                className="flex items-center gap-3 group text-left focus:outline-none"
+                className="flex items-center group text-left focus:outline-none cursor-pointer shrink-0"
               >
                 <img
                   src="/logo-vagago.png"
-                  alt="VagaGo Logo"
-                  className="h-10 w-auto object-contain transition transform group-hover:scale-105"
+                  alt="VagaGo"
+                  className="h-11 sm:h-13 md:h-14 w-auto object-contain transition transform group-hover:scale-105"
                 />
               </button>
 
-              {/* Location indicator desktop & Live Sync Button */}
-              <div className="hidden lg:flex items-center gap-2">
-                <div className="flex items-center gap-2 bg-emerald-50 hover:bg-emerald-100 px-3.5 py-1.5 rounded-full border border-emerald-200 text-xs font-bold text-emerald-900 transition cursor-pointer">
-                  <MapPin className="w-3.5 h-3.5 text-emerald-600" />
-                  <span className="truncate max-w-[220px]">📍 {searchLocation || "Itabuna, BA"} (Cidade Piloto 🚀)</span>
-                </div>
 
-                <button
-                  onClick={syncGlobalParkingSpaces}
-                  className="bg-sky-50 hover:bg-sky-100 text-sky-700 px-3 py-1.5 rounded-full border border-sky-200 text-xs font-extrabold flex items-center gap-1 transition shadow-2xs"
-                  title="Sincronizar Vagas em Tempo Real entre Dispositivos"
-                >
-                  <RotateCcw className="w-3.5 h-3.5 text-sky-600" />
-                  <span>Sincronizar Vagas</span>
-                </button>
-              </div>
 
+
+              {/* Navigation links by Authentication & Role - Aligned to Left */}
+              <nav className="hidden md:flex items-center space-x-1 lg:space-x-2 text-xs font-semibold">
+                
+                {/* 1. Unauthenticated Visitor Navigation */}
+                {!isAuthenticated && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('landing')}
+                      className={`px-3 py-2 rounded-xl transition cursor-pointer ${
+                        activeTab === 'landing' ? 'bg-sky-50 text-sky-700 font-bold' : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      Início
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('search')}
+                      className={`px-3 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
+                        activeTab === 'search' ? 'bg-sky-50 text-sky-700 font-bold' : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      <Search className="w-3.5 h-3.5 text-sky-600" />
+                      Encontrar vaga
+                    </button>
+
+                    {/* Dynamic Host vs Driver Button */}
+                    {activeTab === 'host_landing' ? (
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('landing')}
+                        className="bg-sky-50 hover:bg-sky-100 text-sky-800 font-extrabold px-3.5 py-1.5 rounded-xl border border-sky-200 transition flex items-center gap-1.5 ml-1 cursor-pointer"
+                        title="Ir para a página de motoristas buscando vagas"
+                      >
+                        <Car className="w-3.5 h-3.5 text-sky-600" />
+                        <span>🚗 Sou Motorista</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('host_landing')}
+                        className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-extrabold px-3.5 py-1.5 rounded-xl border border-emerald-200 transition flex items-center gap-1.5 ml-1 cursor-pointer"
+                        title="Alugue sua garagem parada e ganhe renda extra"
+                      >
+                        <Home className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>🏠 Seja um Anfitrião</span>
+                      </button>
+                    )}
+                  </>
+                )}
+
+                {/* 2. Authenticated DRIVER (Cliente) Navigation */}
+                {isAuthenticated && activeRole === 'CLIENTE' && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('landing')}
+                      className={`px-3 py-2 rounded-xl transition cursor-pointer ${
+                        activeTab === 'landing' ? 'bg-sky-50 text-sky-700 font-bold' : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      Início
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('search')}
+                      className={`px-3 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
+                        activeTab === 'search' ? 'bg-sky-50 text-sky-700 font-bold' : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      <Search className="w-3.5 h-3.5 text-sky-600" />
+                      Encontrar vaga
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('client_dashboard')}
+                      className={`px-3 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
+                        activeTab === 'client_dashboard' ? 'bg-sky-50 text-sky-700 font-bold' : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      <Calendar className="w-3.5 h-3.5 text-sky-600" />
+                      Minhas reservas
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('favorites')}
+                      className={`px-3 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
+                        activeTab === 'favorites' ? 'bg-sky-50 text-sky-700 font-bold' : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      <Heart className="w-3.5 h-3.5 text-rose-500" />
+                      Favoritos ({safeFavorites.length})
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        switchRole('PROPRIETÁRIO');
+                        setActiveTab('owner_dashboard');
+                      }}
+                      className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold px-3 py-1.5 rounded-xl border border-emerald-200 transition flex items-center gap-1.5 ml-1 cursor-pointer"
+                      title="Acessar painel para alugar sua garagem e gerar renda"
+                    >
+                      <Home className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>🏠 Modo Anfitrião</span>
+                    </button>
+                  </>
+                )}
+
+                {/* 3. Authenticated HOST (Proprietário) Navigation */}
+                {isAuthenticated && activeRole === 'PROPRIETÁRIO' && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('owner_dashboard')}
+                      className={`px-3 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
+                        activeTab === 'owner_dashboard' ? 'bg-emerald-50 text-emerald-700 font-bold' : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      <LayoutDashboard className="w-3.5 h-3.5 text-emerald-600" />
+                      Painel do Anfitrião
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('owner_reservas')}
+                      className={`px-3 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
+                        activeTab === 'owner_reservas' ? 'bg-emerald-50 text-emerald-700 font-bold' : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+                      Reservas Recebidas
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('owner_spots')}
+                      className={`px-3 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
+                        activeTab === 'owner_spots' ? 'bg-emerald-50 text-emerald-700 font-bold' : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      <Car className="w-3.5 h-3.5 text-emerald-600" />
+                      Minhas Garagens
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('owner_finance')}
+                      className={`px-3 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
+                        activeTab === 'owner_finance' ? 'bg-emerald-50 text-emerald-700 font-bold' : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
+                      Financeiro & Saques
+                    </button>
+
+                  </>
+                )}
+
+
+                {/* 4. Authenticated ADMIN Navigation */}
+                {isAuthenticated && activeRole === 'ADMINISTRADOR' && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('admin_dashboard')}
+                      className={`px-3 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
+                        activeTab === 'admin_dashboard' ? 'bg-purple-50 text-purple-700 font-bold' : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
+                      Painel Admin Global
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        switchRole('CLIENTE');
+                        setActiveTab('landing');
+                      }}
+                      className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>Ver como Cliente</span>
+                    </button>
+                  </>
+                )}
+
+              </nav>
 
             </div>
 
-            {/* Navigation links by Authentication & Role */}
-            <nav className="hidden md:flex items-center space-x-1 lg:space-x-2 text-xs font-semibold">
-              
-              {/* 1. Unauthenticated Visitor Navigation (Default Public View) */}
-              {!isAuthenticated && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('landing')}
-                    className={`px-3 py-2 rounded-xl transition cursor-pointer ${
-                      activeTab === 'landing' ? 'bg-sky-50 text-sky-700 font-bold' : 'text-slate-600 hover:bg-slate-100'
-                    }`}
-                  >
-                    Início
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('search')}
-                    className={`px-3 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
-                      activeTab === 'search' ? 'bg-sky-50 text-sky-700 font-bold' : 'text-slate-600 hover:bg-slate-100'
-                    }`}
-                  >
-                    <Search className="w-3.5 h-3.5 text-sky-600" />
-                    Encontrar vaga
-                  </button>
-                  
-                  {/* Highlighted Host Landing Link */}
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('host_landing')}
-                    className={`px-3.5 py-1.5 rounded-xl border transition flex items-center gap-1.5 ml-2 cursor-pointer ${
-                      activeTab === 'host_landing'
-                        ? 'bg-emerald-600 text-white font-extrabold border-emerald-600 shadow-xs'
-                        : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold border-emerald-200'
-                    }`}
-                    title="Alugue sua garagem parada e ganhe renda extra"
-                  >
-                    <Car className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Seja um Anfitrião</span>
-                  </button>
-                </>
-              )}
-
-              {/* 2. Authenticated DRIVER (Cliente) Navigation */}
-              {isAuthenticated && activeRole === 'CLIENTE' && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('landing')}
-                    className={`px-3 py-2 rounded-xl transition cursor-pointer ${
-                      activeTab === 'landing' ? 'bg-sky-50 text-sky-700 font-bold' : 'text-slate-600 hover:bg-slate-100'
-                    }`}
-                  >
-                    Início
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('search')}
-                    className={`px-3 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
-                      activeTab === 'search' ? 'bg-sky-50 text-sky-700 font-bold' : 'text-slate-600 hover:bg-slate-100'
-                    }`}
-                  >
-                    <Search className="w-3.5 h-3.5 text-sky-600" />
-                    Encontrar vaga
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('client_dashboard')}
-                    className={`px-3 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
-                      activeTab === 'client_dashboard' ? 'bg-sky-50 text-sky-700 font-bold' : 'text-slate-600 hover:bg-slate-100'
-                    }`}
-                  >
-                    <Calendar className="w-3.5 h-3.5 text-sky-600" />
-                    Minhas reservas
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('favorites')}
-                    className={`px-3 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
-                      activeTab === 'favorites' ? 'bg-sky-50 text-sky-700 font-bold' : 'text-slate-600 hover:bg-slate-100'
-                    }`}
-                  >
-                    <Heart className="w-3.5 h-3.5 text-rose-500" />
-                    Favoritos ({safeFavorites.length})
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      switchRole('PROPRIETÁRIO');
-                      setActiveTab('owner_dashboard');
-                    }}
-                    className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold px-3 py-1.5 rounded-xl border border-emerald-200 transition flex items-center gap-1.5 ml-1 cursor-pointer"
-                    title="Acessar painel para alugar sua garagem e gerar renda"
-                  >
-                    <LayoutDashboard className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Modo Anfitrião</span>
-                  </button>
-                </>
-              )}
-
-              {/* 3. Authenticated HOST (Proprietário) Navigation */}
-              {isAuthenticated && activeRole === 'PROPRIETÁRIO' && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('owner_dashboard')}
-                    className={`px-3 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
-                      activeTab === 'owner_dashboard' ? 'bg-emerald-50 text-emerald-700 font-bold' : 'text-slate-600 hover:bg-slate-100'
-                    }`}
-                  >
-                    <LayoutDashboard className="w-3.5 h-3.5 text-emerald-600" />
-                    Painel do Anfitrião
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('owner_spots')}
-                    className={`px-3 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
-                      activeTab === 'owner_spots' ? 'bg-emerald-50 text-emerald-700 font-bold' : 'text-slate-600 hover:bg-slate-100'
-                    }`}
-                  >
-                    <Car className="w-3.5 h-3.5 text-emerald-600" />
-                    Minhas Garagens
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('owner_finance')}
-                    className={`px-3 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
-                      activeTab === 'owner_finance' ? 'bg-emerald-50 text-emerald-700 font-bold' : 'text-slate-600 hover:bg-slate-100'
-                    }`}
-                  >
-                    <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
-                    Financeiro & Saques
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      switchRole('CLIENTE');
-                      setActiveTab('landing');
-                    }}
-                    className="bg-sky-50 hover:bg-sky-100 text-sky-800 font-bold px-3 py-1.5 rounded-xl border border-sky-200 transition flex items-center gap-1.5 ml-1 cursor-pointer"
-                    title="Trocar para visão de motorista buscando vagas"
-                  >
-                    <Search className="w-3.5 h-3.5 text-sky-600" />
-                    <span>Modo Motorista</span>
-                  </button>
-                </>
-              )}
-
-              {/* 4. Authenticated ADMIN Navigation */}
-              {isAuthenticated && activeRole === 'ADMINISTRADOR' && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('admin_dashboard')}
-                    className={`px-3 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer ${
-                      activeTab === 'admin_dashboard' ? 'bg-purple-50 text-purple-700 font-bold' : 'text-slate-600 hover:bg-slate-100'
-                    }`}
-                  >
-                    <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
-                    Painel Admin Global
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      switchRole('CLIENTE');
-                      setActiveTab('landing');
-                    }}
-                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>Ver como Cliente</span>
-                  </button>
-                </>
-              )}
-
-            </nav>
 
             {/* Right side Actions & User */}
             <div className="flex items-center gap-3">
@@ -302,20 +315,30 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
                     <span>R$ {Number(currentUser?.credits || 0).toFixed(2)}</span>
                   </button>
 
-                  <img
-                    src={currentUser?.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=250&q=80"}
-                    alt={currentUser?.name || "Usuário"}
-                    className="w-8 h-8 rounded-full object-cover ring-2 ring-sky-500/20"
-                  />
-                  <div className="hidden sm:block text-left">
-                    <div className="text-xs font-bold text-slate-800 leading-tight">{currentUser?.name || "Usuário"}</div>
-                    <div className="text-[10px] font-semibold text-slate-500 flex items-center gap-1">
-                      <span className={`w-1.5 h-1.5 rounded-full ${
-                        activeRole === 'CLIENTE' ? 'bg-sky-500' : activeRole === 'PROPRIETÁRIO' ? 'bg-emerald-500' : 'bg-purple-500'
-                      }`} />
-                      {activeRole === 'PROPRIETÁRIO' ? 'Anfitrião' : activeRole === 'CLIENTE' ? 'Motorista' : 'Admin'}
+                  <button
+                    type="button"
+                    onClick={openEditProfileModal}
+                    className="flex items-center gap-2 group p-1 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+                    title="Editar Meu Perfil (Nome, Foto, Telefone e Bio)"
+                  >
+                    <img
+                      src={currentUser?.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=250&q=80"}
+                      alt={currentUser?.name || "Usuário"}
+                      className="w-8 h-8 rounded-full object-cover ring-2 ring-sky-500/20 group-hover:ring-sky-500 transition"
+                    />
+                    <div className="hidden sm:block text-left">
+                      <div className="text-xs font-bold text-slate-800 leading-tight flex items-center gap-1">
+                        <span>{currentUser?.name || "Usuário"}</span>
+                        <UserCog className="w-3 h-3 text-slate-400 group-hover:text-sky-600 transition" />
+                      </div>
+                      <div className="text-[10px] font-semibold text-slate-500 flex items-center gap-1">
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          activeRole === 'CLIENTE' ? 'bg-sky-500' : activeRole === 'PROPRIETÁRIO' ? 'bg-emerald-500' : 'bg-purple-500'
+                        }`} />
+                        {activeRole === 'PROPRIETÁRIO' ? 'Anfitrião' : activeRole === 'CLIENTE' ? 'Motorista' : 'Admin'}
+                      </div>
                     </div>
-                  </div>
+                  </button>
 
                   <button
                     type="button"
@@ -326,6 +349,7 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
                     <LogOut className="w-4 h-4" />
                   </button>
                 </div>
+
 
               ) : (
                 <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
@@ -382,15 +406,27 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
                   onClick={() => { setActiveTab('search'); setIsMobileMenuOpen(false); }}
                   className="w-full text-left px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-sky-50 rounded-lg flex items-center gap-2"
                 >
-                  <MapPin className="w-4 h-4 text-sky-600" /> Encontrar no Mapa
+                  <Search className="w-4 h-4 text-sky-600" /> Encontrar no Mapa
                 </button>
-                <button
-                  type="button"
-                  onClick={() => { setActiveTab('host_landing'); setIsMobileMenuOpen(false); }}
-                  className="w-full text-left px-3 py-2 text-sm font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-lg flex items-center gap-2"
-                >
-                  <Car className="w-4 h-4 text-emerald-600" /> Seja um Anfitrião (Alugue sua Vaga)
-                </button>
+
+                {activeTab === 'host_landing' ? (
+                  <button
+                    type="button"
+                    onClick={() => { setActiveTab('landing'); setIsMobileMenuOpen(false); }}
+                    className="w-full text-left px-3 py-2 text-sm font-bold text-sky-800 bg-sky-50 hover:bg-sky-100 rounded-lg flex items-center gap-2"
+                  >
+                    <Car className="w-4 h-4 text-sky-600" /> 🚗 Sou Motorista
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => { setActiveTab('host_landing'); setIsMobileMenuOpen(false); }}
+                    className="w-full text-left px-3 py-2 text-sm font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-lg flex items-center gap-2"
+                  >
+                    <Home className="w-4 h-4 text-emerald-600" /> 🏠 Seja um Anfitrião (Alugue sua Vaga)
+                  </button>
+                )}
+
                 
                 <div className="pt-2 border-t border-slate-100 flex items-center gap-2">
                   <button
@@ -478,20 +514,6 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
                 >
                   <DollarSign className="w-4 h-4 text-emerald-600" /> Financeiro & Saques
                 </button>
-
-                <div className="pt-2 border-t border-slate-100">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      switchRole('CLIENTE');
-                      setActiveTab('landing');
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="w-full text-left px-3 py-2 text-sm font-bold text-sky-800 bg-sky-50 hover:bg-sky-100 rounded-lg flex items-center gap-2"
-                  >
-                    <Search className="w-4 h-4 text-sky-600" /> Alternar para Modo Motorista
-                  </button>
-                </div>
               </>
             )}
 
@@ -505,9 +527,37 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
                 <ShieldCheck className="w-4 h-4 text-purple-600" /> Painel de Controle Admin
               </button>
             )}
+
+            {/* User Profile & Logout in Mobile Menu */}
+            {isAuthenticated && (
+              <div className="pt-2 border-t border-slate-100 space-y-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    openEditProfileModal();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full text-left px-3 py-2.5 text-sm font-bold text-sky-700 bg-sky-50/70 hover:bg-sky-100 rounded-xl flex items-center gap-2 transition cursor-pointer"
+                >
+                  <UserCog className="w-4 h-4 text-sky-600" /> Editar Meu Perfil
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    logout();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm font-bold text-rose-600 hover:bg-rose-50 rounded-xl flex items-center gap-2 transition cursor-pointer"
+                >
+                  <LogOut className="w-4 h-4 text-rose-500" /> Sair da Conta
+                </button>
+              </div>
+            )}
           </div>
         )}
       </header>
+
 
 
       <NotificationsDrawer isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} />

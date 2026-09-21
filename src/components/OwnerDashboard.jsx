@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import {
   ResponsiveContainer,
@@ -27,14 +27,19 @@ import {
   AlertCircle,
   AlertTriangle,
   PieChart,
-  ArrowUpRight
+  ArrowUpRight,
+  UserCog,
+  MessageSquare
 } from 'lucide-react';
+import { HostChatModal } from './HostChatModal';
+
 
 export const OwnerDashboard = () => {
   const {
     currentUser,
     isAuthenticated,
     openLoginModal,
+    openEditProfileModal,
     parkingSpaces = [],
     bookings = [],
     withdrawals = [],
@@ -47,15 +52,42 @@ export const OwnerDashboard = () => {
     setIsAddSpotModalOpen,
     setEditingSpot,
     setIsScannerOpen,
-    demandRegions
+    toggleEventPricing,
+    demandRegions,
+    activeTab,
+    setActiveTab
   } = useApp();
 
 
-  const [activeOwnerTab, setActiveOwnerTab] = useState('visãogeral'); // visãogeral, vagas, calendario, mensalistas, financeiro
+  const [activeOwnerTab, setActiveOwnerTab] = useState(() => {
+    if (activeTab === 'owner_spots') return 'vagas';
+    if (activeTab === 'owner_finance') return 'financeiro';
+    if (activeTab === 'owner_reservas') return 'reservas';
+    return 'visãogeral';
+  });
+
+  // Sync internal tab whenever Navbar tab changes
+  useEffect(() => {
+    if (activeTab === 'owner_spots') {
+      setActiveOwnerTab('vagas');
+    } else if (activeTab === 'owner_finance') {
+      setActiveOwnerTab('financeiro');
+    } else if (activeTab === 'owner_reservas') {
+      setActiveOwnerTab('reservas');
+    } else if (activeTab === 'owner_dashboard') {
+      setActiveOwnerTab('visãogeral');
+    }
+  }, [activeTab]);
+
+
   const [withdrawalAmount, setWithdrawalAmount] = useState('250');
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
   const [spotToDelete, setSpotToDelete] = useState(null);
   const [lockedHours, setLockedHours] = useState(['12:00', '13:00']);
+  const [chatBooking, setChatBooking] = useState(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+
+
 
   if (!isAuthenticated) {
     return (
@@ -85,18 +117,24 @@ export const OwnerDashboard = () => {
   const safeSpaces = Array.isArray(parkingSpaces) ? parkingSpaces : [];
   const safeBookings = Array.isArray(bookings) ? bookings : [];
 
-  // Filter host spaces & bookings - Matching by ID or Email of authenticated host
+  // Filter host spaces & bookings - Robust Cross-Field Matching (by ID, Email, UUID or Spot reference)
   const mySpaces = safeSpaces.filter(s => s && (
     s.ownerId === safeUser.id || 
-    (s.ownerEmail && safeUser.email && s.ownerEmail.toLowerCase() === safeUser.email.toLowerCase())
+    s.owner_id === safeUser.id ||
+    (s.ownerEmail && safeUser.email && s.ownerEmail.toLowerCase() === safeUser.email.toLowerCase()) ||
+    (s.owner_email && safeUser.email && s.owner_email.toLowerCase() === safeUser.email.toLowerCase())
   ));
-
 
   const myBookings = safeBookings.filter(b => b && (
     b.ownerId === safeUser.id || 
+    b.owner_id === safeUser.id ||
+    b.hostId === safeUser.id ||
+    b.host_id === safeUser.id ||
     (b.ownerEmail && safeUser.email && b.ownerEmail.toLowerCase() === safeUser.email.toLowerCase()) ||
-    mySpaces.some(space => space.id === b.spaceId)
+    (b.hostEmail && safeUser.email && b.hostEmail.toLowerCase() === safeUser.email.toLowerCase()) ||
+    mySpaces.some(space => space.id === b.spaceId || space.id === b.parkingId || space.id === b.parking_id || space.id === b.space_id)
   ));
+
 
   // Real Revenue math
   const grossRevenue = myBookings.reduce((sum, b) => sum + Number(b.subtotal || b.totalPrice || 0), 0);
@@ -151,26 +189,40 @@ export const OwnerDashboard = () => {
       {/* Header Banner */}
       <div className="bg-gradient-to-r from-emerald-700 via-emerald-800 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <img
-            src={safeUser.avatar}
-            alt={safeUser.name}
-            className="w-16 h-16 rounded-full object-cover ring-4 ring-white/20 shadow-md"
-          />
+          <div className="relative group cursor-pointer" onClick={openEditProfileModal}>
+            <img
+              src={safeUser.avatar}
+              alt={safeUser.name}
+              className="w-16 h-16 rounded-full object-cover ring-4 ring-white/20 shadow-md group-hover:ring-white/50 transition"
+            />
+            <div className="absolute inset-0 bg-slate-900/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+              <UserCog className="w-5 h-5 text-white" />
+            </div>
+          </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="bg-amber-400/20 text-amber-300 border border-amber-400/40 text-xs font-black px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-xs">
                 ⭐ SuperHost Verificado
               </span>
-
-              <span className="text-slate-400 text-xs hidden sm:inline">• PIX: {safeUser.pixKey || safeUser.email || "pix@vagago.com.br"}</span>
+              <button
+                type="button"
+                onClick={openEditProfileModal}
+                className="bg-white/15 hover:bg-white/25 text-white text-[11px] font-extrabold px-2.5 py-0.5 rounded-lg border border-white/20 transition flex items-center gap-1 cursor-pointer"
+                title="Editar Nome, Foto, Telefone, PIX e Bio"
+              >
+                <UserCog className="w-3.5 h-3.5 text-emerald-300" />
+                <span>Editar Perfil</span>
+              </button>
+              <span className="text-emerald-200 text-xs hidden sm:inline">• PIX: {safeUser.pixKey || safeUser.email || "pix@vagago.com.br"}</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black mt-1">{safeUser.name || "Meu Painel de Anfitrião"}</h1>
-
             <p className="text-xs text-emerald-100/80">Sua vaga gerando renda passiva 24h por dia em Itabuna - BA</p>
+            {safeUser.bio && (
+              <p className="text-xs text-emerald-100/90 mt-1 italic max-w-md line-clamp-2">"{safeUser.bio}"</p>
+            )}
           </div>
-
-
         </div>
+
 
         <div className="flex items-center gap-2">
           <button
@@ -230,90 +282,34 @@ export const OwnerDashboard = () => {
 
       </div>
 
-      {/* Real-time Host Fluid Logistics Board */}
-      <div className="p-5 bg-gradient-to-r from-sky-900 via-slate-900 to-slate-900 text-white rounded-3xl shadow-md border border-sky-500/30 space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-            <h4 className="font-extrabold text-sm text-sky-400">Logística de Chegada de Clientes em Tempo Real</h4>
-          </div>
-          <span className="text-[11px] font-bold bg-sky-500/20 text-sky-300 px-2.5 py-0.5 rounded border border-sky-400/30">
-            Monitoramento Google Maps
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-          {myBookings.map((b) => (
-            <div key={b.id} className="p-3.5 bg-slate-800/80 rounded-2xl border border-slate-700/80 flex items-center justify-between gap-3 text-xs">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-white">{b.userName}</span>
-                  <span className="text-[10px] font-bold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded">
-                    ETA 5 min
-                  </span>
-                </div>
-                <p className="text-slate-400">{b.vehicle.brand} {b.vehicle.model} ({b.vehicle.plate})</p>
-                <p className="text-[11px] font-bold text-sky-400">Vaga: {b.spaceTitle}</p>
-              </div>
-
-              <button
-                onClick={() => setIsScannerOpen(true)}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[11px] px-3 py-2 rounded-xl shrink-0 transition"
-              >
-                Autorizar Entrada
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Strategic Demand Map Alert Banner */}
-      <div className="p-4 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-white border border-amber-200 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
-
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-amber-500 text-white rounded-xl shadow-xs">
-            <Flame className="w-5 h-5" />
-          </div>
-          <div>
-            <h4 className="font-extrabold text-slate-900 text-sm">Oportunidade de Alta Demanda Detectada!</h4>
-            <p className="text-xs text-slate-600">
-              Na região <strong>Bela Vista / Paulista</strong>, 142 motoristas procuraram vagas nos últimos 7 dias. Cadastre mais uma vaga e aumente seus lucros.
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={() => {
-            setEditingSpot(null);
-            setIsAddSpotModalOpen(true);
-          }}
-          className="bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs px-3.5 py-2 rounded-xl shrink-0 transition"
-        >
-          Cadastrar mais 1 vaga
-        </button>
-      </div>
-
       {/* Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 overflow-x-auto pb-1 text-xs font-bold">
+      <div className="flex items-center gap-2 border-b border-slate-200 overflow-x-auto pb-1 text-xs font-bold pt-2">
+
         {[
-          { id: 'visãogeral', label: 'Visão Geral & Gráficos' },
-          { id: 'vagas', label: `Minhas Garagens (${mySpaces.length})` },
-          { id: 'reservas', label: `Solicitações & Reservas (${myBookings.length})` },
-          { id: 'calendario', label: 'Calendário & Bloqueios' },
-          { id: 'mensalistas', label: 'Mensalistas (Assinaturas)' },
-          { id: 'financeiro', label: 'Financeiro & Comissões (10%)' }
+          { id: 'visãogeral', label: 'Visão Geral & Gráficos', tabKey: 'owner_dashboard' },
+          { id: 'vagas', label: `Minhas Garagens (${mySpaces.length})`, tabKey: 'owner_spots' },
+          { id: 'reservas', label: `Solicitações & Reservas (${myBookings.length})`, tabKey: 'owner_dashboard' },
+          { id: 'calendario', label: 'Calendário & Bloqueios', tabKey: 'owner_dashboard' },
+          { id: 'mensalistas', label: 'Mensalistas (Assinaturas)', tabKey: 'owner_dashboard' },
+          { id: 'financeiro', label: 'Financeiro & Comissões (10%)', tabKey: 'owner_finance' }
         ].map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveOwnerTab(tab.id)}
-            className={`px-4 py-2.5 rounded-xl transition shrink-0 ${
+            type="button"
+            onClick={() => {
+              setActiveOwnerTab(tab.id);
+              if (typeof setActiveTab === 'function') setActiveTab(tab.tabKey);
+            }}
+            className={`px-4 py-2.5 rounded-xl transition shrink-0 cursor-pointer ${
               activeOwnerTab === tab.id
-                ? 'bg-emerald-600 text-white shadow-sm'
+                ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
                 : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
             {tab.label}
           </button>
         ))}
+
       </div>
 
 
@@ -360,8 +356,63 @@ export const OwnerDashboard = () => {
             </div>
           </div>
 
+          {/* Quick List: Últimas Reservas Recebidas no Overview */}
+          <div className="lg:col-span-12 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-extrabold text-slate-900 text-base">Últimas Reservas Recebidas</h3>
+                <p className="text-xs text-slate-500">Motoristas que reservaram suas vagas recentemente</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveOwnerTab('reservas')}
+                className="text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-xl border border-emerald-200 transition cursor-pointer"
+              >
+                Ver todas ({myBookings.length}) ➔
+              </button>
+            </div>
+
+            {myBookings.length === 0 ? (
+              <div className="text-center py-6 text-slate-400 space-y-1">
+                <Calendar className="w-8 h-8 mx-auto opacity-40" />
+                <p className="text-xs">Nenhuma reserva recebida até o momento.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {myBookings.slice(0, 4).map((b) => (
+                  <div key={b.id} className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={b.driverAvatar || b.userAvatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=250&q=80"}
+                        alt={b.driverName || b.userName}
+                        className="w-10 h-10 rounded-full object-cover ring-2 ring-emerald-500/20"
+                      />
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-slate-900 text-xs">{b.driverName || b.userName || 'Motorista'}</span>
+                          <span className="text-[10px] font-mono text-slate-400 font-bold">#{b.bookingNumber}</span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 truncate max-w-[180px]">{b.spaceTitle || 'Garagem'}</p>
+                        <p className="text-[10px] text-slate-400">📅 {b.date || b.startDate} • {b.startTime} às {b.endTime}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xs font-black text-emerald-700 block">R$ {Number(b.ownerPayout || (b.totalPrice * 0.9)).toFixed(2)}</span>
+                      <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase inline-block mt-0.5 ${
+                        b.bookingStatus === 'Confirmado' ? 'bg-emerald-100 text-emerald-900' : 'bg-amber-100 text-amber-900'
+                      }`}>
+                        {b.bookingStatus || 'Confirmado'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
         </div>
       )}
+
 
       {/* TAB 2: MINHAS GARAGENS */}
       {activeOwnerTab === 'vagas' && (
@@ -457,8 +508,9 @@ export const OwnerDashboard = () => {
                   {/* Host Pack 2: Event Dynamic Surge Button & Edit Button */}
                   <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
                     <button
-                      onClick={() => useApp().toggleEventPricing(spot.id)}
-                      className={`px-3 py-1.5 rounded-xl font-extrabold text-xs transition flex items-center gap-1 ${
+                      type="button"
+                      onClick={() => toggleEventPricing && toggleEventPricing(spot.id)}
+                      className={`px-3 py-1.5 rounded-xl font-extrabold text-xs transition flex items-center gap-1 cursor-pointer ${
                         spot.isEventPricingActive
                           ? 'bg-amber-500 text-white shadow-xs'
                           : 'bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100'
@@ -467,6 +519,7 @@ export const OwnerDashboard = () => {
                     >
                       <span>⚡ Tarifa Dinâmica de Eventos (+30%)</span>
                     </button>
+
 
                     <div className="flex items-center gap-2">
                       <button
@@ -511,14 +564,17 @@ export const OwnerDashboard = () => {
         </div>
       )}
 
-      {/* TAB: SOLICITAÇÕES & RESERVAS */}
+      {/* TAB: SOLICITAÇÕES & RESERVAS (RESERVAS RECEBIDAS) */}
       {activeOwnerTab === 'reservas' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-extrabold text-slate-900 text-base">Controle de Reservas da Garagem</h3>
-              <p className="text-xs text-slate-500">Aprove ou recuse solicitações e gerencie quem está estacionando.</p>
+              <h3 className="font-black text-slate-900 text-base">Reservas Recebidas da Garagem</h3>
+              <p className="text-xs text-slate-500">Acompanhe quem reservou suas vagas, aprove solicitações e visualize os repasses em tempo real.</p>
             </div>
+            <span className="bg-emerald-100 text-emerald-800 text-xs font-black px-3 py-1 rounded-full border border-emerald-200">
+              {myBookings.length} {myBookings.length === 1 ? 'reserva' : 'reservas'}
+            </span>
           </div>
 
           {myBookings.length === 0 ? (
@@ -526,64 +582,115 @@ export const OwnerDashboard = () => {
               <Calendar className="w-12 h-12 text-slate-400 mx-auto" />
               <h4 className="font-extrabold text-slate-800 text-base">Nenhuma reserva recebida ainda</h4>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                Assim que um motorista reservar sua garagem, a solicitação aparecerá aqui com todos os detalhes do veículo e horários.
+                Assim que um motorista reservar sua garagem, a solicitação aparecerá aqui automaticamente com todos os dados do motorista, veículo e horário.
               </p>
             </div>
           ) : (
             <div className="space-y-3">
-              {myBookings.map((b) => (
-                <div key={b.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase ${
-                        b.bookingStatus === 'Aguardando Aprovação'
-                          ? 'bg-amber-100 text-amber-900 border border-amber-300'
-                          : b.bookingStatus === 'Confirmado'
-                          ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
-                          : b.bookingStatus === 'Recusado' || b.bookingStatus === 'Cancelado'
-                          ? 'bg-rose-100 text-rose-900 border border-rose-300'
-                          : 'bg-slate-100 text-slate-800'
-                      }`}>
-                        {b.bookingStatus}
-                      </span>
-                      <span className="text-xs font-mono text-slate-400">#{b.bookingNumber}</span>
+              {myBookings.map((b) => {
+                const driverAvatar = b.driverAvatar || b.userAvatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=250&q=80";
+                const driverName = b.driverName || b.userName || "Motorista";
+                const driverPhone = b.driverPhone || b.userPhone || "(73) 98765-4321";
+                const spotTitle = b.parkingTitle || b.spaceTitle || "Garagem VagaGo";
+                const spotAddress = b.parkingAddress || b.spaceAddress || "Itabuna - BA";
+                const bookingDate = b.startDate || b.date || "Hoje";
+                const netAmount = Number(b.ownerPayout || b.owner_payout || (b.totalPrice * 0.9)).toFixed(2);
+                const isPending = b.bookingStatus === 'Aguardando Aprovação' || b.status === 'pending';
+                const isConfirmed = b.bookingStatus === 'Confirmado' || b.status === 'confirmed';
+                const isCancelled = b.bookingStatus === 'Cancelado' || b.bookingStatus === 'Recusado' || b.status === 'cancelled';
+                const createdDate = b.createdAt ? new Date(b.createdAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'Recente';
+
+                return (
+                  <div key={b.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition hover:border-emerald-300">
+                    <div className="flex items-start gap-4 flex-1">
+                      <img
+                        src={driverAvatar}
+                        alt={driverName}
+                        className="w-12 h-12 rounded-full object-cover ring-2 ring-emerald-500/20 shrink-0"
+                      />
+                      <div className="space-y-1 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase ${
+                            isPending
+                              ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                              : isConfirmed
+                              ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                              : isCancelled
+                              ? 'bg-rose-100 text-rose-900 border border-rose-300'
+                              : 'bg-slate-100 text-slate-800'
+                          }`}>
+                            {b.bookingStatus || (isConfirmed ? 'Confirmado' : isPending ? 'Aguardando Aprovação' : 'Concluído')}
+                          </span>
+                          <span className="text-xs font-mono text-slate-400 font-bold">#{b.bookingNumber}</span>
+                          <span className="text-[11px] text-slate-400">• Reservada em {createdDate}</span>
+                        </div>
+
+                        <h4 className="font-extrabold text-slate-900 text-sm flex items-center gap-2 flex-wrap">
+                          <span>{driverName}</span>
+                          <span className="text-xs font-normal text-slate-500">📞 {driverPhone}</span>
+                        </h4>
+
+                        <p className="text-xs text-slate-600">
+                          📍 <strong className="text-slate-800">{spotTitle}</strong> ({spotAddress})
+                        </p>
+
+                        <div className="text-xs text-slate-500 flex items-center gap-3 flex-wrap pt-0.5">
+                          <span>📅 <strong>{bookingDate}</strong> das {b.startTime} às {b.endTime} ({b.totalHours}h)</span>
+                          {b.vehicle && (
+                            <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md font-semibold text-[11px]">
+                              🚗 {b.vehicle.brand} {b.vehicle.model} • <span className="font-mono font-bold text-slate-900">{b.vehicle.plate}</span>
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="text-xs font-black text-emerald-700 pt-1">
+                          💰 Valor líquido a receber: R$ {netAmount} <span className="text-slate-400 font-normal">(Taxa VagaGo: R$ {Number(b.platformFee || b.platform_fee || (b.totalPrice * 0.1)).toFixed(2)})</span>
+                        </div>
+                      </div>
                     </div>
 
-                    <h4 className="font-bold text-slate-900 text-sm">
-                      {b.userName} • <span className="text-slate-600 font-normal">{b.vehicle?.brand} {b.vehicle?.model} ({b.vehicle?.plate})</span>
-                    </h4>
-                    <p className="text-xs text-slate-500">
-                      📍 {b.spaceTitle} • 📅 {b.date} das {b.startTime} às {b.endTime} ({b.totalHours}h)
-                    </p>
-                    <div className="text-xs font-black text-emerald-700">
-                      Recebimento líquido: R$ {Number(b.ownerPayout || b.totalPrice * 0.9).toFixed(2)} (Taxa VagaGo: R$ {Number(b.platformFee || b.totalPrice * 0.1).toFixed(2)})
+                    <div className="flex items-center gap-2 w-full md:w-auto shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setChatBooking(b);
+                          setIsChatOpen(true);
+                        }}
+                        className="bg-sky-50 hover:bg-sky-100 text-sky-700 font-bold text-xs px-3 py-2 rounded-xl flex items-center gap-1.5 transition border border-sky-200 cursor-pointer"
+                        title="Falar com o Motorista com moderação do Vagago Concierge"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5 text-sky-600" />
+                        <span>Chat Locatário</span>
+                      </button>
+
+                      {isPending && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => approveBooking(b.id)}
+                            className="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs px-4 py-2 rounded-xl shadow-md transition cursor-pointer"
+                          >
+                            ✓ Aceitar Reserva
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => rejectBooking(b.id)}
+                            className="flex-1 md:flex-none bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer"
+                          >
+                            ✕ Recusar
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
 
-                  {b.bookingStatus === 'Aguardando Aprovação' && (
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
-                      <button
-                        type="button"
-                        onClick={() => approveBooking(b.id)}
-                        className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl shadow-md transition cursor-pointer"
-                      >
-                        ✓ Aceitar Reserva
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => rejectBooking(b.id)}
-                        className="flex-1 sm:flex-none bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer"
-                      >
-                        ✕ Recusar
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
       )}
+
 
 
 
@@ -673,9 +780,10 @@ export const OwnerDashboard = () => {
                   <tr key={b.id}>
                     <td className="p-3 font-bold text-slate-900">{b.bookingNumber}</td>
                     <td className="p-3">{b.date}</td>
-                    <td className="p-3 font-bold text-slate-800">R$ {b.subtotal.toFixed(2)}</td>
-                    <td className="p-3 font-bold text-rose-500">- R$ {b.platformFee.toFixed(2)}</td>
-                    <td className="p-3 font-black text-emerald-600">R$ {b.ownerPayout.toFixed(2)}</td>
+                    <td className="p-3 font-bold text-slate-800">R$ {Number(b.subtotal || b.totalPrice || 0).toFixed(2)}</td>
+                    <td className="p-3 font-bold text-rose-500">- R$ {Number(b.platformFee || ((b.totalPrice || 0) * 0.1)).toFixed(2)}</td>
+                    <td className="p-3 font-black text-emerald-600">R$ {Number(b.ownerPayout || ((b.totalPrice || 0) * 0.9)).toFixed(2)}</td>
+
                     <td className="p-3">
                       <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
                         Liberado
@@ -769,7 +877,18 @@ export const OwnerDashboard = () => {
         </div>
       )}
 
+      {/* Host Chat with Driver (Vagago Concierge Moderated) */}
+      <HostChatModal
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        spot={chatBooking}
+        booking={chatBooking}
+        ownerName={chatBooking?.ownerName}
+        ownerPhone={chatBooking?.ownerPhone}
+      />
+
     </div>
   );
 };
+
 

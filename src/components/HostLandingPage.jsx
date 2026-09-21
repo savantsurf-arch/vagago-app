@@ -459,24 +459,39 @@ export const HostLandingPage = () => {
           
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 pb-8 border-b border-slate-800">
             <div className="flex items-center gap-3">
-              <img src="/logo-vagago.png" alt="VagaGo" className="h-10 w-auto bg-white p-1 rounded-lg" />
+              <img src="/logo-vagago.png" alt="VagaGo" className="h-11 sm:h-12 w-auto object-contain" />
               <div>
                 <div className="font-black text-lg">VagaGo Anfitriões</div>
                 <div className="text-xs text-slate-400">Transformando espaços parados em renda real.</div>
               </div>
             </div>
 
+
             <div className="flex flex-wrap items-center gap-6 text-xs text-slate-400">
-              <button onClick={() => setActiveTab('landing')} className="hover:text-white transition cursor-pointer">
+              <button
+                type="button"
+                onClick={() => setActiveTab('landing')}
+                className="hover:text-white transition cursor-pointer"
+              >
                 Área do Motorista
               </button>
-              <button onClick={() => setActiveTab('search')} className="hover:text-white transition cursor-pointer">
+              <button
+                type="button"
+                onClick={() => setActiveTab('search')}
+                className="hover:text-white transition cursor-pointer"
+              >
                 Encontrar Vagas
               </button>
-              <a href="#" className="hover:text-white transition">Termos de Uso</a>
-              <a href="#" className="hover:text-white transition">Privacidade</a>
+              <button
+                type="button"
+                onClick={() => setActiveTab('terms')}
+                className="hover:text-white transition cursor-pointer"
+              >
+                Termos de Uso & Privacidade (LGPD)
+              </button>
             </div>
           </div>
+
 
           <div className="text-center text-xs text-slate-500">
             © 2026 VagaGo Tecnologia e Plataforma de Garagens LTDA. Todos os direitos reservados.

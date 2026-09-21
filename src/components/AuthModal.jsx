@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
+
 import {
   X,
   Mail,
@@ -23,6 +24,7 @@ export const AuthModal = () => {
     setIsAuthModalOpen,
     authModalMode,
     setAuthModalMode,
+    suggestedAccountType,
     login,
     register,
     resetPassword
@@ -42,6 +44,13 @@ export const AuthModal = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(true);
 
+  // Automatically sync suggested role when modal opens for registration
+  useEffect(() => {
+    if (isAuthModalOpen && authModalMode === 'register' && suggestedAccountType) {
+      setAccountType(suggestedAccountType);
+    }
+  }, [isAuthModalOpen, authModalMode, suggestedAccountType]);
+
   // Forgot password OTP flow
   const [forgotStep, setForgotStep] = useState(1); // 1: Email, 2: OTP, 3: New Password
   const [otpCode, setOtpCode] = useState('');
@@ -51,6 +60,7 @@ export const AuthModal = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
 
   if (!isAuthModalOpen) return null;
 
@@ -443,8 +453,21 @@ export const AuthModal = () => {
                   onChange={(e) => setAcceptedTerms(e.target.checked)}
                   className="rounded text-sky-600 focus:ring-sky-500"
                 />
-                <span className="text-[11px] text-slate-600">Concordo com os Termos de Uso e Política de Privacidade do VagaGo</span>
+                <span className="text-[11px] text-slate-600">
+                  Concordo com os{' '}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAuthModalOpen(false);
+                      setActiveTab('terms');
+                    }}
+                    className="text-sky-600 font-bold underline hover:text-sky-700 cursor-pointer"
+                  >
+                    Termos de Uso e Privacidade (LGPD)
+                  </button>
+                </span>
               </label>
+
 
               <button
                 type="submit"
