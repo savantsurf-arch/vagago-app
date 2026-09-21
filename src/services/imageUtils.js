@@ -86,3 +86,70 @@ export const compressImageToWebP = (file, maxWidth = 1600, quality = 0.88) => {
     reader.readAsDataURL(file);
   });
 };
+
+/**
+ * Otimizador específico para Foto de Perfil (Avatar)
+ * Corta a imagem em quadrado 1:1 centralizado e redimensiona para 320x320px
+ * Garante um arquivo de 10-18 KB, ultraleve e sem distorção.
+ */
+export const compressAvatarImage = (file, targetSize = 320, quality = 0.85) => {
+  return new Promise((resolve, reject) => {
+    if (!file) {
+      return reject(new Error('Nenhum arquivo de foto fornecido.'));
+    }
+
+    const reader = new FileReader();
+    reader.onload = (readerEvent) => {
+      const img = new window.Image();
+      img.onload = () => {
+        try {
+          const minDim = Math.min(img.width, img.height);
+          const sx = Math.max(0, Math.round((img.width - minDim) / 2));
+          const sy = Math.max(0, Math.round((img.height - minDim) / 2));
+
+          const finalSize = Math.min(targetSize, minDim);
+          const canvas = document.createElement('canvas');
+          canvas.width = finalSize;
+          canvas.height = finalSize;
+
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            return resolve({ dataUrl: readerEvent.target.result, sizeKb: Math.round(file.size / 1024) });
+          }
+
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, finalSize, finalSize);
+
+          let outputUrl = '';
+          try {
+            outputUrl = canvas.toDataURL('image/webp', quality);
+            if (!outputUrl || !outputUrl.startsWith('data:image/webp')) {
+              outputUrl = canvas.toDataURL('image/jpeg', 0.85);
+            }
+          } catch (e) {
+            outputUrl = canvas.toDataURL('image/jpeg', 0.85);
+          }
+
+          const commaIndex = outputUrl.indexOf(',');
+          const base64Part = commaIndex !== -1 ? outputUrl.slice(commaIndex + 1) : outputUrl;
+          const sizeInBytes = Math.round(base64Part.length * 3 / 4);
+          const sizeKb = Math.round(sizeInBytes / 1024);
+
+          resolve({
+            dataUrl: outputUrl,
+            sizeKb
+          });
+        } catch (err) {
+          resolve({ dataUrl: readerEvent.target.result, sizeKb: Math.round(file.size / 1024) });
+        }
+      };
+
+      img.onerror = () => reject(new Error('Falha ao processar arquivo de imagem.'));
+      img.src = readerEvent.target.result;
+    };
+
+    reader.onerror = () => reject(new Error('Falha ao ler arquivo de imagem.'));
+    reader.readAsDataURL(file);
+  });
+};

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
-import { compressImageToWebP } from '../services/imageUtils';
+import { compressAvatarImage } from '../services/imageUtils';
 import {
   X,
   User,
@@ -64,7 +64,7 @@ export const EditProfileModal = () => {
       setCompressionNotice('');
       setIsSaving(false);
     }
-  }, [isEditProfileModalOpen, currentUser]);
+  }, [isEditProfileModalOpen]);
 
   // Close on Escape
   useEffect(() => {
@@ -80,31 +80,33 @@ export const EditProfileModal = () => {
 
   if (!isEditProfileModalOpen || !currentUser) return null;
 
-  // Image upload and WebP compression handler
+  // Image upload and 1:1 square compression handler
   const handleImageFile = async (file) => {
     if (!file) return;
     
     // Validate image format
-    if (!file.type.startsWith('image/')) {
+    const isImg = file.type?.startsWith('image/') || /\.(jpe?g|png|webp|gif|bmp|heic)$/i.test(file.name || '');
+    if (!isImg) {
       setErrorMsg('Por favor, selecione um arquivo de imagem válido (JPG, PNG ou WebP).');
       return;
     }
 
-    // Validate size (max 8MB)
-    if (file.size > 8 * 1024 * 1024) {
-      setErrorMsg('A imagem é muito grande. Escolha uma foto de até 8MB.');
+    // Validate size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      setErrorMsg('A imagem é muito grande. Escolha uma foto de até 10MB.');
       return;
     }
 
     try {
       setIsCompressing(true);
       setErrorMsg('');
-      const compressed = await compressImageToWebP(file, 400, 0.85);
+      const compressed = await compressAvatarImage(file, 320, 0.85);
       setAvatar(compressed.dataUrl);
       setCompressionNotice(
-        `✓ Foto otimizada em WebP HD (${compressed.compressedSizeKb} KB - economizou ${compressed.savingsPercent}%)`
+        `✓ Foto quadrada otimizada (${compressed.sizeKb} KB - nítida e ultraleve)`
       );
     } catch (err) {
+      console.warn('Erro na compressão:', err);
       setErrorMsg('Não foi possível processar a imagem. Tente outra foto.');
     } finally {
       setIsCompressing(false);
@@ -126,9 +128,10 @@ export const EditProfileModal = () => {
     if (e && e.preventDefault) e.preventDefault();
     if (isSaving) return;
     setErrorMsg('');
+    setSuccessMsg('');
 
-    if (!name || name.trim().length < 3) {
-      setErrorMsg('Por favor, informe seu nome completo (mínimo 3 caracteres).');
+    if (!name || name.trim().length < 2) {
+      setErrorMsg('Por favor, informe seu nome completo.');
       return;
     }
 
@@ -138,21 +141,22 @@ export const EditProfileModal = () => {
         await updateUserProfile({
           name: name.trim(),
           phone: phone.trim(),
-          avatar,
+          avatar: avatar || PRESET_AVATARS[0],
           bio: bio.trim(),
           pixKey: pixKey.trim(),
           pix_key: pixKey.trim()
         });
       }
 
-      setSuccessMsg('Perfil atualizado com sucesso.');
+      setSuccessMsg('Perfil atualizado com sucesso!');
       setTimeout(() => {
-        setSuccessMsg('');
         setIsEditProfileModalOpen(false);
-      }, 1200);
+        setSuccessMsg('');
+        setIsSaving(false);
+      }, 500);
     } catch (err) {
+      console.error('Erro ao salvar perfil:', err);
       setErrorMsg('Não conseguimos atualizar seu perfil. Tente novamente.');
-    } finally {
       setIsSaving(false);
     }
   };

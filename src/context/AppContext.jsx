@@ -175,13 +175,16 @@ export const AppProvider = ({ children }) => {
   const updateUserProfile = async (updatedData) => {
     if (!currentUser) return null;
     const cleanEmail = (currentUser.email || '').toLowerCase().trim();
-    const updatedAvatar = updatedData.avatar !== undefined ? updatedData.avatar : currentUser.avatar;
+    const currentId = currentUser.id;
+    const updatedAvatar = (updatedData && updatedData.avatar !== undefined) ? updatedData.avatar : currentUser.avatar;
 
     // Cache avatar specifically in localStorage
-    if (updatedAvatar) {
+    if (updatedAvatar && cleanEmail) {
       try {
         localStorage.setItem(`vagago_avatar_${cleanEmail}`, updatedAvatar);
-      } catch (e) {}
+      } catch (e) {
+        console.warn('LocalStorage avatar cache notice:', e);
+      }
     }
 
     const updated = {
@@ -192,13 +195,6 @@ export const AppProvider = ({ children }) => {
 
     // 1. Update React state immediately
     setCurrentUser(updated);
-    setUsers(prev => {
-      const updatedList = prev.map(u => (u.email?.toLowerCase() === cleanEmail || u.id === currentUser.id) ? updated : u);
-      try {
-        localStorage.setItem('vagago_users', JSON.stringify(updatedList));
-      } catch (e) {}
-      return updatedList;
-    });
 
     // 2. Persist currentUser in localStorage synchronously
     try {
@@ -206,11 +202,32 @@ export const AppProvider = ({ children }) => {
       localStorage.setItem('vagago_currentUser_email', updated.email || currentUser.email);
     } catch (e) {}
 
-    // 3. Update any parking spaces owned by this host with the new photo
+    // 3. Update users list safely
+    setUsers(prev => {
+      if (!Array.isArray(prev)) return [updated];
+      const safeUsers = prev.filter(Boolean);
+      let found = false;
+      const updatedList = safeUsers.map(u => {
+        const match = (u.email && u.email.toLowerCase() === cleanEmail) || (u.id && u.id === currentId);
+        if (match) {
+          found = true;
+          return { ...u, ...updated };
+        }
+        return u;
+      });
+      const finalList = found ? updatedList : [updated, ...updatedList];
+      try {
+        localStorage.setItem('vagago_users', JSON.stringify(finalList));
+      } catch (e) {}
+      return finalList;
+    });
+
+    // 4. Update any parking spaces owned by this host with the new photo safely
     setParkingSpaces(prev => {
-      const updatedSpaces = prev.map(s => {
-        const isOwner = (s.ownerId && s.ownerId === currentUser.id) ||
-                        (s.owner_id && s.owner_id === currentUser.id) ||
+      if (!Array.isArray(prev)) return prev;
+      const updatedSpaces = prev.filter(Boolean).map(s => {
+        const isOwner = (s.ownerId && s.ownerId === currentId) ||
+                        (s.owner_id && s.owner_id === currentId) ||
                         (s.ownerEmail && s.ownerEmail.toLowerCase() === cleanEmail) ||
                         (s.owner_email && s.owner_email.toLowerCase() === cleanEmail);
         if (isOwner) {
@@ -230,17 +247,18 @@ export const AppProvider = ({ children }) => {
       return updatedSpaces;
     });
 
-    // 4. Update bookings involving this user
+    // 5. Update bookings involving this user safely
     setBookings(prev => {
-      const updatedBookings = prev.map(b => {
+      if (!Array.isArray(prev)) return prev;
+      const updatedBookings = prev.filter(Boolean).map(b => {
         let modified = { ...b };
-        if (b.userId === currentUser.id || b.user_id === currentUser.id || (b.driverEmail && b.driverEmail.toLowerCase() === cleanEmail)) {
+        if ((b.userId && b.userId === currentId) || (b.user_id && b.user_id === currentId) || (b.driverEmail && b.driverEmail.toLowerCase() === cleanEmail)) {
           modified.userAvatar = updatedAvatar;
           modified.user_avatar = updatedAvatar;
           modified.driverAvatar = updatedAvatar;
           modified.driver_avatar = updatedAvatar;
         }
-        if (b.hostId === currentUser.id || b.host_id === currentUser.id || b.ownerId === currentUser.id) {
+        if ((b.hostId && b.hostId === currentId) || (b.host_id && b.host_id === currentId) || (b.ownerId && b.ownerId === currentId)) {
           modified.hostAvatar = updatedAvatar;
           modified.host_avatar = updatedAvatar;
           modified.ownerAvatar = updatedAvatar;
@@ -254,7 +272,7 @@ export const AppProvider = ({ children }) => {
       return updatedBookings;
     });
 
-    // 5. Asynchronously persist to Supabase Cloud users table in background
+    // 6. Asynchronously persist to Supabase Cloud users table in background
     if (isSupabaseConfigured) {
       updateUserProfileInSupabase(updated).catch(cloudErr => {
         console.warn('Notice: Supabase background user profile sync:', cloudErr);
