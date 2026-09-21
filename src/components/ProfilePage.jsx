@@ -741,34 +741,63 @@ export const ProfilePage = () => {
           {/* 5. SEÇÃO: NOTIFICAÇÕES */}
           {activeSection === 'notificacoes' && (
             <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
-              <div className="border-b border-slate-100 pb-4">
-                <h3 className="font-black text-slate-900 text-lg">Notificações</h3>
-                <p className="text-xs text-slate-500">Alertas e confirmações das suas reservas</p>
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div>
+                  <h3 className="font-black text-slate-900 text-lg">Notificações</h3>
+                  <p className="text-xs text-slate-500">Alertas e confirmações das suas reservas</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('notifications')}
+                  className="bg-sky-50 hover:bg-sky-100 text-sky-700 font-extrabold text-xs px-3.5 py-2 rounded-xl border border-sky-200 transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>Abrir Central Completa</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </button>
               </div>
 
-              {notifications.length === 0 ? (
-                <div className="p-8 text-center text-slate-400 space-y-2">
-                  <Bell className="w-10 h-10 mx-auto text-slate-300" />
-                  <p className="text-xs">Você não tem notificações recentes.</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {notifications.slice(0, 6).map((notif) => (
-                    <div
-                      key={notif.id}
-                      className={`p-4 rounded-2xl border text-xs space-y-1 transition ${
-                        notif.read ? 'bg-slate-50 border-slate-200' : 'bg-sky-50/60 border-sky-200 shadow-xs'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-extrabold text-slate-900">{notif.title}</span>
-                        <span className="text-[10px] text-slate-400">{notif.timestamp}</span>
-                      </div>
-                      <p className="text-slate-600 leading-relaxed">{notif.message}</p>
+              {(() => {
+                const userNotifications = (notifications || []).filter(n => {
+                  if (!n) return false;
+                  if (!n.userId && !n.userEmail && !n.targetUserId) return true;
+                  return (
+                    (n.userId && (n.userId === currentUser?.id || n.userId === currentUser?.email)) ||
+                    (n.targetUserId && n.targetUserId === currentUser?.id) ||
+                    (n.userEmail && currentUser?.email && n.userEmail.toLowerCase() === currentUser.email.toLowerCase())
+                  );
+                });
+
+                if (userNotifications.length === 0) {
+                  return (
+                    <div className="p-8 text-center text-slate-400 space-y-2">
+                      <Bell className="w-10 h-10 mx-auto text-slate-300" />
+                      <p className="text-xs">Você não tem notificações recentes.</p>
                     </div>
-                  ))}
-                </div>
-              )}
+                  );
+                }
+
+                return (
+                  <div className="space-y-3">
+                    {userNotifications.slice(0, 6).map((notif) => (
+                      <div
+                        key={notif.id}
+                        onClick={() => {
+                          if (notif.actionTab) setActiveTab(notif.actionTab);
+                        }}
+                        className={`p-4 rounded-2xl border text-xs space-y-1 transition cursor-pointer ${
+                          notif.read ? 'bg-slate-50 border-slate-200' : 'bg-emerald-50/50 border-emerald-200 shadow-2xs'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-extrabold text-slate-900">{notif.title}</span>
+                          <span className="text-[10px] text-slate-400">{notif.timestamp}</span>
+                        </div>
+                        <p className="text-slate-600 leading-relaxed">{notif.message}</p>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           )}
 

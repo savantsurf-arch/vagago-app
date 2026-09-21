@@ -477,6 +477,21 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
                   <User className="w-4 h-4 text-sky-600" /> Meu Perfil & Veículos
                 </button>
 
+                <button
+                  type="button"
+                  onClick={() => { setIsNotifOpen(true); setIsMobileMenuOpen(false); }}
+                  className="w-full text-left px-3 py-2 text-sm font-semibold rounded-lg flex items-center justify-between text-slate-700 hover:bg-sky-50 cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <Bell className="w-4 h-4 text-sky-600" /> Notificações
+                  </div>
+                  {unreadCount > 0 && (
+                    <span className="bg-sky-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+
                 <div className="pt-2 border-t border-slate-100">
                   <button
                     type="button"
@@ -526,6 +541,20 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
                   }`}
                 >
                   <User className="w-4 h-4 text-emerald-600" /> Meu Perfil & Veículos
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setIsNotifOpen(true); setIsMobileMenuOpen(false); }}
+                  className="w-full text-left px-3 py-2 text-sm font-semibold rounded-lg flex items-center justify-between text-slate-700 hover:bg-emerald-50 cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <Bell className="w-4 h-4 text-emerald-600" /> Notificações
+                  </div>
+                  {unreadCount > 0 && (
+                    <span className="bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                      {unreadCount}
+                    </span>
+                  )}
                 </button>
               </>
             )}

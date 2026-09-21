@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import {
   INITIAL_USERS,
   INITIAL_VEHICLES,
@@ -345,6 +345,88 @@ export const AppProvider = ({ children }) => {
     return INITIAL_NOTIFICATIONS;
   });
 
+  const [notificationPreferences, setNotificationPreferences] = useState(() => {
+    try {
+      const saved = localStorage.getItem('vagago_notification_preferences');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {}
+    return {
+      bookings: true,
+      payments: true,
+      reminders: true,
+      system: true
+    };
+  });
+
+  const [liveToast, setLiveToast] = useState(null);
+  const clearLiveToast = () => setLiveToast(null);
+
+  const updateNotificationPreferences = (newPrefs) => {
+    setNotificationPreferences(prev => {
+      const updated = { ...prev, ...newPrefs };
+      try {
+        localStorage.setItem('vagago_notification_preferences', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+  };
+
+  const addNotification = useCallback((notif) => {
+    if (!notif) return;
+
+    // Check user preferences
+    if (notif.category === 'bookings' && notificationPreferences?.bookings === false) return;
+    if (notif.category === 'payments' && notificationPreferences?.payments === false) return;
+    if (notif.category === 'system' && notificationPreferences?.system === false) return;
+
+    setNotifications(prev => {
+      // Idempotency: prevent duplicates with same relatedId & type or same title & message for target user
+      const isDuplicate = prev.some(existing => 
+        (existing.id && notif.id && existing.id === notif.id) ||
+        (existing.relatedId && notif.relatedId && existing.relatedId === notif.relatedId && existing.type === notif.type) ||
+        (existing.title === notif.title && existing.message === notif.message && (existing.userId === notif.userId || existing.userEmail === notif.userEmail))
+      );
+      if (isDuplicate) return prev;
+
+      const newNotif = {
+        id: notif.id || `not_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        read: false,
+        timestamp: 'Agora mesmo',
+        createdAt: new Date().toISOString(),
+        category: notif.category || 'system',
+        ...notif
+      };
+
+      // Trigger live toast if relevant to active logged in user
+      const isForMe = !newNotif.userId || 
+        (currentUser && (
+          newNotif.userId === currentUser.id || 
+          newNotif.targetUserId === currentUser.id || 
+          (newNotif.userEmail && currentUser.email && newNotif.userEmail.toLowerCase() === currentUser.email.toLowerCase())
+        ));
+
+      if (isForMe && notif.silent !== true) {
+        setLiveToast(newNotif);
+      }
+
+      return [newNotif, ...prev];
+    });
+  }, [notificationPreferences, currentUser]);
+
+  const markNotificationAsRead = (notifId) => {
+    setNotifications(prev =>
+      prev.map(n => n.id === notifId ? { ...n, read: true } : n)
+    );
+  };
+
+  const markAllNotificationsAsRead = () => {
+    setNotifications(prev =>
+      prev.map(n => ({ ...n, read: true }))
+    );
+  };
+
   const [coupons, setCoupons] = useState(() => {
     try {
       const saved = localStorage.getItem('vagago_coupons');
@@ -549,11 +631,81 @@ export const AppProvider = ({ children }) => {
               if (exists) return prev;
               return [newBooking, ...prev];
             });
+
+            if (newBooking) {
+              const hId = newBooking.hostId || newBooking.host_id || newBooking.ownerId || newBooking.owner_id;
+              const hEmail = newBooking.hostEmail || newBooking.host_email || newBooking.ownerEmail;
+              addNotification({
+                id: `not_rt_${newBooking.id || newBooking.bookingNumber || Date.now()}`,
+                relatedId: newBooking.bookingNumber || newBooking.id,
+                userId: hId,
+                userEmail: hEmail,
+                targetUserId: hId,
+                category: 'bookings',
+                type: 'new_booking',
+                title: '🔔 Nova Reserva Recebida (Tempo Real)!',
+                message: `${newBooking.driverName || 'Um motorista'} reservou a vaga "${newBooking.parkingTitle || newBooking.spaceTitle || 'em Itabuna'}" para ${newBooking.date || newBooking.startDate}.`,
+                actionText: 'Ver Reservas',
+                actionTab: 'owner_reservas'
+              });
+            }
           },
           (updatedBooking) => {
             setBookings(prev =>
               prev.map(b => (b.id === updatedBooking.id || b.bookingNumber === updatedBooking.bookingNumber) ? updatedBooking : b)
             );
+
+            if (updatedBooking) {
+              const bStatus = updatedBooking.bookingStatus || updatedBooking.status;
+              const dId = updatedBooking.userId || updatedBooking.driverId || updatedBooking.driver_id;
+              const dEmail = updatedBooking.userEmail || updatedBooking.driverEmail || updatedBooking.driver_email;
+              const hId = updatedBooking.hostId || updatedBooking.host_id || updatedBooking.ownerId || updatedBooking.owner_id;
+              const hEmail = updatedBooking.hostEmail || updatedBooking.host_email || updatedBooking.ownerEmail;
+
+              if (bStatus === 'Confirmado') {
+                addNotification({
+                  id: `not_rt_conf_${updatedBooking.id || updatedBooking.bookingNumber}`,
+                  relatedId: updatedBooking.bookingNumber || updatedBooking.id,
+                  userId: dId,
+                  userEmail: dEmail,
+                  targetUserId: dId,
+                  category: 'bookings',
+                  type: 'booking_approved',
+                  title: '✅ Reserva Confirmada!',
+                  message: `Sua reserva na vaga "${updatedBooking.parkingTitle || updatedBooking.spaceTitle || 'em Itabuna'}" foi confirmada!`,
+                  actionText: 'Acessar Comprovante',
+                  actionTab: 'client_dashboard'
+                });
+              } else if (bStatus === 'Recusado') {
+                addNotification({
+                  id: `not_rt_rec_${updatedBooking.id || updatedBooking.bookingNumber}`,
+                  relatedId: updatedBooking.bookingNumber || updatedBooking.id,
+                  userId: dId,
+                  userEmail: dEmail,
+                  targetUserId: dId,
+                  category: 'bookings',
+                  type: 'booking_rejected',
+                  title: '❌ Reserva Não Aprovada',
+                  message: `A solicitação de reserva na vaga "${updatedBooking.parkingTitle || updatedBooking.spaceTitle || 'em Itabuna'}" não pôde ser aceita.`,
+                  actionText: 'Buscar Outras Vagas',
+                  actionTab: 'search'
+                });
+              } else if (bStatus === 'Cancelado') {
+                addNotification({
+                  id: `not_rt_canc_${updatedBooking.id || updatedBooking.bookingNumber}`,
+                  relatedId: updatedBooking.bookingNumber || updatedBooking.id,
+                  userId: hId,
+                  userEmail: hEmail,
+                  targetUserId: hId,
+                  category: 'bookings',
+                  type: 'booking_cancelled',
+                  title: '⚠️ Uma Reserva Foi Cancelada',
+                  message: `A reserva #${updatedBooking.bookingNumber} na sua vaga foi cancelada pelo motorista.`,
+                  actionText: 'Ver Reservas',
+                  actionTab: 'owner_reservas'
+                });
+              }
+            }
           }
         );
       } catch (e) {
@@ -565,7 +717,7 @@ export const AppProvider = ({ children }) => {
       if (spacesChannel) supabase.removeChannel(spacesChannel);
       if (bookingsChannel) supabase.removeChannel(bookingsChannel);
     };
-  }, []);
+  }, [addNotification]);
 
 
 
@@ -804,6 +956,7 @@ export const AppProvider = ({ children }) => {
 
   const pauseParkingSpace = async (spotId) => {
     setParkingSpaces(prev => prev.map(s => s.id === spotId ? { ...s, status: 'Pausada', isAvailable: false } : s));
+    const target = parkingSpaces.find(s => s.id === spotId);
     try {
       const saved = localStorage.getItem('vagago_parkingSpaces');
       if (saved) {
@@ -817,10 +970,24 @@ export const AppProvider = ({ children }) => {
         await supabase.from('parking_spaces').update({ status: 'Pausada', is_available: false }).eq('id', spotId);
       }
     } catch (e) {}
+
+    addNotification({
+      id: `not_pause_${spotId}_${Date.now()}`,
+      userId: target?.ownerId || currentUser?.id,
+      userEmail: target?.ownerEmail || currentUser?.email,
+      targetUserId: target?.ownerId || currentUser?.id,
+      category: 'system',
+      type: 'spot_status',
+      title: '⏸️ Garagem Pausada',
+      message: `A vaga "${target?.title || 'Sua vaga'}" foi pausada e não receberá novas reservas até ser reativada.`,
+      actionText: 'Minhas Garagens',
+      actionTab: 'owner_spots'
+    });
   };
 
   const activateParkingSpace = async (spotId) => {
     setParkingSpaces(prev => prev.map(s => s.id === spotId ? { ...s, status: 'Ativa', isAvailable: true } : s));
+    const target = parkingSpaces.find(s => s.id === spotId);
     try {
       const saved = localStorage.getItem('vagago_parkingSpaces');
       if (saved) {
@@ -834,6 +1001,19 @@ export const AppProvider = ({ children }) => {
         await supabase.from('parking_spaces').update({ status: 'Ativa', is_available: true }).eq('id', spotId);
       }
     } catch (e) {}
+
+    addNotification({
+      id: `not_act_${spotId}_${Date.now()}`,
+      userId: target?.ownerId || currentUser?.id,
+      userEmail: target?.ownerEmail || currentUser?.email,
+      targetUserId: target?.ownerId || currentUser?.id,
+      category: 'system',
+      type: 'spot_status',
+      title: '▶️ Garagem Reativada',
+      message: `A vaga "${target?.title || 'Sua vaga'}" está online e disponível para receber novas reservas em Itabuna!`,
+      actionText: 'Minhas Garagens',
+      actionTab: 'owner_spots'
+    });
   };
 
   const approveBooking = (bookingId) => {
@@ -841,21 +1021,23 @@ export const AppProvider = ({ children }) => {
     if (found) {
       setBookings(prev => prev.map(b => (b.id === bookingId || b.bookingNumber === bookingId) ? { ...b, bookingStatus: 'Confirmado', status: 'confirmed' } : b));
       updateBookingStatusInSupabase(bookingId, 'Confirmado');
-      setNotifications(prev => [
-        {
-          id: `not_${Date.now()}`,
-          userId: found.userId || found.driverId,
-          userEmail: found.userEmail || found.driverEmail,
-          targetUserId: found.userId || found.driverId,
-          type: 'booking_approved',
-          title: '✅ Reserva Aprovada pelo Locador!',
-          message: `Sua reserva da vaga "${found.spaceTitle}" foi confirmada para ${found.date} das ${found.startTime} às ${found.endTime}.`,
-          read: false,
-          timestamp: 'Agora mesmo',
-          createdAt: new Date().toISOString()
-        },
-        ...prev
-      ]);
+
+      const driverUid = found.userId || found.driverId;
+      const driverMail = found.userEmail || found.driverEmail;
+
+      addNotification({
+        id: `not_apprv_${found.bookingNumber || bookingId}`,
+        relatedId: found.bookingNumber || bookingId,
+        userId: driverUid,
+        userEmail: driverMail,
+        targetUserId: driverUid,
+        category: 'bookings',
+        type: 'booking_approved',
+        title: '✅ Reserva Aprovada pelo Anfitrião!',
+        message: `Sua reserva da vaga "${found.spaceTitle || found.parkingTitle || 'Garagem'}" foi confirmada para ${found.date} das ${found.startTime} às ${found.endTime}.`,
+        actionText: 'Acessar QR Code',
+        actionTab: 'client_dashboard'
+      });
     }
   };
 
@@ -875,21 +1057,23 @@ export const AppProvider = ({ children }) => {
           }
         }
       }
-      setNotifications(prev => [
-        {
-          id: `not_${Date.now()}`,
-          userId: found.userId || found.driverId,
-          userEmail: found.userEmail || found.driverEmail,
-          targetUserId: found.userId || found.driverId,
-          type: 'booking_rejected',
-          title: '❌ Solicitação de Reserva Não Aprovada',
-          message: `O anfitrião não pôde aceitar sua reserva para "${found.spaceTitle}". ${found.paymentMethod === 'Carteira VagaGo' ? 'Seu saldo foi reembolsado.' : ''}`,
-          read: false,
-          timestamp: 'Agora mesmo',
-          createdAt: new Date().toISOString()
-        },
-        ...prev
-      ]);
+
+      const driverUid = found.userId || found.driverId;
+      const driverMail = found.userEmail || found.driverEmail;
+
+      addNotification({
+        id: `not_rej_${found.bookingNumber || bookingId}`,
+        relatedId: found.bookingNumber || bookingId,
+        userId: driverUid,
+        userEmail: driverMail,
+        targetUserId: driverUid,
+        category: 'bookings',
+        type: 'booking_rejected',
+        title: '❌ Solicitação de Reserva Não Aprovada',
+        message: `O anfitrião não pôde aceitar sua reserva para "${found.spaceTitle || found.parkingTitle || 'Garagem'}". ${found.paymentMethod === 'Carteira VagaGo' ? 'Seu saldo em créditos foi reembolsado.' : ''}`,
+        actionText: 'Buscar Outras Vagas',
+        actionTab: 'search'
+      });
     }
   };
 
@@ -1100,35 +1284,51 @@ export const AppProvider = ({ children }) => {
     publishBookingToSupabase(completeBooking);
 
     // Send instant notification to host (Anfitrião)
-    setNotifications(prev => [
-      {
-        id: `not_${Date.now()}`,
-        userId: hostId,
-        userEmail: hostEmail,
-        targetUserId: hostId,
-        type: requiresApproval ? 'new_booking_request' : 'booking_confirmed',
-        title: requiresApproval ? '🔔 Nova Solicitação de Reserva Pendente!' : '🎉 Nova Reserva Recebida!',
-        message: `Nova reserva recebida! ${driverName} reservou sua vaga para ${newBookingData.date} às ${newBookingData.startTime}.`,
-        read: false,
-        timestamp: 'Agora mesmo',
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: `not_${Date.now() + 1}`,
-        userId: driverId,
-        userEmail: driverEmail,
-        targetUserId: driverId,
-        type: requiresApproval ? 'booking_pending' : 'booking_confirmed',
-        title: requiresApproval ? '⏳ Reserva Solicitada com Sucesso!' : '✅ Reserva Confirmada!',
-        message: requiresApproval
-          ? `Sua solicitação de vaga em "${targetSpot.title || 'Garagem'}" foi enviada ao anfitrião ${hostName}.`
-          : `Sua vaga em "${targetSpot.title || 'Garagem'}" está confirmada para ${newBookingData.date} às ${newBookingData.startTime}!`,
-        read: false,
-        timestamp: 'Agora mesmo',
-        createdAt: new Date().toISOString()
-      },
-      ...prev
-    ]);
+    addNotification({
+      id: `not_bk_host_${bookingNumber}`,
+      relatedId: bookingNumber,
+      userId: hostId,
+      userEmail: hostEmail,
+      targetUserId: hostId,
+      category: 'bookings',
+      type: requiresApproval ? 'new_booking_request' : 'new_booking',
+      title: requiresApproval ? '🔔 Nova Solicitação de Reserva Pendente!' : '🎉 Nova Reserva Recebida!',
+      message: `${driverName} solicitou vaga em "${targetSpot.title || 'sua garagem'}" para ${newBookingData.date || newBookingData.startDate} às ${newBookingData.startTime}.`,
+      actionText: 'Ver Reservas',
+      actionTab: 'owner_reservas'
+    });
+
+    // Send instant notification to driver (Motorista)
+    addNotification({
+      id: `not_bk_drv_${bookingNumber}`,
+      relatedId: bookingNumber,
+      userId: driverId,
+      userEmail: driverEmail,
+      targetUserId: driverId,
+      category: 'bookings',
+      type: requiresApproval ? 'booking_pending' : 'booking_confirmed',
+      title: requiresApproval ? '⏳ Reserva Solicitada com Sucesso!' : '✅ Reserva Confirmada!',
+      message: requiresApproval
+        ? `Sua solicitação de vaga em "${targetSpot.title || 'Garagem'}" foi enviada ao anfitrião ${hostName}.`
+        : `Sua vaga em "${targetSpot.title || 'Garagem'}" está confirmada para ${newBookingData.date || newBookingData.startDate} às ${newBookingData.startTime}!`,
+      actionText: 'Ver Comprovante',
+      actionTab: 'client_dashboard'
+    });
+
+    // Send instant notification for payment
+    addNotification({
+      id: `not_pay_${bookingNumber}`,
+      relatedId: bookingNumber,
+      userId: driverId,
+      userEmail: driverEmail,
+      targetUserId: driverId,
+      category: 'payments',
+      type: 'payment_approved',
+      title: '💳 Pagamento Confirmado',
+      message: `Pagamento de R$ ${Number(newBookingData.totalPrice || subtotalVal).toFixed(2)} (${newBookingData.paymentMethod || 'PIX'}) aprovado para a reserva #${bookingNumber}.`,
+      actionText: 'Minhas Reservas',
+      actionTab: 'client_dashboard'
+    });
 
     return completeBooking;
   };
@@ -1352,19 +1552,19 @@ export const AppProvider = ({ children }) => {
       publishSpaceToSupabase(newSpot);
 
 
-      // Broadcast notification to all drivers about the new garage in Itabuna
-      setNotifications(prev => [
-        {
-          id: `not_${Date.now()}`,
-          userId: 'usr_1',
-          type: 'new_space',
-          title: '🎉 Nova Garagem Publicada em Itabuna!',
-          message: `A vaga "${newSpot.title}" (${newSpot.address}) foi publicada e já está disponível para todos os motoristas!`,
-          read: false,
-          timestamp: 'Agora mesmo'
-        },
-        ...prev
-      ]);
+      // Broadcast notification to host about the new garage
+      addNotification({
+        id: `not_spc_${newSpot.id}`,
+        userId: safeUser.id,
+        userEmail: safeUser.email,
+        targetUserId: safeUser.id,
+        category: 'system',
+        type: 'new_space',
+        title: '🎉 Sua Garagem está Ativa e Publicada!',
+        message: `A vaga "${newSpot.title}" (${newSpot.address}) foi publicada com sucesso e já está disponível para motoristas em Itabuna!`,
+        actionText: 'Minhas Garagens',
+        actionTab: 'owner_spots'
+      });
     }
   };
 
@@ -1393,11 +1593,84 @@ export const AppProvider = ({ children }) => {
 
 
   const authorizeCheckIn = (bookingId) => {
+    const found = bookings.find(b => b.id === bookingId || b.bookingNumber === bookingId);
     setBookings(prev => prev.map(b => (b.id === bookingId || b.bookingNumber === bookingId) ? { ...b, bookingStatus: 'Em Andamento', checkInTime: new Date().toLocaleString('pt-BR') } : b));
+
+    if (found) {
+      const driverUid = found.userId || found.driverId;
+      const driverMail = found.userEmail || found.driverEmail;
+      const hostUid = found.hostId || found.ownerId;
+      const hostMail = found.hostEmail || found.ownerEmail;
+
+      addNotification({
+        id: `not_chkin_drv_${found.bookingNumber || bookingId}`,
+        relatedId: found.bookingNumber || bookingId,
+        userId: driverUid,
+        userEmail: driverMail,
+        targetUserId: driverUid,
+        category: 'bookings',
+        type: 'check_in',
+        title: '🚗 Check-in Realizado com Sucesso!',
+        message: `Seu check-in na vaga "${found.spaceTitle || found.parkingTitle || 'Garagem'}" foi registrado. Boa estadia!`,
+        actionText: 'Acompanhar Reserva',
+        actionTab: 'client_dashboard'
+      });
+
+      addNotification({
+        id: `not_chkin_host_${found.bookingNumber || bookingId}`,
+        relatedId: found.bookingNumber || bookingId,
+        userId: hostUid,
+        userEmail: hostMail,
+        targetUserId: hostUid,
+        category: 'bookings',
+        type: 'driver_check_in',
+        title: '🚗 Motorista Fez Check-in na Vaga',
+        message: `O motorista ${found.driverName || 'locatário'} deu entrada na vaga "${found.spaceTitle || found.parkingTitle || 'Garagem'}" (Placa: ${found.vehicle?.plate || 'identificada'}).`,
+        actionText: 'Ver Reservas',
+        actionTab: 'owner_reservas'
+      });
+    }
   };
 
   const completeCheckOut = (bookingId) => {
+    const found = bookings.find(b => b.id === bookingId || b.bookingNumber === bookingId);
     setBookings(prev => prev.map(b => (b.id === bookingId || b.bookingNumber === bookingId) ? { ...b, bookingStatus: 'Concluído', checkOutTime: new Date().toLocaleString('pt-BR') } : b));
+
+    if (found) {
+      const driverUid = found.userId || found.driverId;
+      const driverMail = found.userEmail || found.driverEmail;
+      const hostUid = found.hostId || found.ownerId;
+      const hostMail = found.hostEmail || found.ownerEmail;
+      const payoutVal = found.ownerPayout || (found.totalPrice ? (found.totalPrice * 0.9).toFixed(2) : '0.00');
+
+      addNotification({
+        id: `not_chkout_drv_${found.bookingNumber || bookingId}`,
+        relatedId: found.bookingNumber || bookingId,
+        userId: driverUid,
+        userEmail: driverMail,
+        targetUserId: driverUid,
+        category: 'bookings',
+        type: 'check_out',
+        title: '🏁 Check-out Finalizado',
+        message: `Check-out da reserva #${found.bookingNumber} finalizado na vaga "${found.spaceTitle || found.parkingTitle || 'Garagem'}". Obrigado por usar o VagaGo!`,
+        actionText: 'Minhas Reservas',
+        actionTab: 'client_dashboard'
+      });
+
+      addNotification({
+        id: `not_payout_host_${found.bookingNumber || bookingId}`,
+        relatedId: found.bookingNumber || bookingId,
+        userId: hostUid,
+        userEmail: hostMail,
+        targetUserId: hostUid,
+        category: 'payments',
+        type: 'payout_credited',
+        title: '💰 Pagamento Creditado!',
+        message: `O valor líquido de R$ ${Number(payoutVal).toFixed(2)} foi liberado no seu saldo pela locação da vaga "${found.spaceTitle || found.parkingTitle || 'Garagem'}".`,
+        actionText: 'Ver Saldo & Saques',
+        actionTab: 'owner_finance'
+      });
+    }
   };
 
   const requestWithdrawal = async (amount) => {
@@ -1434,6 +1707,19 @@ export const AppProvider = ({ children }) => {
     } catch (e) {
       console.warn("Notice saving withdrawal to Supabase:", e);
     }
+
+    addNotification({
+      id: `not_wtd_${newWtd.id}`,
+      userId: currentUser?.id,
+      userEmail: currentUser?.email,
+      targetUserId: currentUser?.id,
+      category: 'payments',
+      type: 'deposit_success',
+      title: '💸 Solicitação de Saque PIX Enviada',
+      message: `Sua solicitação de saque de R$ ${Number(amount).toFixed(2)} para a chave PIX "${newWtd.pixKey}" está em processamento.`,
+      actionText: 'Ver Financeiro',
+      actionTab: 'owner_finance'
+    });
   };
 
   const approveWithdrawal = (id) => {
@@ -1459,79 +1745,9 @@ export const AppProvider = ({ children }) => {
     }));
   };
 
-  const extendBooking = (bookingId, additionalMinutes, extraPrice) => {
-
-    setBookings(prev => prev.map(b => {
-      if (b.id === bookingId || b.bookingNumber === bookingId) {
-        // Calculate new end time string
-        const [h, m] = b.endTime.split(':').map(Number);
-        const totalMins = h * 60 + m + additionalMinutes;
-        const newH = Math.floor(totalMins / 60) % 24;
-        const newM = totalMins % 60;
-        const formattedEndTime = `${newH < 10 ? '0' + newH : newH}:${newM < 10 ? '0' + newM : newM}`;
-
-        return {
-          ...b,
-          endTime: formattedEndTime,
-          subtotal: b.subtotal + extraPrice,
-          totalPrice: b.totalPrice + extraPrice,
-          totalHours: b.totalHours + (additionalMinutes / 60)
-        };
-      }
-      return b;
-    }));
-  };
-
-  const cancelBooking = (bookingId) => {
-    const found = bookings.find(b => b.id === bookingId || b.bookingNumber === bookingId);
-    if (found) {
-      setBookings(prev => prev.map(b => (b.id === bookingId || b.bookingNumber === bookingId) ? { ...b, bookingStatus: 'Cancelado', status: 'cancelled' } : b));
-      updateBookingStatusInSupabase(bookingId, 'Cancelado');
-      // Refund credits
-      if (currentUser && found.totalPrice) {
-        const refundedCredits = (currentUser.credits || 0) + found.totalPrice;
-        setCurrentUser(prev => ({ ...prev, credits: refundedCredits }));
-        setUsers(prev => prev.map(u => u.id === currentUser.id ? { ...u, credits: refundedCredits } : u));
-      }
-    }
-  };
-
-
-  const depositWalletCredits = async (amount) => {
-    if (currentUser && amount > 0) {
-      const newCredits = Number((currentUser.credits || 0) + amount);
-      setCurrentUser(prev => prev ? ({ ...prev, credits: newCredits }) : prev);
-      setUsers(prev => prev.map(u => (u.id === currentUser.id || u.email === currentUser.email) ? { ...u, credits: newCredits } : u));
-      
-      // Persist credit recharge to Supabase Cloud
-      if (isSupabaseConfigured) {
-        try {
-          await supabase
-            .from('users')
-            .update({ credits: newCredits })
-            .or(`id.eq.${currentUser.id},email.eq.${currentUser.email}`);
-        } catch (e) {
-          console.warn("Notice syncing credits to Supabase Cloud:", e);
-        }
-      }
-    }
-  };
-
 
   const addCoupon = (couponData) => {
     setCoupons(prev => [{ id: `cp_${Date.now()}`, status: 'Ativo', usageCount: 0, ...couponData }, ...prev]);
-  };
-
-  const markNotificationAsRead = (notifId) => {
-    setNotifications(prev =>
-      prev.map(n => n.id === notifId ? { ...n, read: true } : n)
-    );
-  };
-
-  const markAllNotificationsAsRead = () => {
-    setNotifications(prev =>
-      prev.map(n => ({ ...n, read: true }))
-    );
   };
 
   const openSpotDetails = (spot) => {
@@ -1565,6 +1781,17 @@ export const AppProvider = ({ children }) => {
     v.userId === 'usr_1' ||
     safeUserId === 'usr_1'
   ));
+
+  const unreadNotificationsCount = (notifications || []).filter(n => {
+    if (!n || n.read) return false;
+    if (!n.userId && !n.userEmail && !n.targetUserId) return true;
+    const safeUser = currentUser || {};
+    return (
+      (n.userId && (n.userId === safeUser.id || n.userId === safeUser.email)) ||
+      (n.targetUserId && n.targetUserId === safeUser.id) ||
+      (n.userEmail && safeUser.email && n.userEmail.toLowerCase() === safeUser.email.toLowerCase())
+    );
+  }).length;
 
   return (
 
@@ -1603,6 +1830,12 @@ export const AppProvider = ({ children }) => {
       favorites,
       toggleFavorite,
       notifications,
+      unreadNotificationsCount,
+      notificationPreferences,
+      updateNotificationPreferences,
+      liveToast,
+      clearLiveToast,
+      addNotification,
       markNotificationAsRead,
       markAllNotificationsAsRead,
       coupons,

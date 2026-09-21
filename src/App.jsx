@@ -20,6 +20,8 @@ import { ProfilePage } from './components/ProfilePage';
 
 import { OwnerDashboard } from './components/OwnerDashboard';
 import { AdminPanel } from './components/AdminPanel';
+import { NotificationsPage } from './components/NotificationsPage';
+import { NotificationToast } from './components/NotificationToast';
 import { RotateCcw, Sparkles } from 'lucide-react';
 
 
@@ -133,8 +135,12 @@ const MainContent = () => {
         )}
         {(activeTab === 'owner_dashboard' || activeTab === 'owner_spots' || activeTab === 'owner_finance' || activeTab === 'owner_reservas') && <OwnerDashboard />}
         {activeTab === 'profile' && <ProfilePage />}
+        {activeTab === 'notifications' && <NotificationsPage />}
         {activeTab === 'admin_dashboard' && <AdminPanel />}
       </div>
+
+      {/* Global Real-Time Notification Toast Alert */}
+      <NotificationToast />
 
 
 
