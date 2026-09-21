@@ -1782,6 +1782,88 @@ export const AppProvider = ({ children }) => {
     });
   };
 
+  const cancelBooking = (bookingId) => {
+    const found = bookings.find(b => b.id === bookingId || b.bookingNumber === bookingId);
+    if (found) {
+      setBookings(prev => prev.map(b => (b.id === bookingId || b.bookingNumber === bookingId) ? { ...b, bookingStatus: 'Cancelado', status: 'cancelled' } : b));
+      updateBookingStatusInSupabase(bookingId, 'Cancelado');
+      // Refund credits
+      if (currentUser && found.totalPrice) {
+        const refundedCredits = (currentUser.credits || 0) + found.totalPrice;
+        setCurrentUser(prev => ({ ...prev, credits: refundedCredits }));
+        setUsers(prev => prev.map(u => u.id === currentUser.id ? { ...u, credits: refundedCredits } : u));
+      }
+
+      const driverUid = found.userId || found.driverId;
+      const driverMail = found.userEmail || found.driverEmail;
+      const hostUid = found.hostId || found.ownerId;
+      const hostMail = found.hostEmail || found.ownerEmail;
+
+      // Notification to driver
+      addNotification({
+        id: `not_canc_drv_${found.bookingNumber || bookingId}`,
+        relatedId: found.bookingNumber || bookingId,
+        userId: driverUid,
+        userEmail: driverMail,
+        targetUserId: driverUid,
+        category: 'bookings',
+        type: 'booking_cancelled',
+        title: '⚠️ Reserva Cancelada',
+        message: `A reserva #${found.bookingNumber} para a vaga "${found.spaceTitle || found.parkingTitle || 'Garagem'}" foi cancelada. O valor de R$ ${Number(found.totalPrice || 0).toFixed(2)} foi estornado em créditos na sua carteira.`,
+        actionText: 'Minhas Reservas',
+        actionTab: 'client_dashboard'
+      });
+
+      // Notification to host
+      addNotification({
+        id: `not_canc_host_${found.bookingNumber || bookingId}`,
+        relatedId: found.bookingNumber || bookingId,
+        userId: hostUid,
+        userEmail: hostMail,
+        targetUserId: hostUid,
+        category: 'bookings',
+        type: 'booking_cancelled',
+        title: '⚠️ Uma Reserva Foi Cancelada',
+        message: `A reserva #${found.bookingNumber} na vaga "${found.spaceTitle || found.parkingTitle || 'Garagem'}" foi cancelada. A vaga voltou a ficar disponível para locação.`,
+        actionText: 'Ver Garagens',
+        actionTab: 'owner_spots'
+      });
+    }
+  };
+
+  const depositWalletCredits = async (amount) => {
+    if (currentUser && amount > 0) {
+      const newCredits = Number((currentUser.credits || 0) + amount);
+      setCurrentUser(prev => prev ? ({ ...prev, credits: newCredits }) : prev);
+      setUsers(prev => prev.map(u => (u.id === currentUser.id || u.email === currentUser.email) ? { ...u, credits: newCredits } : u));
+      
+      // Persist credit recharge to Supabase Cloud
+      if (isSupabaseConfigured) {
+        try {
+          await supabase
+            .from('users')
+            .update({ credits: newCredits })
+            .or(`id.eq.${currentUser.id},email.eq.${currentUser.email}`);
+        } catch (e) {
+          console.warn("Notice syncing credits to Supabase Cloud:", e);
+        }
+      }
+
+      addNotification({
+        id: `not_dep_${Date.now()}`,
+        userId: currentUser.id,
+        userEmail: currentUser.email,
+        targetUserId: currentUser.id,
+        category: 'payments',
+        type: 'deposit_success',
+        title: '💵 Recarga de Carteira Concluída!',
+        message: `Recarga de R$ ${Number(amount).toFixed(2)} confirmada. Seu saldo atual é R$ ${newCredits.toFixed(2)}.`,
+        actionText: 'Minhas Reservas',
+        actionTab: 'client_dashboard'
+      });
+    }
+  };
+
   const addCoupon = (couponData) => {
     setCoupons(prev => [{ id: `cp_${Date.now()}`, status: 'Ativo', usageCount: 0, ...couponData }, ...prev]);
   };
