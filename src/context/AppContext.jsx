@@ -1746,6 +1746,42 @@ export const AppProvider = ({ children }) => {
   };
 
 
+  const extendBooking = (bookingId, additionalMinutes, extraPrice) => {
+    setBookings(prev => prev.map(b => {
+      if (b.id === bookingId || b.bookingNumber === bookingId) {
+        // Calculate new end time string
+        const [h, m] = (b.endTime || '12:00').split(':').map(Number);
+        const totalMins = h * 60 + m + additionalMinutes;
+        const newH = Math.floor(totalMins / 60) % 24;
+        const newM = totalMins % 60;
+        const formattedEndTime = `${newH < 10 ? '0' + newH : newH}:${newM < 10 ? '0' + newM : newM}`;
+
+        return {
+          ...b,
+          endTime: formattedEndTime,
+          subtotal: Number(b.subtotal || 0) + extraPrice,
+          totalPrice: Number(b.totalPrice || 0) + extraPrice,
+          totalHours: Number(b.totalHours || 1) + (additionalMinutes / 60)
+        };
+      }
+      return b;
+    }));
+
+    addNotification({
+      id: `not_ext_${bookingId}_${Date.now()}`,
+      relatedId: bookingId,
+      userId: currentUser?.id,
+      userEmail: currentUser?.email,
+      targetUserId: currentUser?.id,
+      category: 'bookings',
+      type: 'booking_confirmed',
+      title: '⏱️ Reserva Estendida com Sucesso!',
+      message: `Tempo de permanência estendido em ${additionalMinutes} minutos por R$ ${extraPrice.toFixed(2)}.`,
+      actionText: 'Minhas Reservas',
+      actionTab: 'client_dashboard'
+    });
+  };
+
   const addCoupon = (couponData) => {
     setCoupons(prev => [{ id: `cp_${Date.now()}`, status: 'Ativo', usageCount: 0, ...couponData }, ...prev]);
   };
