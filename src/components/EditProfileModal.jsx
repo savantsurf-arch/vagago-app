@@ -99,7 +99,7 @@ export const EditProfileModal = () => {
     try {
       setIsCompressing(true);
       setErrorMsg('');
-      const compressed = await compressImageToWebP(file, 800, 0.90);
+      const compressed = await compressImageToWebP(file, 400, 0.85);
       setAvatar(compressed.dataUrl);
       setCompressionNotice(
         `✓ Foto otimizada em WebP HD (${compressed.compressedSizeKb} KB - economizou ${compressed.savingsPercent}%)`
@@ -245,6 +245,7 @@ export const EditProfileModal = () => {
                     accept="image/*"
                     capture="user"
                     className="hidden"
+                    onClick={(e) => { e.target.value = null; }}
                     onChange={(e) => {
                       if (e.target.files && e.target.files[0]) {
                         handleImageFile(e.target.files[0]);
@@ -266,6 +267,7 @@ export const EditProfileModal = () => {
                     type="file"
                     accept="image/*"
                     className="hidden"
+                    onClick={(e) => { e.target.value = null; }}
                     onChange={(e) => {
                       if (e.target.files && e.target.files[0]) {
                         handleImageFile(e.target.files[0]);

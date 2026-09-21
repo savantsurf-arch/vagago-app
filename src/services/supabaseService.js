@@ -236,6 +236,46 @@ export async function registerUserInSupabase(user) {
   }
 }
 
+// Update existing user profile in Supabase Cloud users table
+export async function updateUserProfileInSupabase(user) {
+  if (!isSupabaseConfigured || !user || !user.email) return false;
+
+  try {
+    const cleanEmail = user.email.toLowerCase().trim();
+    const updatePayload = {
+      name: user.name,
+      phone: user.phone || '(73) 99123-4567',
+      avatar: user.avatar || null,
+      role: user.role || 'CLIENTE'
+    };
+
+    if (user.cpf) updatePayload.cpf = user.cpf;
+    if (user.pixKey || user.pix_key) updatePayload.pix_key = user.pixKey || user.pix_key;
+
+    const { data, error } = await supabase
+      .from('users')
+      .update(updatePayload)
+      .eq('email', cleanEmail)
+      .select();
+
+    if (error) {
+      console.warn("Supabase user update notice:", error.message);
+      return false;
+    }
+
+    if (!data || data.length === 0) {
+      // User not in Supabase yet, upsert full row
+      return await registerUserInSupabase(user);
+    }
+
+    console.log("👤 Perfil do usuário atualizado no Supabase Cloud:", data);
+    return true;
+  } catch (e) {
+    console.warn("Supabase user update error:", e);
+    return false;
+  }
+}
+
 // Map Booking between Frontend (camelCase) and Supabase DB (snake_case)
 export function mapBookingToSupabaseRow(booking) {
   const driverId = booking.driver_id || booking.driverId || booking.userId || booking.user_id;

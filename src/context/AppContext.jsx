@@ -29,6 +29,7 @@ import {
   publishSpaceToSupabase,
   deleteSpaceFromSupabase,
   registerUserInSupabase,
+  updateUserProfileInSupabase,
   publishBookingToSupabase,
   fetchBookingsFromSupabase,
   updateBookingStatusInSupabase,
@@ -110,14 +111,42 @@ export const AppProvider = ({ children }) => {
     const isAuth = localStorage.getItem('vagago_isAuthenticated') === 'true';
     const savedEmail = localStorage.getItem('vagago_currentUser_email');
     if (isAuth && savedEmail && !LEGACY_EMAILS.includes(savedEmail.toLowerCase())) {
+      const cleanEmail = savedEmail.toLowerCase();
+      let userObj = null;
+
+      // 1. Try dedicated vagago_currentUser
       try {
-        const saved = localStorage.getItem('vagago_users');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          const found = parsed.find(u => u && u.email?.toLowerCase() === savedEmail.toLowerCase());
-          if (found) return found;
+        const savedCurrent = localStorage.getItem('vagago_currentUser');
+        if (savedCurrent) {
+          const parsed = JSON.parse(savedCurrent);
+          if (parsed && parsed.email?.toLowerCase() === cleanEmail) {
+            userObj = parsed;
+          }
         }
       } catch (e) {}
+
+      // 2. Try from vagago_users
+      if (!userObj) {
+        try {
+          const saved = localStorage.getItem('vagago_users');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            const found = parsed.find(u => u && u.email?.toLowerCase() === cleanEmail);
+            if (found) userObj = found;
+          }
+        } catch (e) {}
+      }
+
+      if (userObj) {
+        // Enforce dedicated avatar cache if available
+        try {
+          const savedAvatar = localStorage.getItem(`vagago_avatar_${cleanEmail}`);
+          if (savedAvatar) {
+            userObj.avatar = savedAvatar;
+          }
+        } catch (e) {}
+        return userObj;
+      }
     }
     return null;
   });
@@ -143,20 +172,112 @@ export const AppProvider = ({ children }) => {
     setIsEditProfileModalOpen(true);
   };
 
-  const updateUserProfile = (updatedData) => {
+  const updateUserProfile = async (updatedData) => {
     if (!currentUser) return null;
+    const cleanEmail = (currentUser.email || '').toLowerCase().trim();
+    const updatedAvatar = updatedData.avatar !== undefined ? updatedData.avatar : currentUser.avatar;
+
+    // Cache avatar specifically in localStorage
+    if (updatedAvatar) {
+      try {
+        localStorage.setItem(`vagago_avatar_${cleanEmail}`, updatedAvatar);
+      } catch (e) {}
+    }
+
     const updated = {
       ...currentUser,
-      ...updatedData
+      ...updatedData,
+      avatar: updatedAvatar
     };
+
+    // 1. Update React state immediately
     setCurrentUser(updated);
-    setUsers(prev => prev.map(u => (u.email?.toLowerCase() === currentUser.email?.toLowerCase() || u.id === currentUser.id) ? updated : u));
+    setUsers(prev => {
+      const updatedList = prev.map(u => (u.email?.toLowerCase() === cleanEmail || u.id === currentUser.id) ? updated : u);
+      try {
+        localStorage.setItem('vagago_users', JSON.stringify(updatedList));
+      } catch (e) {}
+      return updatedList;
+    });
+
+    // 2. Persist currentUser in localStorage synchronously
     try {
+      localStorage.setItem('vagago_currentUser', JSON.stringify(updated));
       localStorage.setItem('vagago_currentUser_email', updated.email || currentUser.email);
     } catch (e) {}
+
+    // 3. Update any parking spaces owned by this host with the new photo
+    setParkingSpaces(prev => {
+      const updatedSpaces = prev.map(s => {
+        const isOwner = (s.ownerId && s.ownerId === currentUser.id) ||
+                        (s.owner_id && s.owner_id === currentUser.id) ||
+                        (s.ownerEmail && s.ownerEmail.toLowerCase() === cleanEmail) ||
+                        (s.owner_email && s.owner_email.toLowerCase() === cleanEmail);
+        if (isOwner) {
+          return {
+            ...s,
+            ownerAvatar: updatedAvatar,
+            owner_avatar: updatedAvatar,
+            ownerName: updated.name || s.ownerName,
+            ownerPhone: updated.phone || s.ownerPhone
+          };
+        }
+        return s;
+      });
+      try {
+        localStorage.setItem('vagago_parkingSpaces', JSON.stringify(updatedSpaces));
+      } catch (e) {}
+      return updatedSpaces;
+    });
+
+    // 4. Update bookings involving this user
+    setBookings(prev => {
+      const updatedBookings = prev.map(b => {
+        let modified = { ...b };
+        if (b.userId === currentUser.id || b.user_id === currentUser.id || (b.driverEmail && b.driverEmail.toLowerCase() === cleanEmail)) {
+          modified.userAvatar = updatedAvatar;
+          modified.user_avatar = updatedAvatar;
+          modified.driverAvatar = updatedAvatar;
+          modified.driver_avatar = updatedAvatar;
+        }
+        if (b.hostId === currentUser.id || b.host_id === currentUser.id || b.ownerId === currentUser.id) {
+          modified.hostAvatar = updatedAvatar;
+          modified.host_avatar = updatedAvatar;
+          modified.ownerAvatar = updatedAvatar;
+          modified.owner_avatar = updatedAvatar;
+        }
+        return modified;
+      });
+      try {
+        localStorage.setItem('vagago_bookings', JSON.stringify(updatedBookings));
+      } catch (e) {}
+      return updatedBookings;
+    });
+
+    // 5. Asynchronously persist to Supabase Cloud users table
+    if (isSupabaseConfigured) {
+      try {
+        await updateUserProfileInSupabase(updated);
+      } catch (cloudErr) {
+        console.warn('Notice: Supabase background user profile sync:', cloudErr);
+      }
+    }
+
     return updated;
   };
 
+  // Keep currentUser synced in localStorage
+  useEffect(() => {
+    if (currentUser && currentUser.email) {
+      try {
+        localStorage.setItem('vagago_currentUser', JSON.stringify(currentUser));
+        localStorage.setItem('vagago_currentUser_email', currentUser.email);
+        if (currentUser.avatar) {
+          localStorage.setItem(`vagago_avatar_${currentUser.email.toLowerCase()}`, currentUser.avatar);
+        }
+      } catch (e) {}
+    }
+  }, [currentUser]);
 
   // Sync Role & Save Users
   useEffect(() => {
@@ -206,16 +327,27 @@ export const AppProvider = ({ children }) => {
       return false;
     }
 
-    setCurrentUser(foundUser);
-    const userRole = foundUser.role || 'CLIENTE';
+    let resolvedUser = foundUser;
+    try {
+      const savedAvatar = localStorage.getItem(`vagago_avatar_${cleanEmail}`);
+      if (savedAvatar) {
+        resolvedUser = { ...resolvedUser, avatar: savedAvatar };
+      }
+    } catch (e) {}
+
+    setCurrentUser(resolvedUser);
+    const userRole = resolvedUser.role || 'CLIENTE';
     setActiveRole(userRole);
     setIsAuthenticated(true);
     const token = `jwt_token_${Date.now()}`;
     setAuthToken(token);
-    localStorage.setItem('vagago_isAuthenticated', 'true');
-    localStorage.setItem('vagago_authToken', token);
-    localStorage.setItem('vagago_currentUser_email', foundUser.email);
-    localStorage.setItem('vagago_activeRole', userRole);
+    try {
+      localStorage.setItem('vagago_isAuthenticated', 'true');
+      localStorage.setItem('vagago_authToken', token);
+      localStorage.setItem('vagago_currentUser_email', resolvedUser.email);
+      localStorage.setItem('vagago_currentUser', JSON.stringify(resolvedUser));
+      localStorage.setItem('vagago_activeRole', userRole);
+    } catch (e) {}
 
     if (userRole === 'PROPRIETÁRIO') {
       setActiveTab('owner_dashboard');
@@ -247,10 +379,13 @@ export const AppProvider = ({ children }) => {
     setIsAuthenticated(true);
     const token = `jwt_token_${Date.now()}`;
     setAuthToken(token);
-    localStorage.setItem('vagago_isAuthenticated', 'true');
-    localStorage.setItem('vagago_authToken', token);
-    localStorage.setItem('vagago_currentUser_email', cleanEmail);
-    localStorage.setItem('vagago_activeRole', newUser.role);
+    try {
+      localStorage.setItem('vagago_isAuthenticated', 'true');
+      localStorage.setItem('vagago_authToken', token);
+      localStorage.setItem('vagago_currentUser_email', cleanEmail);
+      localStorage.setItem('vagago_currentUser', JSON.stringify(newUser));
+      localStorage.setItem('vagago_activeRole', newUser.role);
+    } catch (e) {}
 
     if (newUser.role === 'PROPRIETÁRIO') {
       setActiveTab('owner_dashboard');
@@ -271,10 +406,13 @@ export const AppProvider = ({ children }) => {
     setCurrentUser(null);
     setAuthToken(null);
     setActiveRole('CLIENTE');
-    localStorage.removeItem('vagago_isAuthenticated');
-    localStorage.removeItem('vagago_authToken');
-    localStorage.removeItem('vagago_currentUser_email');
-    localStorage.setItem('vagago_activeRole', 'CLIENTE');
+    try {
+      localStorage.removeItem('vagago_isAuthenticated');
+      localStorage.removeItem('vagago_authToken');
+      localStorage.removeItem('vagago_currentUser_email');
+      localStorage.removeItem('vagago_currentUser');
+      localStorage.setItem('vagago_activeRole', 'CLIENTE');
+    } catch (e) {}
     setActiveTab('landing');
   };
 
@@ -587,24 +725,68 @@ export const AppProvider = ({ children }) => {
       if (cloudUsers && cloudUsers.length > 0) {
         setUsers(prev => {
           const mergedMap = new Map();
-          prev.forEach(u => mergedMap.set(u.email || u.id, u));
+          prev.forEach(u => mergedMap.set((u.email || u.id || '').toLowerCase(), u));
           cloudUsers.forEach(cu => {
+            const cleanEmail = (cu.email || cu.id || '').toLowerCase();
+            const existing = prev.find(p => p.email?.toLowerCase() === cleanEmail || p.id === cu.id);
+
+            let localAvatar = null;
+            try {
+              localAvatar = localStorage.getItem(`vagago_avatar_${cleanEmail}`);
+            } catch (e) {}
+
+            const resolvedAvatar = localAvatar || cu.avatar || existing?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80';
+
             const normalized = {
               id: cu.id,
-              name: cu.name,
+              name: cu.name || existing?.name || 'Usuário VagaGo',
               email: cu.email,
-              role: cu.role || 'CLIENTE',
-              phone: cu.phone || '(73) 98765-4321',
-              avatar: cu.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80',
-              cpf: cu.cpf,
-              pixKey: cu.pix_key || cu.pixKey,
-              credits: cu.credits || 20,
-              status: cu.status || 'Ativo',
-              createdAt: cu.created_at || cu.createdAt
+              role: cu.role || existing?.role || 'CLIENTE',
+              phone: cu.phone || existing?.phone || '(73) 98765-4321',
+              avatar: resolvedAvatar,
+              cpf: cu.cpf || existing?.cpf,
+              pixKey: cu.pix_key || cu.pixKey || existing?.pixKey,
+              bio: existing?.bio || '',
+              credits: cu.credits !== undefined ? cu.credits : (existing?.credits || 20),
+              status: cu.status || existing?.status || 'Ativo',
+              createdAt: cu.created_at || cu.createdAt || existing?.createdAt
             };
-            mergedMap.set(cu.email || cu.id, normalized);
+            mergedMap.set(cleanEmail, normalized);
           });
-          return Array.from(mergedMap.values());
+          const mergedUsers = Array.from(mergedMap.values());
+          try {
+            localStorage.setItem('vagago_users', JSON.stringify(mergedUsers));
+          } catch (e) {}
+          return mergedUsers;
+        });
+
+        // Also update currentUser if currently logged in
+        setCurrentUser(prevUser => {
+          if (!prevUser || !prevUser.email) return prevUser;
+          const cleanEmail = prevUser.email.toLowerCase();
+          const matchingCloud = cloudUsers.find(cu => cu.email?.toLowerCase() === cleanEmail || cu.id === prevUser.id);
+          if (!matchingCloud) return prevUser;
+
+          let localAvatar = null;
+          try {
+            localAvatar = localStorage.getItem(`vagago_avatar_${cleanEmail}`);
+          } catch (e) {}
+
+          const finalAvatar = localAvatar || prevUser.avatar || matchingCloud.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80';
+
+          const updatedCurrent = {
+            ...prevUser,
+            name: matchingCloud.name || prevUser.name,
+            phone: matchingCloud.phone || prevUser.phone,
+            role: matchingCloud.role || prevUser.role,
+            credits: matchingCloud.credits !== undefined ? matchingCloud.credits : prevUser.credits,
+            pixKey: matchingCloud.pix_key || prevUser.pixKey,
+            avatar: finalAvatar
+          };
+          try {
+            localStorage.setItem('vagago_currentUser', JSON.stringify(updatedCurrent));
+          } catch (e) {}
+          return updatedCurrent;
         });
       }
     };
