@@ -254,13 +254,11 @@ export const AppProvider = ({ children }) => {
       return updatedBookings;
     });
 
-    // 5. Asynchronously persist to Supabase Cloud users table
+    // 5. Asynchronously persist to Supabase Cloud users table in background
     if (isSupabaseConfigured) {
-      try {
-        await updateUserProfileInSupabase(updated);
-      } catch (cloudErr) {
+      updateUserProfileInSupabase(updated).catch(cloudErr => {
         console.warn('Notice: Supabase background user profile sync:', cloudErr);
-      }
+      });
     }
 
     return updated;
