@@ -156,12 +156,26 @@ function AutoFitBoundsController({ spots, userLocation, autoFitTrigger }) {
   return null;
 }
 
+// Controller to gently pan map to selected spot
+function PanToSelectedSpotController({ selectedSpotId, spots }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!selectedSpotId || !spots || spots.length === 0) return;
+    const spot = spots.find(s => s && s.id === selectedSpotId);
+    if (spot && spot.lat && spot.lng && !isNaN(Number(spot.lat)) && !isNaN(Number(spot.lng))) {
+      map.panTo([Number(spot.lat), Number(spot.lng)], { animate: true, duration: 0.6 });
+    }
+  }, [selectedSpotId, spots, map]);
+  return null;
+}
+
 export const InteractiveMap = ({
   spots = [],
   userLocation = null,
   routePolyline = null,
   alternativePolylines = [],
   selectedSpotId = null,
+  hoveredSpotId = null,
   favorites = [],
   onSelectSpot = () => {},
   center = [-14.7966, -39.2789], // Default Itabuna - BA
@@ -169,6 +183,7 @@ export const InteractiveMap = ({
   className = "w-full h-full min-h-[380px] rounded-3xl overflow-hidden border border-slate-200 shadow-sm relative group"
 }) => {
   const [autoFitKey, setAutoFitKey] = React.useState(0);
+
 
   const effectiveCenter = userLocation ? [userLocation.lat, userLocation.lng] : center;
 
@@ -207,6 +222,11 @@ export const InteractiveMap = ({
           spots={validSpots}
           userLocation={userLocation}
           autoFitTrigger={autoFitKey}
+        />
+
+        <PanToSelectedSpotController
+          selectedSpotId={selectedSpotId}
+          spots={validSpots}
         />
 
         {/* CartoDB Voyager Tile Layer */}
@@ -248,7 +268,7 @@ export const InteractiveMap = ({
 
         {/* Spot Markers & Entrance Gate Markers */}
         {validSpots.map((spot) => {
-          const isSelected = selectedSpotId === spot.id;
+          const isSelected = selectedSpotId === spot.id || hoveredSpotId === spot.id;
           const isFav = safeFavorites.includes(spot.id);
           const markerIcon = createPriceMarkerIcon(spot, isSelected, isFav);
           const spotLat = Number(spot.lat);
