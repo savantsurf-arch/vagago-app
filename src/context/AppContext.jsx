@@ -443,7 +443,7 @@ export const AppProvider = ({ children }) => {
     try {
       const saved = localStorage.getItem('vagago_parkingSpaces');
       if (saved) {
-        if (saved.includes('Carlos') || saved.includes('juliana@proprietario.com') || saved.includes('carlos@proprietario.com')) {
+        if (saved.includes('juliana@proprietario.com') || saved.includes('carlos@proprietario.com')) {
           localStorage.removeItem('vagago_parkingSpaces');
           return INITIAL_PARKING_SPACES;
         }
@@ -969,6 +969,7 @@ export const AppProvider = ({ children }) => {
     return 'landing';
   });
   const [isPageLoading, setIsPageLoading] = useState(false);
+  const [legalTab, setLegalTab] = useState('privacy_lgpd');
 
   const setActiveTab = (newTab) => {
     if (newTab === activeTab) return;
@@ -985,6 +986,11 @@ export const AppProvider = ({ children }) => {
     setTimeout(() => {
       setIsPageLoading(false);
     }, 260);
+  };
+
+  const openTermsPage = (subTab = 'privacy_lgpd') => {
+    setLegalTab(subTab);
+    setActiveTab('terms');
   };
 
   // Listen to popstate & hashchange for direct navigation to /admin
@@ -2189,6 +2195,9 @@ export const AppProvider = ({ children }) => {
 
       activeTab,
       setActiveTab,
+      legalTab,
+      setLegalTab,
+      openTermsPage,
       isPageLoading,
       searchLocation,
       setSearchLocation: handleSearchLocationChange,

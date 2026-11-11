@@ -510,6 +510,7 @@ export const SpotDetailsModal = () => {
 
                 <div className="h-56 rounded-2xl overflow-hidden border border-slate-200 shadow-xs">
                   <InteractiveMap
+                    eagerLoad={true}
                     spots={[selectedSpot]}
                     selectedSpotId={selectedSpot.id}
                     center={[Number(selectedSpot.lat || -14.7877), Number(selectedSpot.lng || -39.2789)]}

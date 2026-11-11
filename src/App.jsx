@@ -22,6 +22,8 @@ import { OwnerDashboard } from './components/OwnerDashboard';
 import { AdminPanel } from './components/AdminPanel';
 import { NotificationsPage } from './components/NotificationsPage';
 import { NotificationToast } from './components/NotificationToast';
+import { Footer } from './components/Footer';
+import { WhatsAppSupportWidget } from './components/WhatsAppSupportWidget';
 import { RotateCcw, Sparkles } from 'lucide-react';
 
 
@@ -109,6 +111,7 @@ const MainContent = () => {
   const [trackingBooking, setTrackingBooking] = useState(null);
   const [extendingBooking, setExtendingBooking] = useState(null);
   const [isDepositOpen, setIsDepositOpen] = useState(false);
+  const [isWhatsAppSupportOpen, setIsWhatsAppSupportOpen] = useState(false);
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans relative">
@@ -141,6 +144,15 @@ const MainContent = () => {
 
       {/* Global Real-Time Notification Toast Alert */}
       <NotificationToast />
+
+      {/* Rodapé Global Completo + Suporte WhatsApp Flutuante */}
+      {activeTab !== 'admin_dashboard' && (
+        <Footer onOpenWhatsAppHelp={() => setIsWhatsAppSupportOpen(true)} />
+      )}
+      <WhatsAppSupportWidget
+        isOpen={isWhatsAppSupportOpen}
+        onToggle={setIsWhatsAppSupportOpen}
+      />
 
 
 

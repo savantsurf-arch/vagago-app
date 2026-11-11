@@ -634,6 +634,8 @@ export const SearchPage = () => {
                     <img
                       src={(spot.photos && spot.photos[0]) || spot.facadePhoto || "https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=800&q=80"}
                       alt={spot.title}
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover group-hover:scale-103 transition duration-300"
                     />
                     
@@ -648,7 +650,7 @@ export const SearchPage = () => {
                     {/* Rating Pill */}
                     <div className="absolute top-2.5 right-11 bg-slate-900/80 backdrop-blur-xs text-white text-[11px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1">
                       <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
-                      <span>{spot.rating || '4.9'}</span>
+                      <span>{Number(spot.rating || 4.8).toFixed(1)}</span>
                     </div>
 
                     {/* Share Garage Button */}
@@ -664,15 +666,29 @@ export const SearchPage = () => {
                       <Share2 className="w-3.5 h-3.5" />
                     </button>
 
-                    {/* Covered / Facade Tag */}
-                    <div className="absolute bottom-2 left-2.5 flex items-center gap-1">
+                    {/* Miniaturas de fotos reais + Selo Coberta */}
+                    <div className="absolute bottom-2 left-2.5 flex items-center gap-1.5">
+                      {Array.isArray(spot.photos) && spot.photos.length > 1 && (
+                        <div className="flex items-center gap-1">
+                          {spot.photos.slice(0, 3).map((thumb, tIdx) => (
+                            <img
+                              key={tIdx}
+                              src={thumb}
+                              alt={`${spot.title} mini ${tIdx + 1}`}
+                              loading="lazy"
+                              decoding="async"
+                              className="w-7 h-7 rounded-md object-cover border border-white/80 shadow-xs"
+                            />
+                          ))}
+                        </div>
+                      )}
                       {spot.isCovered && (
                         <span className="bg-slate-900/90 text-white text-[9px] font-bold px-2 py-0.5 rounded-md backdrop-blur-xs">
                           🛡️ Coberta
                         </span>
                       )}
                       <span className="bg-slate-900/90 text-amber-300 text-[9px] font-bold px-2 py-0.5 rounded-md backdrop-blur-xs">
-                        📷 Fachada
+                        📷 {(spot.photos && spot.photos.length) || 1} {(spot.photos && spot.photos.length > 1) ? 'fotos reais' : 'Foto real'}
                       </span>
                     </div>
 
@@ -740,9 +756,9 @@ export const SearchPage = () => {
                           e.stopPropagation();
                           openSpotDetails(spot);
                         }}
-                        className="bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-1 transition shadow-2xs cursor-pointer"
+                        className="bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white text-xs font-extrabold px-3.5 py-2 rounded-xl flex items-center gap-1 transition shadow-2xs cursor-pointer"
                       >
-                        <span>Ver vaga</span>
+                        <span>Reservar Agora</span>
                         <ChevronRight className="w-3.5 h-3.5" />
                       </button>
                     </div>

@@ -73,40 +73,103 @@ export function geocodeAddress(addressQuery) {
 export function calculateSmartParkOptions(spots = [], userLat, userLng) {
   if (!spots || spots.length === 0) return null;
 
-  // Enrich spots with calculated distance
-  const enriched = spots.map(s => {
-    const dist = calculateDistanceKm(userLat, userLng, s.lat, s.lng);
-    // Score combines price (lower is better), rating (higher is better), and distance (lower is better)
-    // Formula: (rating * 20) - (priceHourly * 2) - (dist * 5)
-    const score = (s.rating * 20) - (s.priceHourly * 2) - (dist * 5);
+  const activeSpots = spots.filter(
+    s => s && s.status !== 'Pausada' && s.isAvailable !== false && s.availabilityStatus !== 'Indisponível'
+  );
+  const sourceSpots = activeSpots.length > 0 ? activeSpots : spots.filter(Boolean);
+  if (sourceSpots.length === 0) return null;
+
+  // Enrich spots with safe numeric distance, rating & smartScore
+  const enriched = sourceSpots.map((s) => {
+    const spotLat = Number(s.lat || -14.7966);
+    const spotLng = Number(s.lng || -39.2789);
+    const dist = calculateDistanceKm(userLat, userLng, spotLat, spotLng);
+    const ratingVal = Number(s.rating || 4.8);
+    const reviewsVal = Number(s.reviewsCount || 0);
+    const priceVal = Number(s.priceHourly || 6);
+    const coveredBonus = s.isCovered ? 1.5 : 0;
+
+    // Score combines rating, price, proximity, review confidence and covered status
+    const score = (ratingVal * 20) - (priceVal * 2) - (dist * 5) + Math.min(reviewsVal, 20) * 0.15 + coveredBonus;
+
     return {
       ...s,
+      rating: ratingVal,
+      reviewsCount: reviewsVal,
+      priceHourly: priceVal,
       calculatedDistKm: dist,
       distFormatted: formatDistance(dist),
       walkTime: estimateWalkingTime(dist),
       driveTime: estimateDrivingTime(dist),
-      smartScore: score
+      smartScore: Number(score.toFixed(2))
     };
   });
 
+  // Helper to pick distinct winners whenever possible so categories don't show duplicate cards
+  const usedIds = new Set();
+  const usedAddresses = new Set();
+  const normalizeAddr = (addr) => (addr || '').trim().toLowerCase().replace(/\s+/g, ' ');
+
+  const pickCandidate = (sortedList, preferDistinct = true) => {
+    if (!sortedList || sortedList.length === 0) return null;
+    if (preferDistinct) {
+      const distinct = sortedList.find(
+        item => !usedIds.has(item.id) && !usedAddresses.has(normalizeAddr(item.address))
+      );
+      if (distinct) {
+        usedIds.add(distinct.id);
+        usedAddresses.add(normalizeAddr(distinct.address));
+        return distinct;
+      }
+      const distinctById = sortedList.find(item => !usedIds.has(item.id));
+      if (distinctById) {
+        usedIds.add(distinctById.id);
+        return distinctById;
+      }
+    }
+    const first = sortedList[0];
+    usedIds.add(first.id);
+    usedAddresses.add(normalizeAddr(first.address));
+    return first;
+  };
+
   // 1. MAIS PRÓXIMA (Smallest distance)
-  const closest = [...enriched].sort((a, b) => a.calculatedDistKm - b.calculatedDistKm)[0];
+  const closestList = [...enriched].sort(
+    (a, b) => (a.calculatedDistKm - b.calculatedDistKm) || (b.smartScore - a.smartScore)
+  );
+  const closest = pickCandidate(closestList, false);
 
-  // 2. MAIS BARATA (Lowest hourly price)
-  const cheapest = [...enriched].sort((a, b) => a.priceHourly - b.priceHourly)[0];
+  // 2. MAIS BARATA (Lowest hourly price, breaking ties toward unused spots)
+  const cheapestList = [...enriched].sort(
+    (a, b) => (a.priceHourly - b.priceHourly) || (a.calculatedDistKm - b.calculatedDistKm)
+  );
+  // If strictly cheapest is already closest and there is an equal-price or alternative spot, pick distinct;
+  // otherwise allow SmartParkWidget to combine badges cleanly instead of duplicating the card.
+  const cheapestDistinct = cheapestList.find(
+    item => !usedIds.has(item.id) && item.priceHourly <= closestList[0].priceHourly + 0.5
+  );
+  const cheapest = cheapestDistinct
+    ? pickCandidate([cheapestDistinct, ...cheapestList], true)
+    : pickCandidate(cheapestList, enriched.length > 1 && cheapestList[0].priceHourly === cheapestList[1]?.priceHourly);
 
-  // 3. MELHOR AVALIADA (Highest rating)
-  const topRated = [...enriched].sort((a, b) => b.rating - a.rating)[0];
+  // 3. MELHOR AVALIADA (Highest rating & reviews)
+  const topRatedList = [...enriched].sort(
+    (a, b) => (b.rating - a.rating) || (b.reviewsCount - a.reviewsCount) || (b.smartScore - a.smartScore)
+  );
+  const topRated = pickCandidate(topRatedList, true);
 
-  // 4. MELHOR OPÇÃO (Highest calculated smart score)
-  const bestOverall = [...enriched].sort((a, b) => b.smartScore - a.smartScore)[0];
+  // 4. MELHOR OPÇÃO (Highest overall smartScore among spots, preferring unused balanced spot if >= 4 exist)
+  const bestOverallList = [...enriched].sort(
+    (a, b) => (b.smartScore - a.smartScore) || (a.calculatedDistKm - b.calculatedDistKm)
+  );
+  const bestOverall = pickCandidate(bestOverallList, true);
 
   return {
     bestOverall,
     closest,
     cheapest,
     topRated,
-    allEnriched: enriched
+    allEnriched: bestOverallList
   };
 }
 

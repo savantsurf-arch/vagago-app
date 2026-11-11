@@ -254,6 +254,7 @@ export const LogisticsTrackerModal = ({ booking, isOpen, onClose }) => {
 
             <div className="h-64 rounded-2xl overflow-hidden border border-slate-200 shadow-inner">
               <InteractiveMap
+                eagerLoad={true}
                 spots={[targetSpot]}
                 userLocation={userLocation}
                 routePolyline={activeRoute.polyline}

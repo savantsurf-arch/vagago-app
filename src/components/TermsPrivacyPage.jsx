@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import {
   ShieldCheck,
@@ -23,8 +23,19 @@ import {
 } from 'lucide-react';
 
 export const TermsPrivacyPage = () => {
-  const { setActiveTab } = useApp();
-  const [activeLegalTab, setActiveLegalTab] = useState('privacy_lgpd'); // 'driver', 'host', 'privacy_lgpd', 'google_cookies'
+  const { setActiveTab, legalTab, setLegalTab } = useApp();
+  const [activeLegalTab, setActiveLegalTab] = useState(legalTab || 'privacy_lgpd'); // 'driver', 'host', 'privacy_lgpd', 'google_cookies'
+
+  useEffect(() => {
+    if (legalTab) {
+      setActiveLegalTab(legalTab);
+    }
+  }, [legalTab]);
+
+  const handleSelectLegalTab = (tab) => {
+    setActiveLegalTab(tab);
+    if (typeof setLegalTab === 'function') setLegalTab(tab);
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 py-10 pb-24 animate-in fade-in duration-200">
@@ -66,7 +77,7 @@ export const TermsPrivacyPage = () => {
           
           <button
             type="button"
-            onClick={() => setActiveLegalTab('privacy_lgpd')}
+            onClick={() => handleSelectLegalTab('privacy_lgpd')}
             className={`p-3 rounded-xl transition flex flex-col sm:flex-row items-center justify-center gap-2 cursor-pointer ${
               activeLegalTab === 'privacy_lgpd'
                 ? 'bg-purple-900 text-white shadow-sm'
@@ -79,7 +90,7 @@ export const TermsPrivacyPage = () => {
 
           <button
             type="button"
-            onClick={() => setActiveLegalTab('driver')}
+            onClick={() => handleSelectLegalTab('driver')}
             className={`p-3 rounded-xl transition flex flex-col sm:flex-row items-center justify-center gap-2 cursor-pointer ${
               activeLegalTab === 'driver'
                 ? 'bg-sky-600 text-white shadow-sm'
@@ -92,7 +103,7 @@ export const TermsPrivacyPage = () => {
 
           <button
             type="button"
-            onClick={() => setActiveLegalTab('host')}
+            onClick={() => handleSelectLegalTab('host')}
             className={`p-3 rounded-xl transition flex flex-col sm:flex-row items-center justify-center gap-2 cursor-pointer ${
               activeLegalTab === 'host'
                 ? 'bg-emerald-600 text-white shadow-sm'
@@ -105,7 +116,7 @@ export const TermsPrivacyPage = () => {
 
           <button
             type="button"
-            onClick={() => setActiveLegalTab('google_cookies')}
+            onClick={() => handleSelectLegalTab('google_cookies')}
             className={`p-3 rounded-xl transition flex flex-col sm:flex-row items-center justify-center gap-2 cursor-pointer ${
               activeLegalTab === 'google_cookies'
                 ? 'bg-slate-900 text-white shadow-sm'

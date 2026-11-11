@@ -1,0 +1,32 @@
+{
+  "name": "VagaGo — Vagas de Garagem em Itabuna",
+  "short_name": "VagaGo",
+  "description": "Encontre e reserve vagas de estacionamento e garagens privativas por hora, diária ou mês em Itabuna - BA, ou alugue sua vaga parada.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f8fafc",
+  "theme_color": "#0284c7",
+  "lang": "pt-BR",
+  "categories": ["travel", "navigation", "utilities"],
+  "icons": [
+    {
+      "src": "/logo-vagago.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo-vagago.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
