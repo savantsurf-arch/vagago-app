@@ -509,4 +509,35 @@ export function subscribeToBookingsRealtime(onInsert, onUpdate) {
   }
 }
 
+// Save Host Waitlist Lead to Supabase Cloud (gracefully falls back if table not yet created)
+export async function saveHostWaitlistToSupabase(lead) {
+  if (!isSupabaseConfigured || !lead) return false;
+
+  try {
+    const row = {
+      id: generateSafeUUID(),
+      name: lead.name,
+      whatsapp: lead.whatsapp,
+      neighborhood: lead.neighborhood,
+      city: 'Itabuna - BA',
+      created_at: lead.createdAt || new Date().toISOString()
+    };
+
+    const { error } = await supabase
+      .from('host_waitlist')
+      .insert([row]);
+
+    if (error) {
+      // Optional table fallback: lead remains saved locally without breaking UX
+      console.warn('Supabase host waitlist notice:', error.message);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.warn('Supabase host waitlist fallback:', e);
+    return false;
+  }
+}
+
+
 

@@ -2,14 +2,21 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { InteractiveMap } from './InteractiveMap';
 import { SmartParkWidget } from './SmartParkWidget';
+import { GaragePhotoCarousel } from './GaragePhotoCarousel';
+import { HostWaitlist } from './HostWaitlist';
 import { PwaInstallSection } from './PwaInstallSection';
-import { PLATFORM_GUARANTEES, ITABUNA_TESTIMONIALS } from '../services/brandConfig';
+import {
+  PLATFORM_GUARANTEES,
+  GARAGE_TRUST_GALLERY,
+  ITABUNA_TESTIMONIALS
+} from '../services/brandConfig';
 import {
   Search,
   MapPin,
   Car,
   ShieldCheck,
   Zap,
+  DollarSign,
   Star,
   Sparkles,
   ArrowRight,
@@ -20,12 +27,8 @@ import {
   RefreshCw,
   UserCheck,
   Camera,
-  Wallet,
   PlusCircle
 } from 'lucide-react';
-
-const FALLBACK_GARAGE_PHOTO =
-  'https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=600&q=80';
 
 export const LandingPage = () => {
   const {
@@ -98,7 +101,6 @@ export const LandingPage = () => {
               <span>Operação Oficial em Itabuna - BA • Web App (PWA)</span>
             </div>
 
-            {/* Toggle Claro no Topo: Sou Motorista / Sou Anfitrião */}
             <div
               role="tablist"
               aria-label="Selecione seu perfil no VagaGo"
@@ -138,7 +140,6 @@ export const LandingPage = () => {
 
           {heroAudience === 'driver' ? (
             <>
-              {/* Hero Motorista */}
               <div className="text-center max-w-3xl mx-auto space-y-4">
                 <h1 className="text-3xl sm:text-5xl md:text-6xl font-black text-slate-900 tracking-tight leading-[1.14] text-balance">
                   Encontre vagas de estacionamento <br className="hidden sm:block" />
@@ -152,7 +153,6 @@ export const LandingPage = () => {
                 </p>
               </div>
 
-              {/* Card de Busca Motorista */}
               <div className="mt-6 max-w-4xl mx-auto">
                 <form
                   onSubmit={handleSearchSubmit}
@@ -162,7 +162,7 @@ export const LandingPage = () => {
                     <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-600 shrink-0" />
                     <input
                       type="text"
-                      placeholder="Buscar garagem em Itabuna (Ex: Centro, Av. Cinquentenário, Góes Calmon...)"
+                      placeholder="Buscar garagem em Itabuna (Ex: Centro, Av. Cinquentenário, Fátima...)"
                       value={searchLocation}
                       onChange={(e) => setSearchLocation(e.target.value)}
                       className="w-full bg-slate-50/80 hover:bg-slate-100/80 focus:bg-white border border-slate-200 rounded-2xl pl-12 pr-12 py-3.5 sm:py-4 text-xs sm:text-sm font-bold text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500 focus:outline-none transition shadow-2xs"
@@ -177,7 +177,6 @@ export const LandingPage = () => {
                     </button>
                   </div>
 
-                  {/* Populares em Itabuna */}
                   <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-1 text-xs">
                     <span className="text-slate-400 font-semibold shrink-0">Populares em Itabuna:</span>
                     {[
@@ -202,7 +201,6 @@ export const LandingPage = () => {
                     ))}
                   </div>
 
-                  {/* Filtros Data e Período */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-100">
                     <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1">
                       {[
@@ -248,7 +246,6 @@ export const LandingPage = () => {
                     </div>
                   </div>
 
-                  {/* Hierarquia Clara de CTAs: Primário Destaque + Secundário Contorno */}
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-1">
                     <button
                       type="submit"
@@ -279,7 +276,6 @@ export const LandingPage = () => {
             </>
           ) : (
             <>
-              {/* Hero Anfitrião */}
               <div className="text-center max-w-3xl mx-auto space-y-4 animate-in fade-in duration-200">
                 <h1 className="text-3xl sm:text-5xl md:text-6xl font-black text-slate-900 tracking-tight leading-[1.14] text-balance">
                   Alugue sua garagem parada <br className="hidden sm:block" />
@@ -293,7 +289,6 @@ export const LandingPage = () => {
                 </p>
               </div>
 
-              {/* Simulador Rápido do Anfitrião no Hero */}
               <div className="mt-6 max-w-4xl mx-auto bg-white rounded-3xl p-5 sm:p-8 shadow-xl shadow-slate-200/50 border border-emerald-200/80 grid grid-cols-1 md:grid-cols-12 gap-6 items-center animate-in fade-in duration-200">
                 <div className="md:col-span-7 space-y-4">
                   <div className="flex items-center justify-between text-xs font-bold text-slate-700">
@@ -363,10 +358,14 @@ export const LandingPage = () => {
 
                     <button
                       type="button"
-                      onClick={() => setActiveTab('host_landing')}
+                      onClick={() => {
+                        const wlEl = document.getElementById('para-anfitrioes-waitlist');
+                        if (wlEl) wlEl.scrollIntoView({ behavior: 'smooth' });
+                        else setActiveTab('host_landing');
+                      }}
                       className="w-full border border-slate-600 hover:border-emerald-400 text-slate-200 hover:text-white font-bold text-xs py-2.5 px-4 rounded-xl transition cursor-pointer"
                     >
-                      Ver detalhes para anfitriões
+                      Entrar na Lista Prioritária
                     </button>
                   </div>
                 </div>
@@ -374,10 +373,10 @@ export const LandingPage = () => {
             </>
           )}
 
-          {/* Barra de Credibilidade Realista (sem números inflados ou vagos) */}
+          {/* Barra de Credibilidade Realista */}
           <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 max-w-4xl mx-auto text-center">
             <div className="p-3.5 sm:p-4 bg-white/80 backdrop-blur-md rounded-2xl border border-slate-200/80 shadow-2xs">
-              <div className="text-base sm:text-lg font-black text-slate-900">A partir de R$ 5/h</div>
+              <div className="text-base sm:text-lg font-black text-slate-900">A partir de R$ 4/h</div>
               <div className="text-[11px] sm:text-xs text-slate-500 font-semibold mt-0.5">
                 Mais econômico que rotativos
               </div>
@@ -397,7 +396,7 @@ export const LandingPage = () => {
             <div className="p-3.5 sm:p-4 bg-white/80 backdrop-blur-md rounded-2xl border border-slate-200/80 shadow-2xs">
               <div className="text-base sm:text-lg font-black text-slate-900">Itabuna - BA</div>
               <div className="text-[11px] sm:text-xs text-slate-500 font-semibold mt-0.5">
-                Centro, Jequitibá e Bairros
+                Centro, Jequitibá e Fátima
               </div>
             </div>
           </div>
@@ -405,14 +404,14 @@ export const LandingPage = () => {
       </section>
 
       {/* ==================================================
-          2. SUGESTÕES AUTOMÁTICAS PERTO DE VOCÊ (SEM REPETIÇÃO)
+          2. ESTACIONAR PERTO DE MIM (DADOS DISTINTOS + CARROSSEL)
          ================================================== */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <SmartParkWidget />
       </section>
 
       {/* ==================================================
-          3. MAPA INTERATIVO (LAZY LOADING 4G/5G) + FOTOS REAIS DAS GARAGENS
+          3. MAPA INTERATIVO (LAZY 4G/5G) + CARDS COM CARROSSEL DE FOTOS
          ================================================== */}
       <section id="mapa-itabuna-section" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
@@ -424,7 +423,7 @@ export const LandingPage = () => {
               Garagens disponíveis com fotos reais e preço por hora
             </h2>
             <p className="text-slate-600 text-xs sm:text-sm mt-1">
-              Confira portão de entrada, iluminação e cobertura antes de reservar sua vaga.
+              Navegue pelas fotos do portão, interior e iluminação diretamente nos cards antes de reservar.
             </p>
           </div>
 
@@ -438,17 +437,17 @@ export const LandingPage = () => {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Interactive Lazy Map (7 cols) */}
-          <div className="lg:col-span-7 h-[360px] sm:h-[440px] rounded-3xl overflow-hidden shadow-md border border-slate-200">
+          <div className="lg:col-span-7 h-[360px] sm:h-[460px] rounded-3xl overflow-hidden shadow-md border border-slate-200 lg:sticky lg:top-24">
             <InteractiveMap
               spots={displaySpots}
               onSelectSpot={(spot) => openSpotDetails(spot)}
             />
           </div>
 
-          {/* Lista de Vagas com Miniaturas Reais (5 cols) */}
-          <div className="lg:col-span-5 space-y-3.5 flex flex-col justify-center">
+          {/* Cards com Carrossel de Fotos Reais (5 cols) */}
+          <div className="lg:col-span-5 grid grid-cols-1 gap-4">
             {displaySpots.length === 0 ? (
               <div className="p-8 bg-white rounded-3xl border border-dashed border-slate-300 text-center space-y-3 shadow-2xs">
                 <Car className="w-12 h-12 text-slate-300 mx-auto" />
@@ -468,98 +467,73 @@ export const LandingPage = () => {
               </div>
             ) : (
               displaySpots.slice(0, 3).map((spot) => {
-                const spotPhotos =
-                  Array.isArray(spot.photos) && spot.photos.length > 0
-                    ? spot.photos
-                    : [spot.facadePhoto || FALLBACK_GARAGE_PHOTO];
-                const mainPhoto = spotPhotos[0] || FALLBACK_GARAGE_PHOTO;
+                const ratingLabel = Number(spot.rating || 4.8).toFixed(1);
+                const reviewsCount = Number(spot.reviewsCount || 0);
 
                 return (
                   <div
                     key={spot.id}
                     onClick={() => openSpotDetails(spot)}
-                    className="p-3.5 sm:p-4 bg-white hover:bg-slate-50/90 rounded-2xl border border-slate-200/80 hover:border-sky-300 shadow-2xs hover:shadow-md transition cursor-pointer flex gap-3.5 items-start group"
+                    className="bg-white rounded-2xl border border-slate-200/90 hover:border-sky-300 overflow-hidden shadow-2xs hover:shadow-md transition cursor-pointer group"
                   >
-                    {/* Foto Principal + Tira de Miniaturas Reais (Portão, Iluminação, Espaço) */}
-                    <div className="shrink-0 space-y-1.5">
-                      <div className="relative">
-                        <img
-                          src={mainPhoto}
-                          alt={`Garagem ${spot.title}`}
-                          loading="lazy"
-                          decoding="async"
-                          className="w-24 h-20 sm:w-28 sm:h-22 rounded-xl object-cover ring-1 ring-slate-200 group-hover:scale-102 transition"
-                        />
-                        {spot.isCovered && (
-                          <span className="absolute bottom-1 left-1 bg-slate-900/85 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
-                            🛡️ Coberta
+                    <GaragePhotoCarousel
+                      photos={spot.photos}
+                      captions={spot.photoCaptions}
+                      fallbackPhoto={spot.facadePhoto}
+                      altPrefix={spot.title}
+                      heightClass="h-40"
+                      topLeftSlot={
+                        spot.isCovered ? (
+                          <span className="bg-white/95 px-2.5 py-1 rounded-md text-[11px] font-extrabold text-slate-800 flex items-center gap-1 shadow-xs">
+                            🛡️ Coberta e Monitorada
                           </span>
-                        )}
-                      </div>
-
-                      {spotPhotos.length > 1 && (
-                        <div className="flex items-center gap-1">
-                          {spotPhotos.slice(0, 3).map((thumb, idx) => (
-                            <img
-                              key={idx}
-                              src={thumb}
-                              alt={`Detalhe ${idx + 1} de ${spot.title}`}
-                              loading="lazy"
-                              decoding="async"
-                              className="w-7 h-5 sm:w-8 sm:h-6 rounded object-cover ring-1 ring-slate-200"
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="text-[10px] font-extrabold text-sky-700 bg-sky-50 px-2 py-0.5 rounded-full uppercase border border-sky-200/60 truncate">
+                        ) : null
+                      }
+                      topRightSlot={
+                        <span className="bg-sky-50/95 text-sky-800 text-[10px] font-extrabold px-2.5 py-1 rounded-full border border-sky-200 shadow-xs">
                           📍 {spot.neighborhood || 'Itabuna'}
                         </span>
-                        <span className="text-xs font-bold text-slate-700 flex items-center gap-1 shrink-0">
-                          <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                          {Number(spot.rating || 4.8).toFixed(1)}
+                      }
+                    />
+
+                    <div className="p-4">
+                      <div className="flex justify-between items-start gap-2">
+                        <h3 className="font-extrabold text-base text-slate-900 group-hover:text-sky-600 transition truncate">
+                          {spot.title}
+                        </h3>
+                        <span className="text-emerald-600 font-black text-base shrink-0">
+                          R$ {Number(spot.priceHourly || 6).toFixed(2)}/h
                         </span>
                       </div>
 
-                      <h3 className="font-extrabold text-slate-900 text-sm mt-1 truncate group-hover:text-sky-600 transition">
-                        {spot.title}
-                      </h3>
-                      <p className="text-xs text-slate-500 truncate mt-0.5">{spot.address}</p>
+                      <p className="text-xs text-slate-500 mt-1 truncate">
+                        📍 {spot.address}
+                      </p>
 
-                      {/* Características visuais de confiança (Portão, Iluminação, etc.) */}
-                      <div className="flex flex-wrap gap-1 mt-1.5">
-                        {(spot.features || ['Portão Eletrônico', 'Iluminação']).slice(0, 2).map((feat, idx) => (
-                          <span
-                            key={idx}
-                            className="bg-slate-100 text-slate-600 text-[10px] font-semibold px-2 py-0.5 rounded-md"
-                          >
-                            {feat}
-                          </span>
-                        ))}
+                      <div className="flex items-center gap-2 mt-3 text-xs">
+                        <span className="text-amber-500 font-bold flex items-center gap-1">
+                          <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                          {ratingLabel}
+                          {reviewsCount > 0 && (
+                            <span className="text-slate-400 font-normal">({reviewsCount})</span>
+                          )}
+                        </span>
+                        <span className="text-slate-300">|</span>
+                        <span className="text-sky-600 font-bold">
+                          {spot.walkTime || '3 min a pé'}
+                        </span>
                       </div>
 
-                      <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-slate-100">
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-base font-black text-slate-900">
-                            R$ {Number(spot.priceHourly || 6).toFixed(2)}
-                          </span>
-                          <span className="text-[11px] text-slate-400 font-semibold">/ hora</span>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openSpotDetails(spot);
-                          }}
-                          className="text-xs font-extrabold bg-sky-600 hover:bg-sky-500 text-white px-3.5 py-1.5 rounded-xl transition shadow-2xs cursor-pointer"
-                        >
-                          Reservar Agora
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openSpotDetails(spot);
+                        }}
+                        className="w-full mt-3.5 bg-sky-600 hover:bg-sky-500 text-white py-2.5 rounded-xl text-xs font-extrabold transition shadow-xs cursor-pointer"
+                      >
+                        Ver detalhes e reservar
+                      </button>
                     </div>
                   </div>
                 );
@@ -570,34 +544,126 @@ export const LandingPage = () => {
       </section>
 
       {/* ==================================================
-          4. PROTEÇÃO NA PRÁTICA (DETALHAMENTO DA SEGURANÇA)
+          4. GALERIA DE CONFIANÇA: FOTOS REAIS DAS GARAGENS
          ================================================== */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white rounded-3xl border border-slate-200/90 p-6 sm:p-10 shadow-2xs space-y-8">
           <div className="text-center max-w-2xl mx-auto space-y-2">
-            <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase text-emerald-600 tracking-wider">
-              <ShieldCheck className="w-4 h-4" /> Transparência e Proteção
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase text-sky-600 tracking-wider">
+              <Camera className="w-4 h-4" /> Galeria de Confiança VagaGo
             </span>
             <h2 className="text-2xl sm:text-3xl font-black text-slate-900">
-              O que a segurança VagaGo garante na prática
+              Confira portão, espaço interno e iluminação antes de sair
             </h2>
             <p className="text-slate-600 text-xs sm:text-sm">
-              Sem promessas vagas: regras claras que protegem seu dinheiro, seu veículo e a garagem do anfitrião.
+              Foto real é o que dá segurança: incentivamos todo anfitrião a registrar os 3 ângulos essenciais da garagem.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">
+            {GARAGE_TRUST_GALLERY.map((item) => (
+              <div
+                key={item.id}
+                className="rounded-2xl border border-slate-200 overflow-hidden bg-slate-50/70 hover:border-sky-300 transition group"
+              >
+                <div className="relative h-44 bg-slate-200 overflow-hidden">
+                  <img
+                    src={item.image}
+                    alt={item.title}
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                  />
+                  <span className="absolute top-2.5 left-2.5 bg-slate-900/85 text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full">
+                    {item.step}
+                  </span>
+                  <span className="absolute bottom-2.5 left-2.5 bg-white/95 text-slate-900 text-[10px] font-extrabold px-2.5 py-1 rounded-lg shadow-xs">
+                    {item.tag}
+                  </span>
+                </div>
+                <div className="p-4 space-y-1.5">
+                  <h3 className="font-extrabold text-slate-900 text-sm">{item.title}</h3>
+                  <p className="text-xs text-slate-600 leading-relaxed">{item.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ==================================================
+          5. VANTAGENS PARA MOTORISTAS + SEGURANÇA NA PRÁTICA
+         ================================================== */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+        <div>
+          <div className="text-center max-w-2xl mx-auto mb-8 space-y-2">
+            <span className="text-xs font-bold uppercase text-sky-600 tracking-wider">
+              Vantagens para Motoristas
+            </span>
+            <h2 className="text-2xl sm:text-4xl font-black text-slate-900">
+              Por que estacionar com o VagaGo?
+            </h2>
+            <p className="text-slate-600 text-xs sm:text-sm">
+              Acabe com a dor de cabeça de rodar procurando vaga ou pagar preços abusivos no centro.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">
+            <div className="p-6 sm:p-7 bg-white rounded-3xl border border-slate-200/80 shadow-2xs space-y-3.5 hover:border-sky-300 transition group">
+              <div className="w-12 h-12 bg-sky-50 text-sky-600 rounded-2xl flex items-center justify-center group-hover:scale-105 transition">
+                <DollarSign className="w-6 h-6" />
+              </div>
+              <h3 className="font-extrabold text-slate-900 text-lg">Até 40% Mais Barato</h3>
+              <p className="text-slate-600 text-xs leading-relaxed">
+                Pague valores justos por hora, diária ou mês. Sem surpresas ou cobranças abusivas de estacionamentos convencionais.
+              </p>
+            </div>
+
+            <div className="p-6 sm:p-7 bg-white rounded-3xl border border-slate-200/80 shadow-2xs space-y-3.5 hover:border-emerald-300 transition group">
+              <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center group-hover:scale-105 transition">
+                <ShieldCheck className="w-6 h-6" />
+              </div>
+              <h3 className="font-extrabold text-slate-900 text-lg">Garagem Segura e Coberta</h3>
+              <p className="text-slate-600 text-xs leading-relaxed">
+                Deixe seu carro protegido do sol e da chuva em garagens privativas com portão eletrônico, iluminação noturna e anfitriões verificados.
+              </p>
+            </div>
+
+            <div className="p-6 sm:p-7 bg-white rounded-3xl border border-slate-200/80 shadow-2xs space-y-3.5 hover:border-sky-300 transition group">
+              <div className="w-12 h-12 bg-sky-50 text-sky-700 rounded-2xl flex items-center justify-center group-hover:scale-105 transition">
+                <Zap className="w-6 h-6" />
+              </div>
+              <h3 className="font-extrabold text-slate-900 text-lg">Vaga Garantida no Destino</h3>
+              <p className="text-slate-600 text-xs leading-relaxed">
+                Reserve antes de sair de casa com navegação integrada no GPS. Chegue no seu compromisso em Itabuna sempre no horário.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Segurança Garantida na Prática */}
+        <div className="bg-white rounded-3xl border border-slate-200/90 p-6 sm:p-8 shadow-2xs space-y-6">
+          <div className="text-center max-w-2xl mx-auto space-y-1.5">
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase text-emerald-600 tracking-wider">
+              <ShieldCheck className="w-4 h-4" /> Transparência e Proteção
+            </span>
+            <h3 className="text-xl sm:text-2xl font-black text-slate-900">
+              O que a segurança VagaGo garante na prática
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {PLATFORM_GUARANTEES.map((item) => {
               const IconComp = guaranteeIcons[item.id] || ShieldCheck;
               return (
                 <div
                   key={item.id}
-                  className="p-5 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-3 hover:border-emerald-300 transition"
+                  className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-2.5"
                 >
-                  <div className="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center">
-                    <IconComp className="w-5 h-5" />
+                  <div className="w-9 h-9 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center">
+                    <IconComp className="w-4 h-4" />
                   </div>
-                  <h3 className="font-extrabold text-slate-900 text-sm">{item.title}</h3>
+                  <h4 className="font-extrabold text-slate-900 text-xs sm:text-sm">{item.title}</h4>
                   <p className="text-xs text-slate-600 leading-relaxed">{item.description}</p>
                 </div>
               );
@@ -607,7 +673,14 @@ export const LandingPage = () => {
       </section>
 
       {/* ==================================================
-          5. COMO FUNCIONA PARA MOTORISTAS
+          6. SEÇÃO "PARA ANFITRIÕES" COM WAITLIST (LOGO APÓS VANTAGENS)
+         ================================================== */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <HostWaitlist />
+      </div>
+
+      {/* ==================================================
+          7. COMO FUNCIONA PARA MOTORISTAS
          ================================================== */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white p-6 sm:p-10 rounded-3xl border border-slate-200/80 shadow-2xs space-y-8">
@@ -669,7 +742,7 @@ export const LandingPage = () => {
       </section>
 
       {/* ==================================================
-          6. DEPOIMENTOS DE MORADORES DE ITABUNA
+          8. DEPOIMENTOS DE MORADORES DE ITABUNA
          ================================================== */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-2xl mx-auto mb-8 space-y-2">
@@ -725,85 +798,14 @@ export const LandingPage = () => {
       </section>
 
       {/* ==================================================
-          7. SEÇÃO DEDICADA PARA ANFITRIÕES (DONOS DE GARAGEM)
-         ================================================== */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950 text-white rounded-3xl p-6 sm:p-10 lg:p-12 shadow-xl space-y-8 border border-emerald-900/40">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-            <div className="space-y-2 max-w-2xl">
-              <span className="inline-flex items-center gap-1.5 bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-extrabold px-3 py-1 rounded-full">
-                <Home className="w-3.5 h-3.5" /> Para Proprietários e Condomínios
-              </span>
-              <h2 className="text-2xl sm:text-4xl font-black text-white leading-tight">
-                Tem uma vaga parada? Alugue com segurança e receba via PIX
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                Seu espaço vazio durante o horário comercial ou nos fins de semana pode gerar renda extra mensal sem dor de cabeça e sem custos fixos.
-              </p>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3 shrink-0">
-              <button
-                type="button"
-                onClick={handleStartHosting}
-                className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs sm:text-sm px-6 py-3.5 rounded-2xl shadow-lg shadow-emerald-500/20 transition flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <PlusCircle className="w-4 h-4" />
-                <span>Anunciar Minha Vaga</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('host_landing')}
-                className="border border-emerald-400/50 hover:bg-emerald-500/15 text-emerald-200 font-bold text-xs sm:text-sm px-5 py-3.5 rounded-2xl transition cursor-pointer"
-              >
-                Simular ganhos
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5 pt-2">
-            <div className="p-5 bg-slate-800/80 rounded-2xl border border-slate-700/80 space-y-2">
-              <div className="w-9 h-9 bg-emerald-500/20 text-emerald-400 rounded-xl flex items-center justify-center">
-                <Zap className="w-5 h-5" />
-              </div>
-              <h3 className="font-extrabold text-white text-sm">Controle total de horários e preço</h3>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                Defina tarifas por hora, diária ou mensalidade, escolha se quer aprovar pedidos manualmente e pause sua vaga em 1 clique quando precisar usar.
-              </p>
-            </div>
-
-            <div className="p-5 bg-slate-800/80 rounded-2xl border border-slate-700/80 space-y-2">
-              <div className="w-9 h-9 bg-sky-500/20 text-sky-400 rounded-xl flex items-center justify-center">
-                <ShieldCheck className="w-5 h-5" />
-              </div>
-              <h3 className="font-extrabold text-white text-sm">Motoristas identificados e check-in</h3>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                Antes de liberar o portão, você recebe nome, telefone, CPF e modelo/placa do veículo do motorista no seu painel.
-              </p>
-            </div>
-
-            <div className="p-5 bg-slate-800/80 rounded-2xl border border-slate-700/80 space-y-2">
-              <div className="w-9 h-9 bg-amber-500/20 text-amber-400 rounded-xl flex items-center justify-center">
-                <Wallet className="w-5 h-5" />
-              </div>
-              <h3 className="font-extrabold text-white text-sm">90% líquido direto via PIX</h3>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                Sem mensalidade nem taxa de adesão: você fica com 90% de cada reserva concluída e solicita saque para sua chave PIX a qualquer momento.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ==================================================
-          8. IDENTIFICAÇÃO DA PLATAFORMA (WEB APP / PWA)
+          9. IDENTIFICAÇÃO DA PLATAFORMA (WEB APP / PWA)
          ================================================== */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <PwaInstallSection />
       </section>
 
       {/* ==================================================
-          9. BANNER CTA FINAL COM HIERARQUIA CLARA
+          10. BANNER CTA FINAL COM HIERARQUIA CLARA
          ================================================== */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-gradient-to-r from-sky-700 via-sky-800 to-slate-900 text-white rounded-3xl p-7 sm:p-12 text-center space-y-6 shadow-xl">

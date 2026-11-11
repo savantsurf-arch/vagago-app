@@ -23,7 +23,7 @@ import { AdminPanel } from './components/AdminPanel';
 import { NotificationsPage } from './components/NotificationsPage';
 import { NotificationToast } from './components/NotificationToast';
 import { Footer } from './components/Footer';
-import { WhatsAppSupportWidget } from './components/WhatsAppSupportWidget';
+import { LiveChatWidget } from './components/LiveChatWidget';
 import { RotateCcw, Sparkles } from 'lucide-react';
 
 
@@ -111,7 +111,7 @@ const MainContent = () => {
   const [trackingBooking, setTrackingBooking] = useState(null);
   const [extendingBooking, setExtendingBooking] = useState(null);
   const [isDepositOpen, setIsDepositOpen] = useState(false);
-  const [isWhatsAppSupportOpen, setIsWhatsAppSupportOpen] = useState(false);
+  const [isLiveChatOpen, setIsLiveChatOpen] = useState(false);
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans relative">
@@ -145,13 +145,13 @@ const MainContent = () => {
       {/* Global Real-Time Notification Toast Alert */}
       <NotificationToast />
 
-      {/* Rodapé Global Completo + Suporte WhatsApp Flutuante */}
+      {/* Rodapé Global Completo + Chat Integrado (Crisp / Fallback Leve) */}
       {activeTab !== 'admin_dashboard' && (
-        <Footer onOpenWhatsAppHelp={() => setIsWhatsAppSupportOpen(true)} />
+        <Footer onOpenChatHelp={() => setIsLiveChatOpen(true)} />
       )}
-      <WhatsAppSupportWidget
-        isOpen={isWhatsAppSupportOpen}
-        onToggle={setIsWhatsAppSupportOpen}
+      <LiveChatWidget
+        isOpen={isLiveChatOpen}
+        onToggle={setIsLiveChatOpen}
       />
 
 

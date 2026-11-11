@@ -1,4 +1,4 @@
-// Configurações oficiais da marca, canais de atendimento e dados institucionais do VagaGo
+// Configurações oficiais da marca, chat integrado (Crisp.chat) e dados institucionais do VagaGo
 
 const env = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : {};
 
@@ -8,15 +8,10 @@ export const BRAND_CONFIG = {
   city: 'Itabuna - BA',
   supportEmail: 'suporte@vagago.com.br',
   privacyEmail: 'privacidade@vagago.com.br',
-  // Defina VITE_SUPPORT_WHATSAPP (ex: 5573999999999) no .env / Vercel quando o canal comercial estiver ativo
-  whatsappNumber: (env.VITE_SUPPORT_WHATSAPP || '').replace(/\D/g, ''),
-  serviceHours: 'Seg a Sáb • 07h às 21h'
+  // Configure VITE_CRISP_WEBSITE_ID no .env / Vercel para ativar seu painel Crisp.chat
+  crispWebsiteId: (env.VITE_CRISP_WEBSITE_ID || '').trim(),
+  serviceHours: 'Atendimento online • Seg a Sáb • 07h às 21h'
 };
-
-export function buildWhatsAppSupportUrl(customMessage = 'Olá, equipe VagaGo! Preciso de suporte em Itabuna.') {
-  if (!BRAND_CONFIG.whatsappNumber) return null;
-  return `https://wa.me/${BRAND_CONFIG.whatsappNumber}?text=${encodeURIComponent(customMessage)}`;
-}
 
 // Garantias operacionais reais descritas nos Termos e fluxos da plataforma
 export const PLATFORM_GUARANTEES = [
@@ -38,7 +33,35 @@ export const PLATFORM_GUARANTEES = [
   {
     id: 'real_photos',
     title: 'Fotos reais do portão e iluminação',
-    description: 'Anúncios exibem fotos da fachada, entrada e espaço interno para você saber exatamente onde vai estacionar.'
+    description: 'Anúncios exibem fotos da fachada, interior com referência de espaço e iluminação noturna para você decidir com segurança.'
+  }
+];
+
+// Checklist visual: Galeria de Confiança das Garagens
+export const GARAGE_TRUST_GALLERY = [
+  {
+    id: 'gate',
+    step: '01 • Foto do Portão',
+    title: 'Portão fechado e entrada aberta',
+    description: 'Mostra a solidez do portão eletrônico, largura do acesso e referência exata da fachada na rua.',
+    tag: '🚪 Acesso Identificado',
+    image: 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=800&q=80'
+  },
+  {
+    id: 'interior',
+    step: '02 • Foto do Interior',
+    title: 'Espaço real e vaga coberta',
+    description: 'Foto interna com referência de vagas demarcadas, altura de cobertura e facilidade para manobrar.',
+    tag: '🚗 Noção Real de Espaço',
+    image: 'https://images.unsplash.com/photo-1573348722427-f1d6819fdf98?auto=format&fit=crop&w=800&q=80'
+  },
+  {
+    id: 'lighting',
+    step: '03 • Detalhe de Segurança',
+    title: 'Iluminação noturna e monitoramento',
+    description: 'Visão clara das luzes LED, câmeras 24h e área protegida para estacionar tranquilo a qualquer hora.',
+    tag: '💡 Câmeras & Iluminação',
+    image: 'https://images.unsplash.com/photo-1486006920555-c77dcf18193c?auto=format&fit=crop&w=800&q=80'
   }
 ];
 

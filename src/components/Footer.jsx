@@ -1,11 +1,10 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import { BRAND_CONFIG, buildWhatsAppSupportUrl } from '../services/brandConfig';
-import { MessageCircle, Mail, MapPin, ShieldCheck, Smartphone } from 'lucide-react';
+import { BRAND_CONFIG } from '../services/brandConfig';
+import { MessageSquare, Mail, MapPin, ShieldCheck, Smartphone } from 'lucide-react';
 
-export const Footer = ({ onOpenWhatsAppHelp = () => {} }) => {
+export const Footer = ({ onOpenChatHelp = () => {} }) => {
   const { setActiveTab, openTermsPage } = useApp();
-  const whatsappUrl = buildWhatsAppSupportUrl();
 
   const handleOpenLegal = (subTab) => {
     if (typeof openTermsPage === 'function') {
@@ -91,7 +90,7 @@ export const Footer = ({ onOpenWhatsAppHelp = () => {} }) => {
                   onClick={() => handleOpenLegal('driver')}
                   className="hover:text-white transition cursor-pointer"
                 >
-                  Termos de Uso (Motoristas e Anfitriões)
+                  Termos de Uso
                 </button>
               </li>
               <li>
@@ -116,32 +115,20 @@ export const Footer = ({ onOpenWhatsAppHelp = () => {} }) => {
             </ul>
           </div>
 
-          {/* Coluna 4: Suporte & Atendimento */}
+          {/* Coluna 4: Suporte via Chat Integrado */}
           <div className="space-y-3 text-xs">
             <div className="font-black text-white uppercase tracking-wider text-[11px]">
-              Suporte Local
+              Atendimento Online
             </div>
             <div className="space-y-2">
-              {whatsappUrl ? (
-                <a
-                  href={whatsappUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold px-4 py-2.5 rounded-xl transition shadow-sm w-full sm:w-auto"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  <span>Suporte via WhatsApp</span>
-                </a>
-              ) : (
-                <button
-                  type="button"
-                  onClick={onOpenWhatsAppHelp}
-                  className="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold px-4 py-2.5 rounded-xl transition shadow-sm cursor-pointer w-full sm:w-auto"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  <span>Suporte via WhatsApp</span>
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={onOpenChatHelp}
+                className="inline-flex items-center justify-center gap-2 bg-sky-600 hover:bg-sky-500 text-white font-extrabold px-4 py-2.5 rounded-xl transition shadow-sm cursor-pointer w-full sm:w-auto"
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span>Abrir Chat Online</span>
+              </button>
               <div className="text-slate-400 flex items-center gap-1.5 pt-1">
                 <Mail className="w-3.5 h-3.5 text-sky-400 shrink-0" />
                 <a href={`mailto:${BRAND_CONFIG.supportEmail}`} className="hover:text-white transition">

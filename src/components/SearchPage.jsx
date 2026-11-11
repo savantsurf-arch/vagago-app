@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { InteractiveMap } from './InteractiveMap';
 import { ShareGarageModal } from './ShareGarageModal';
+import { GaragePhotoCarousel } from './GaragePhotoCarousel';
 import {
   Search,
   Filter,
@@ -629,84 +630,66 @@ export const SearchPage = () => {
                       : 'border-slate-200/80 shadow-2xs'
                   }`}
                 >
-                  {/* Spot Image Header */}
-                  <div className="relative h-44 overflow-hidden bg-slate-100">
-                    <img
-                      src={(spot.photos && spot.photos[0]) || spot.facadePhoto || "https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=800&q=80"}
-                      alt={spot.title}
-                      loading="lazy"
-                      decoding="async"
-                      className="w-full h-full object-cover group-hover:scale-103 transition duration-300"
-                    />
-                    
-                    {/* Top Pick / Destaque Badge */}
-                    {isTopPick && (
-                      <div className="absolute top-2.5 left-2.5 bg-gradient-to-r from-sky-600 to-emerald-600 text-white text-[10px] font-black px-2.5 py-0.5 rounded-md flex items-center gap-1 shadow-md">
-                        <Trophy className="w-3 h-3 text-amber-300" />
-                        DESTAQUE
+                  {/* Spot Image Carousel Header */}
+                  <GaragePhotoCarousel
+                    photos={spot.photos}
+                    captions={spot.photoCaptions}
+                    fallbackPhoto={spot.facadePhoto}
+                    altPrefix={spot.title}
+                    heightClass="h-44"
+                    topLeftSlot={
+                      <div className="flex items-center gap-1.5">
+                        {isTopPick && (
+                          <span className="bg-gradient-to-r from-sky-600 to-emerald-600 text-white text-[10px] font-black px-2.5 py-0.5 rounded-md flex items-center gap-1 shadow-md">
+                            <Trophy className="w-3 h-3 text-amber-300" />
+                            DESTAQUE
+                          </span>
+                        )}
+                        {spot.isCovered && (
+                          <span className="bg-white/95 text-slate-800 text-[10px] font-extrabold px-2 py-0.5 rounded-md shadow-xs">
+                            🛡️ Coberta e Monitorada
+                          </span>
+                        )}
                       </div>
-                    )}
-
-                    {/* Rating Pill */}
-                    <div className="absolute top-2.5 right-11 bg-slate-900/80 backdrop-blur-xs text-white text-[11px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1">
-                      <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
-                      <span>{Number(spot.rating || 4.8).toFixed(1)}</span>
-                    </div>
-
-                    {/* Share Garage Button */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSharingSpot(spot);
-                      }}
-                      className="absolute bottom-2 right-2.5 p-2 bg-slate-900/80 hover:bg-slate-900 text-white rounded-xl transition shadow-sm cursor-pointer"
-                      title="Compartilhar Garagem"
-                    >
-                      <Share2 className="w-3.5 h-3.5" />
-                    </button>
-
-                    {/* Miniaturas de fotos reais + Selo Coberta */}
-                    <div className="absolute bottom-2 left-2.5 flex items-center gap-1.5">
-                      {Array.isArray(spot.photos) && spot.photos.length > 1 && (
-                        <div className="flex items-center gap-1">
-                          {spot.photos.slice(0, 3).map((thumb, tIdx) => (
-                            <img
-                              key={tIdx}
-                              src={thumb}
-                              alt={`${spot.title} mini ${tIdx + 1}`}
-                              loading="lazy"
-                              decoding="async"
-                              className="w-7 h-7 rounded-md object-cover border border-white/80 shadow-xs"
-                            />
-                          ))}
-                        </div>
-                      )}
-                      {spot.isCovered && (
-                        <span className="bg-slate-900/90 text-white text-[9px] font-bold px-2 py-0.5 rounded-md backdrop-blur-xs">
-                          🛡️ Coberta
+                    }
+                    topRightSlot={
+                      <div className="flex items-center gap-1.5">
+                        <span className="bg-slate-900/85 backdrop-blur-xs text-white text-[11px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1">
+                          <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
+                          <span>{Number(spot.rating || 4.8).toFixed(1)}</span>
+                          {Number(spot.reviewsCount || 0) > 0 && (
+                            <span className="text-[10px] text-slate-300 font-normal">({spot.reviewsCount})</span>
+                          )}
                         </span>
-                      )}
-                      <span className="bg-slate-900/90 text-amber-300 text-[9px] font-bold px-2 py-0.5 rounded-md backdrop-blur-xs">
-                        📷 {(spot.photos && spot.photos.length) || 1} {(spot.photos && spot.photos.length > 1) ? 'fotos reais' : 'Foto real'}
-                      </span>
-                    </div>
-
-                    {/* Favorite Heart Button */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (typeof toggleFavorite === 'function') toggleFavorite(spot.id);
-                      }}
-                      className={`absolute top-2.5 right-2.5 p-1.5 rounded-xl backdrop-blur-xs transition cursor-pointer ${
-                        isFav ? 'bg-rose-500 text-white' : 'bg-slate-900/60 text-white hover:bg-slate-900'
-                      }`}
-                      title={isFav ? "Remover dos favoritos" : "Salvar nos favoritos"}
-                    >
-                      <Heart className={`w-3.5 h-3.5 ${isFav ? 'fill-white' : ''}`} />
-                    </button>
-                  </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (typeof toggleFavorite === 'function') toggleFavorite(spot.id);
+                          }}
+                          className={`p-1.5 rounded-xl backdrop-blur-xs transition cursor-pointer ${
+                            isFav ? 'bg-rose-500 text-white' : 'bg-slate-900/70 text-white hover:bg-slate-900'
+                          }`}
+                          title={isFav ? 'Remover dos favoritos' : 'Salvar nos favoritos'}
+                        >
+                          <Heart className={`w-3.5 h-3.5 ${isFav ? 'fill-white' : ''}`} />
+                        </button>
+                      </div>
+                    }
+                    bottomRightSlot={
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSharingSpot(spot);
+                        }}
+                        className="p-1.5 bg-slate-900/80 hover:bg-slate-900 text-white rounded-lg transition shadow-sm cursor-pointer"
+                        title="Compartilhar Garagem"
+                      >
+                        <Share2 className="w-3.5 h-3.5" />
+                      </button>
+                    }
+                  />
 
                   {/* Spot Card Body */}
                   <div className="p-3.5 sm:p-4 space-y-2.5">

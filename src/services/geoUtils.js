@@ -133,36 +133,29 @@ export function calculateSmartParkOptions(spots = [], userLat, userLng) {
     return first;
   };
 
-  // 1. MAIS PRÓXIMA (Smallest distance)
+  // 1. MELHOR OPÇÃO (Highest overall smart score — top balanced pick)
+  const bestOverallList = [...enriched].sort(
+    (a, b) => (b.smartScore - a.smartScore) || (b.reviewsCount - a.reviewsCount) || (a.calculatedDistKm - b.calculatedDistKm)
+  );
+  const bestOverall = pickCandidate(bestOverallList, false);
+
+  // 2. MAIS PRÓXIMA (Smallest distance)
   const closestList = [...enriched].sort(
     (a, b) => (a.calculatedDistKm - b.calculatedDistKm) || (b.smartScore - a.smartScore)
   );
-  const closest = pickCandidate(closestList, false);
+  const closest = pickCandidate(closestList, enriched.length > 1);
 
-  // 2. MAIS BARATA (Lowest hourly price, breaking ties toward unused spots)
+  // 3. MAIS BARATA (Lowest hourly price)
   const cheapestList = [...enriched].sort(
     (a, b) => (a.priceHourly - b.priceHourly) || (a.calculatedDistKm - b.calculatedDistKm)
   );
-  // If strictly cheapest is already closest and there is an equal-price or alternative spot, pick distinct;
-  // otherwise allow SmartParkWidget to combine badges cleanly instead of duplicating the card.
-  const cheapestDistinct = cheapestList.find(
-    item => !usedIds.has(item.id) && item.priceHourly <= closestList[0].priceHourly + 0.5
-  );
-  const cheapest = cheapestDistinct
-    ? pickCandidate([cheapestDistinct, ...cheapestList], true)
-    : pickCandidate(cheapestList, enriched.length > 1 && cheapestList[0].priceHourly === cheapestList[1]?.priceHourly);
+  const cheapest = pickCandidate(cheapestList, true);
 
-  // 3. MELHOR AVALIADA (Highest rating & reviews)
+  // 4. MELHOR AVALIADA (Highest rating & reviews among remaining distinct spots)
   const topRatedList = [...enriched].sort(
     (a, b) => (b.rating - a.rating) || (b.reviewsCount - a.reviewsCount) || (b.smartScore - a.smartScore)
   );
   const topRated = pickCandidate(topRatedList, true);
-
-  // 4. MELHOR OPÇÃO (Highest overall smartScore among spots, preferring unused balanced spot if >= 4 exist)
-  const bestOverallList = [...enriched].sort(
-    (a, b) => (b.smartScore - a.smartScore) || (a.calculatedDistKm - b.calculatedDistKm)
-  );
-  const bestOverall = pickCandidate(bestOverallList, true);
 
   return {
     bestOverall,

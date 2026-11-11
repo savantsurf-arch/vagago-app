@@ -1,5 +1,6 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
+import { GaragePhotoCarousel } from './GaragePhotoCarousel';
 import {
   Trophy,
   Navigation,
@@ -7,12 +8,8 @@ import {
   Star,
   ChevronRight,
   Sparkles,
-  Camera,
   ShieldCheck
 } from 'lucide-react';
-
-const FALLBACK_GARAGE_PHOTO =
-  'https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=600&q=80';
 
 export const SmartParkWidget = () => {
   const { smartParkOptions, openSpotDetails, requestUserLocation, userLocation } = useApp();
@@ -25,12 +22,12 @@ export const SmartParkWidget = () => {
     {
       key: 'bestOverall',
       badge: '🏆 MELHOR OPÇÃO',
-      badgeBg: 'bg-amber-500 text-slate-950 font-black',
+      badgeBg: 'bg-amber-400 text-slate-950 font-black',
       border: 'border-amber-400 ring-2 ring-amber-300/40',
       isPrimaryCta: true,
       spot: bestOverall,
       icon: Trophy,
-      color: 'text-amber-500'
+      color: 'text-amber-400'
     },
     {
       key: 'closest',
@@ -80,7 +77,6 @@ export const SmartParkWidget = () => {
     const addrKey = normalizeAddress(chosenSpot.address);
 
     if (seenSpotIds.has(spotKey) || (addrKey && seenAddresses.has(addrKey))) {
-      // Busca outra vaga distinta ainda não exibida
       const alternative = (allEnriched || []).find(
         (candidate) =>
           candidate &&
@@ -92,7 +88,6 @@ export const SmartParkWidget = () => {
         chosenSpot = alternative;
         activeBadge = slot.key === 'topRated' ? '⭐ BEM AVALIADA' : '✨ OPÇÃO NO BAIRRO';
       } else {
-        // Banco de dados possui menos de 4 vagas distintas: combina o selo no card já exibido
         const existingCard = displayCards.find(
           (c) => c.spot.id === spotKey || (addrKey && normalizeAddress(c.spot.address) === addrKey)
         );
@@ -158,12 +153,9 @@ export const SmartParkWidget = () => {
         {displayCards.map((item) => {
           const IconComp = item.icon;
           const spot = item.spot;
-          const spotPhotos =
-            Array.isArray(spot.photos) && spot.photos.length > 0
-              ? spot.photos
-              : [spot.facadePhoto || FALLBACK_GARAGE_PHOTO];
-          const primaryPhoto = spotPhotos[0] || FALLBACK_GARAGE_PHOTO;
-          const featurePreview = (spot.features || ['Portão', 'Iluminação']).slice(0, 2);
+          const featurePreview = (spot.features || ['Portão Eletrônico', 'Iluminação']).slice(0, 2);
+          const ratingLabel = Number(spot.rating || 4.8).toFixed(1);
+          const reviewsCount = Number(spot.reviewsCount || 0);
 
           return (
             <div
@@ -171,52 +163,33 @@ export const SmartParkWidget = () => {
               onClick={() => openSpotDetails(spot)}
               className={`bg-slate-800/95 hover:bg-slate-800 rounded-2xl border ${item.border} overflow-hidden cursor-pointer transition transform hover:-translate-y-1 shadow-md flex flex-col justify-between group`}
             >
-              {/* Foto real da garagem e miniaturas */}
-              <div className="relative h-32 bg-slate-900 overflow-hidden">
-                <img
-                  src={primaryPhoto}
-                  alt={`Foto da vaga ${spot.title}`}
-                  loading="lazy"
-                  decoding="async"
-                  className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent" />
-
-                <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between gap-1.5">
+              {/* Carrossel interativo de fotos reais da garagem */}
+              <GaragePhotoCarousel
+                photos={spot.photos}
+                captions={spot.photoCaptions}
+                fallbackPhoto={spot.facadePhoto}
+                altPrefix={spot.title}
+                heightClass="h-36"
+                topLeftSlot={
                   <span className={`text-[10px] uppercase px-2.5 py-0.5 rounded-full shadow-xs ${item.badgeBg}`}>
                     {item.badge}
                   </span>
-                  <span className="bg-slate-900/85 text-white text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 border border-white/10">
+                }
+                topRightSlot={
+                  <span className="bg-slate-900/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 border border-white/15">
                     <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
-                    {Number(spot.rating || 4.8).toFixed(1)}
+                    <span>{ratingLabel}</span>
+                    {reviewsCount > 0 && <span className="text-slate-300 font-normal">({reviewsCount})</span>}
                   </span>
-                </div>
-
-                {/* Miniaturas de fotos reais (fachada, portão, iluminação) */}
-                <div className="absolute bottom-2 left-2.5 right-2.5 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1">
-                    {spotPhotos.slice(0, 3).map((thumb, tIdx) => (
-                      <img
-                        key={tIdx}
-                        src={thumb}
-                        alt={`${spot.title} foto ${tIdx + 1}`}
-                        loading="lazy"
-                        decoding="async"
-                        className="w-7 h-7 rounded-md object-cover border border-white/60 shadow-xs"
-                      />
-                    ))}
-                    <span className="text-[10px] font-bold text-slate-200 bg-slate-900/75 px-1.5 py-0.5 rounded flex items-center gap-1">
-                      <Camera className="w-3 h-3 text-sky-300" />
-                      {spotPhotos.length} {spotPhotos.length === 1 ? 'foto' : 'fotos'}
-                    </span>
-                  </div>
-                  {spot.isCovered && (
-                    <span className="text-[10px] font-bold bg-emerald-500/90 text-slate-950 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                }
+                bottomRightSlot={
+                  spot.isCovered ? (
+                    <span className="text-[10px] font-bold bg-emerald-500/95 text-slate-950 px-1.5 py-0.5 rounded flex items-center gap-0.5">
                       <ShieldCheck className="w-3 h-3" /> Coberta
                     </span>
-                  )}
-                </div>
-              </div>
+                  ) : null
+                }
+              />
 
               {/* Card Body */}
               <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
@@ -244,7 +217,7 @@ export const SmartParkWidget = () => {
                     {featurePreview.map((feat, fIdx) => (
                       <span
                         key={fIdx}
-                        className="text-[10px] font-semibold bg-slate-700/70 text-slate-200 px-2 py-0.5 rounded-md"
+                        className="text-[10px] font-semibold bg-slate-700/80 text-slate-200 px-2 py-0.5 rounded-md"
                       >
                         {feat}
                       </span>
@@ -254,17 +227,16 @@ export const SmartParkWidget = () => {
 
                 <div className="space-y-2 pt-2.5 border-t border-slate-700/70 text-xs">
                   <div className="flex items-center justify-between text-slate-300">
-                    <span className="flex items-center gap-1 font-bold">
+                    <span className="flex items-center gap-1 font-bold text-sky-300">
                       <Navigation className="w-3 h-3 text-sky-400" />
-                      {spot.distFormatted || spot.distance}
+                      {spot.distFormatted || spot.distance} ({spot.walkTime})
                     </span>
-                    <span className="text-slate-400">{spot.walkTime}</span>
                   </div>
 
                   <div className="flex items-center justify-between pt-1">
                     <div>
                       <span className="text-[10px] text-slate-400 uppercase block font-semibold">Tarifa</span>
-                      <span className="text-lg font-black text-sky-400">
+                      <span className="text-lg font-black text-emerald-400">
                         R$ {Number(spot.priceHourly || 6).toFixed(2)}/h
                       </span>
                     </div>
@@ -281,7 +253,7 @@ export const SmartParkWidget = () => {
                           : 'border border-white/25 hover:bg-white/15 text-white'
                       }`}
                     >
-                      <span>{item.isPrimaryCta ? 'Reservar Agora' : 'Ver detalhes'}</span>
+                      <span>{item.isPrimaryCta ? 'Reservar Agora' : 'Ver detalhes e reservar'}</span>
                       <ChevronRight className="w-3 h-3" />
                     </button>
                   </div>

@@ -715,6 +715,31 @@ export const AppProvider = ({ children }) => {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
+  const mergeSpacesWithCatalog = (cloudList = []) => {
+    const normalizeAddr = (addr) => (addr || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    let deletedIds = [];
+    try {
+      const savedDeleted = localStorage.getItem('vagago_deleted_spot_ids');
+      if (savedDeleted) deletedIds = JSON.parse(savedDeleted);
+    } catch (e) {}
+
+    const baseCloud = Array.isArray(cloudList) ? cloudList.filter(s => s && !deletedIds.includes(s.id)) : [];
+    const seenIds = new Set(baseCloud.map(s => s.id));
+    const seenAddresses = new Set(baseCloud.map(s => normalizeAddr(s.address)).filter(Boolean));
+
+    const merged = [...baseCloud];
+    // Garante diversidade mínima de vagas distintas em Itabuna caso o banco tenha menos de 4 registros
+    for (const catalogSpot of INITIAL_PARKING_SPACES) {
+      if (merged.filter(s => s.status !== 'Pausada' && s.isAvailable !== false).length >= 4) break;
+      if (deletedIds.includes(catalogSpot.id) || seenIds.has(catalogSpot.id)) continue;
+      if (seenAddresses.has(normalizeAddr(catalogSpot.address))) continue;
+      seenIds.add(catalogSpot.id);
+      seenAddresses.add(normalizeAddr(catalogSpot.address));
+      merged.push(catalogSpot);
+    }
+    return merged;
+  };
+
   // SUPABASE CLOUD & REALTIME SYNC EFFECT - Fetch cloud spaces, users and bookings on mount
   useEffect(() => {
     let spacesChannel;
@@ -723,8 +748,9 @@ export const AppProvider = ({ children }) => {
     const syncCloudData = async () => {
       const cloudSpaces = await fetchSpacesFromSupabase();
       if (cloudSpaces && cloudSpaces.length > 0) {
-        setParkingSpaces(cloudSpaces);
-        cloudSpaces.forEach(s => registerGlobalParkingSpace(s));
+        const mergedSpaces = mergeSpacesWithCatalog(cloudSpaces);
+        setParkingSpaces(mergedSpaces);
+        mergedSpaces.forEach(s => registerGlobalParkingSpace(s));
       }
 
       const cloudBookings = await fetchBookingsFromSupabase();
@@ -816,8 +842,9 @@ export const AppProvider = ({ children }) => {
           .on('postgres_changes', { event: '*', schema: 'public', table: 'parking_spaces' }, async () => {
             const updatedCloudSpaces = await fetchSpacesFromSupabase();
             if (updatedCloudSpaces && updatedCloudSpaces.length > 0) {
-              setParkingSpaces(updatedCloudSpaces);
-              updatedCloudSpaces.forEach(s => registerGlobalParkingSpace(s));
+              const mergedSpaces = mergeSpacesWithCatalog(updatedCloudSpaces);
+              setParkingSpaces(mergedSpaces);
+              mergedSpaces.forEach(s => registerGlobalParkingSpace(s));
             }
           })
           .subscribe();
@@ -1776,6 +1803,11 @@ export const AppProvider = ({ children }) => {
     if (!spotId) return;
     setParkingSpaces(prev => prev.filter(s => s.id !== spotId));
     try {
+      const deletedRaw = localStorage.getItem('vagago_deleted_spot_ids');
+      const deletedList = deletedRaw ? JSON.parse(deletedRaw) : [];
+      if (!deletedList.includes(spotId)) {
+        localStorage.setItem('vagago_deleted_spot_ids', JSON.stringify([...deletedList, spotId]));
+      }
       const saved = localStorage.getItem('vagago_parkingSpaces');
       if (saved) {
         const parsed = JSON.parse(saved);
