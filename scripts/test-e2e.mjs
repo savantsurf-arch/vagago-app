@@ -3,7 +3,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
 
-import { geocodeAddress, calculateSmartParkOptions } from '../src/services/geoUtils.js';
+import {
+  geocodeAddress,
+  calculateSmartParkOptions,
+  getNavigationLinks,
+  fetchDrivingRoute
+} from '../src/services/geoUtils.js';
 import {
   calculateBookingPricing,
   getOccupiedSlotsForDate,
@@ -71,14 +76,33 @@ async function runTests() {
   assert.ok(homeHtml.includes('og:image'), 'og:image ausente');
   assert.ok(homeHtml.includes('twitter:card'), 'twitter:card ausente');
   assert.ok(homeHtml.includes('rel="canonical"'), 'canonical ausente');
-  assert.ok(homeHtml.replace(/<!--.*?-->/g, '').includes('Olá, Motorista!'), 'Conteudo SSR da Home nao renderizado');
+  const cleanHomeText = homeHtml.replace(/<!--.*?-->/g, '');
+  assert.ok(cleanHomeText.includes('Olá, Motorista!'), 'Conteudo SSR da Home nao renderizado');
+  assert.ok(cleanHomeText.includes('Onde você vai estacionar?'), 'Placeholder adaptado nao renderizado');
+  assert.ok(cleanHomeText.includes('Cupom de primeira reserva'), 'Cupom de primeira reserva ausente');
+  assert.ok(cleanHomeText.includes('Indique e ganhe'), 'Banner Indique e ganhe ausente');
+  assert.ok(homeHtml.includes('#002A66') || homeHtml.includes('#062B5B'), 'Paleta oficial VagaGo ausente na Home');
 
-  console.log('2. Testando fluxo E2E: Buscar -> Reservar -> Pagar (Pix)...');
-  // 2A. Buscar
+  console.log('2. Testando fluxo E2E: Buscar -> Navegar -> Reservar -> Pagar (Pix)...');
+  // 2A. Buscar + Links de Navegacao (Waze / Google Maps / Apple Maps) + Trajeto azul
   const geoCentro = geocodeAddress('Centro - Av. Cinquentenário');
   assert.ok(geoCentro.lat < -14 && geoCentro.lat > -15, 'Geocodificacao Centro fora de Itabuna');
   const smart = calculateSmartParkOptions(INITIAL_PARKING_SPACES, geoCentro.lat, geoCentro.lng);
   assert.ok(smart && smart.allEnriched.length >= 3, 'Busca nao retornou vagas em Itabuna');
+
+  const navLinks = getNavigationLinks(smart.allEnriched[0].lat, smart.allEnriched[0].lng);
+  assert.ok(navLinks.wazeUrl.startsWith('https://waze.com/ul?ll='));
+  assert.ok(navLinks.googleMapsUrl.startsWith('https://www.google.com/maps/dir/?api=1&destination='));
+  assert.ok(navLinks.appleMapsUrl.startsWith('https://maps.apple.com/?daddr='));
+
+  const previewRoute = await fetchDrivingRoute(
+    geoCentro.lat,
+    geoCentro.lng,
+    smart.allEnriched[0].lat,
+    smart.allEnriched[0].lng
+  );
+  assert.ok(previewRoute && Array.isArray(previewRoute.coordinates) && previewRoute.coordinates.length >= 2);
+  assert.equal(await fetchDrivingRoute(NaN, geoCentro.lng, -14.78, -39.27), null);
 
   // 2B. Reservar (calculo + bloqueio de conflito + endpoint /api/bookings/create)
   const chosenSpot = smart.allEnriched[0];
@@ -221,12 +245,23 @@ async function runTests() {
     server.listen(0, '127.0.0.1', async () => {
       try {
         const { port } = server.address();
-        const r1 = await fetch(`http://127.0.0.1:${port}/`);
-        assert.equal(r1.status, 200);
-        const r2 = await fetch(`http://127.0.0.1:${port}/buscar`);
-        assert.equal(r2.status, 200);
-        const r3 = await fetch(`http://127.0.0.1:${port}/sitemap.xml`);
-        assert.equal(r3.status, 200);
+        const routesToVerify = [
+          '/',
+          '/buscar',
+          '/anfitriao',
+          '/termos',
+          '/privacidade',
+          '/cancelamento',
+          '/contato',
+          '/robots.txt',
+          '/sitemap.xml',
+          '/manifest.json',
+          '/og-image.png'
+        ];
+        for (const route of routesToVerify) {
+          const resp = await fetch(`http://127.0.0.1:${port}${route}`);
+          assert.equal(resp.status, 200, `Rota HTTP retornou ${resp.status}: ${route}`);
+        }
         server.close(resolve);
       } catch (err) {
         server.close(() => reject(err));

@@ -166,11 +166,9 @@ export const BookingFlowModal = () => {
     });
   }, [bookings, selectedSpot]);
 
-  if (!isBookingFlowOpen || !selectedSpot) return null;
-
-  const hourlyRate = Number(selectedSpot.priceHourly || selectedSpot.price_hourly || 6);
+  const hourlyRate = Number(selectedSpot?.priceHourly || selectedSpot?.price_hourly || 6);
   const pricing = calculateBookingPricing({
-    spot: selectedSpot,
+    spot: selectedSpot || { priceHourly: 6 },
     planType,
     startTime,
     endTime,
@@ -188,7 +186,9 @@ export const BookingFlowModal = () => {
       : selectedDate;
   const effectiveStartTime = planType === 'hora' ? startTime : '08:00';
   const effectiveEndTime = planType === 'hora' ? endTime : '20:00';
-  const occupiedSlotsSelectedDate = getOccupiedSlotsForDate(bookings, selectedSpot.id, selectedDate);
+  const occupiedSlotsSelectedDate = selectedSpot
+    ? getOccupiedSlotsForDate(bookings, selectedSpot.id, selectedDate)
+    : [];
 
   // Calculate coupon discount
   let discount = 0;
@@ -206,6 +206,53 @@ export const BookingFlowModal = () => {
   }
   discount = Math.min(discount, subtotal);
   const totalPrice = Math.max(0, subtotal - discount);
+
+  const generatePixCharge = async () => {
+    setPixCharge((prev) => ({ ...prev, loading: true, error: '' }));
+    try {
+      const resp = await fetch('/api/pix/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: totalPrice,
+          spaceTitle: selectedSpot?.title || 'Garagem VagaGo',
+          payerName: currentUser?.name || 'Motorista VagaGo',
+          payerEmail: currentUser?.email || 'motorista@vagago.com.br',
+          payerCpf: currentUser?.cpf,
+          hostWalletId: selectedSpot?.asaasWalletId || selectedSpot?.ownerWalletId || null
+        })
+      });
+      const data = await resp.json();
+      if (!resp.ok) {
+        throw new Error(data?.error || 'Não foi possível gerar o QR Code Pix.');
+      }
+      setPixCharge({
+        loading: false,
+        error: '',
+        paymentId: data.paymentId,
+        provider: data.provider || 'sandbox',
+        mode: data.mode || 'sandbox',
+        status: data.status || 'PENDING',
+        pixCopyPaste: data.pixCopyPaste || '',
+        split: data.split || null
+      });
+    } catch (err) {
+      setPixCharge((prev) => ({
+        ...prev,
+        loading: false,
+        error: err?.message || 'Erro de comunicação com o gateway Pix. Tente gerar novamente.'
+      }));
+    }
+  };
+
+  useEffect(() => {
+    if (isBookingFlowOpen && selectedSpot && step === 2 && paymentMethod === 'PIX') {
+      generatePixCharge();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isBookingFlowOpen, selectedSpot?.id, step, paymentMethod, totalPrice]);
+
+  if (!isBookingFlowOpen || !selectedSpot) return null;
 
   // Handlers
   const handleApplyCoupon = () => {
@@ -479,51 +526,6 @@ Instruções de Acesso: ${completedBooking.secretAccessInstructions || 'Liberado
   const pixCopyString =
     pixCharge.pixCopyPaste ||
     `00020126580014br.gov.bcb.pix0136vagago-pix-gateway-key-20265204000053039865405${totalPrice.toFixed(2)}5802BR5920VAGAGO PLATAFORMA LTDA6009ITABUNA62070503***6304E8A1`;
-
-  const generatePixCharge = async () => {
-    setPixCharge((prev) => ({ ...prev, loading: true, error: '' }));
-    try {
-      const resp = await fetch('/api/pix/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: totalPrice,
-          spaceTitle: selectedSpot?.title || 'Garagem VagaGo',
-          payerName: currentUser?.name || 'Motorista VagaGo',
-          payerEmail: currentUser?.email || 'motorista@vagago.com.br',
-          payerCpf: currentUser?.cpf,
-          hostWalletId: selectedSpot?.asaasWalletId || selectedSpot?.ownerWalletId || null
-        })
-      });
-      const data = await resp.json();
-      if (!resp.ok) {
-        throw new Error(data?.error || 'Não foi possível gerar o QR Code Pix.');
-      }
-      setPixCharge({
-        loading: false,
-        error: '',
-        paymentId: data.paymentId,
-        provider: data.provider || 'sandbox',
-        mode: data.mode || 'sandbox',
-        status: data.status || 'PENDING',
-        pixCopyPaste: data.pixCopyPaste || '',
-        split: data.split || null
-      });
-    } catch (err) {
-      setPixCharge((prev) => ({
-        ...prev,
-        loading: false,
-        error: err?.message || 'Erro de comunicação com o gateway Pix. Tente gerar novamente.'
-      }));
-    }
-  };
-
-  useEffect(() => {
-    if (isBookingFlowOpen && step === 2 && paymentMethod === 'PIX') {
-      generatePixCharge();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isBookingFlowOpen, step, paymentMethod, totalPrice]);
 
   const checkPixPaymentStatus = async () => {
     if (!pixCharge.paymentId) return 'APPROVED';
