@@ -90,6 +90,16 @@ export const BookingFlowModal = () => {
   const [copiedPix, setCopiedPix] = useState(false);
   const [copiedSummary, setCopiedSummary] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [pixCharge, setPixCharge] = useState({
+    loading: false,
+    error: '',
+    paymentId: null,
+    provider: 'sandbox',
+    mode: 'sandbox',
+    status: 'PENDING',
+    pixCopyPaste: '',
+    split: null
+  });
 
   // Final booking outcome
   const [completedBooking, setCompletedBooking] = useState(null);
@@ -117,6 +127,16 @@ export const BookingFlowModal = () => {
       setIsProcessing(false);
       setEmailDispatchState({ status: 'idle', message: '' });
       setConfirmEmail(currentUser?.email || '');
+      setPixCharge({
+        loading: false,
+        error: '',
+        paymentId: null,
+        provider: 'sandbox',
+        mode: 'sandbox',
+        status: 'PENDING',
+        pixCopyPaste: '',
+        split: null
+      });
       const f = searchFilters || {};
       setPlanType(f.billingType === 'diaria' || f.billingType === 'mensal' ? f.billingType : 'hora');
       setDaysCount(Number(f.daysCount || 1));
@@ -304,6 +324,20 @@ export const BookingFlowModal = () => {
 
     setIsProcessing(true);
 
+    if (paymentMethod === 'PIX' && pixCharge.mode === 'live') {
+      const latestStatus = await checkPixPaymentStatus();
+      if (latestStatus === 'FAILED') {
+        setAvailabilityError('O Pix expirou ou falhou no gateway. Gere um novo QR Code Pix para continuar.');
+        setIsProcessing(false);
+        return;
+      }
+      if (latestStatus !== 'APPROVED') {
+        setAvailabilityError('Pagamento Pix ainda não foi compensado pelo banco. Conclua o Pix no app do seu banco e clique novamente.');
+        setIsProcessing(false);
+        return;
+      }
+    }
+
     // Double check availability immediately before persisting (anti-duplicate lock)
     if (typeof checkAvailability === 'function') {
       const check = checkAvailability(
@@ -425,7 +459,74 @@ Instruções de Acesso: ${completedBooking.secretAccessInstructions || 'Liberado
     }
   };
 
-  const pixCopyString = `00020126580014br.gov.bcb.pix0136vagago-pix-gateway-key-20265204000053039865405${totalPrice.toFixed(2)}5802BR5920VAGAGO PLATAFORMA LTDA6009ITABUNA62070503***6304E8A1`;
+  const pixCopyString =
+    pixCharge.pixCopyPaste ||
+    `00020126580014br.gov.bcb.pix0136vagago-pix-gateway-key-20265204000053039865405${totalPrice.toFixed(2)}5802BR5920VAGAGO PLATAFORMA LTDA6009ITABUNA62070503***6304E8A1`;
+
+  const generatePixCharge = async () => {
+    setPixCharge((prev) => ({ ...prev, loading: true, error: '' }));
+    try {
+      const resp = await fetch('/api/pix/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: totalPrice,
+          spaceTitle: selectedSpot?.title || 'Garagem VagaGo',
+          payerName: currentUser?.name || 'Motorista VagaGo',
+          payerEmail: currentUser?.email || 'motorista@vagago.com.br',
+          payerCpf: currentUser?.cpf,
+          hostWalletId: selectedSpot?.asaasWalletId || selectedSpot?.ownerWalletId || null
+        })
+      });
+      const data = await resp.json();
+      if (!resp.ok) {
+        throw new Error(data?.error || 'Não foi possível gerar o QR Code Pix.');
+      }
+      setPixCharge({
+        loading: false,
+        error: '',
+        paymentId: data.paymentId,
+        provider: data.provider || 'sandbox',
+        mode: data.mode || 'sandbox',
+        status: data.status || 'PENDING',
+        pixCopyPaste: data.pixCopyPaste || '',
+        split: data.split || null
+      });
+    } catch (err) {
+      setPixCharge((prev) => ({
+        ...prev,
+        loading: false,
+        error: err?.message || 'Erro de comunicação com o gateway Pix. Tente gerar novamente.'
+      }));
+    }
+  };
+
+  useEffect(() => {
+    if (isBookingFlowOpen && step === 2 && paymentMethod === 'PIX') {
+      generatePixCharge();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isBookingFlowOpen, step, paymentMethod, totalPrice]);
+
+  const checkPixPaymentStatus = async () => {
+    if (!pixCharge.paymentId) return 'APPROVED';
+    try {
+      const resp = await fetch(
+        `/api/pix/status?paymentId=${encodeURIComponent(pixCharge.paymentId)}&provider=${encodeURIComponent(
+          pixCharge.provider || 'sandbox'
+        )}`
+      );
+      const data = await resp.json();
+      if (resp.ok && data.status) {
+        setPixCharge((prev) => ({ ...prev, status: data.status }));
+        return data.status;
+      }
+    } catch {
+      // Fallback para offline/dev local sem serverless
+      return pixCharge.mode === 'sandbox' ? 'APPROVED' : 'PENDING';
+    }
+    return pixCharge.status;
+  };
 
   const spotPhoto =
     (selectedSpot.photos && selectedSpot.photos[0]) ||
@@ -1072,51 +1173,83 @@ Instruções de Acesso: ${completedBooking.secretAccessInstructions || 'Liberado
                 )}
               </div>
 
-              {/* PIX Details Area */}
+              {/* PIX Details Area (Asaas / Mercado Pago + Split Transparente + Tratamento de Falhas) */}
               {paymentMethod === 'PIX' && (
                 <div className="p-4 bg-emerald-50/80 rounded-2xl border border-emerald-200 text-center space-y-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
                     <span className="text-xs font-black text-emerald-900 uppercase tracking-wider flex items-center gap-1.5">
                       <QrCode className="w-4 h-4 text-emerald-700" />
-                      QR Code PIX Dinâmico
+                      QR Code PIX ({pixCharge.provider === 'asaas' ? 'Asaas' : pixCharge.provider === 'mercadopago' ? 'Mercado Pago' : 'Sandbox'})
                     </span>
                     <span className="bg-emerald-200/80 text-emerald-900 text-[10px] font-mono font-black px-2.5 py-0.5 rounded-full flex items-center gap-1">
                       <Clock className="w-3 h-3 text-emerald-700" />
-                      14:59 restantes
+                      {pixCharge.status === 'APPROVED' ? 'Pix Pago ✓' : pixCharge.status === 'FAILED' ? 'Expirado/Falhou' : '15 min'}
                     </span>
                   </div>
 
-                  <div className="bg-white p-3 rounded-2xl inline-block shadow-sm ring-1 ring-emerald-200">
-                    <QRCodeSVG value={pixCopyString} size={150} />
-                  </div>
+                  {pixCharge.loading ? (
+                    <div className="py-8 flex flex-col items-center gap-2 text-emerald-800 text-xs font-bold">
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                      <span>Gerando cobrança Pix com split automático...</span>
+                    </div>
+                  ) : pixCharge.error ? (
+                    <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs space-y-2">
+                      <p className="font-bold">{pixCharge.error}</p>
+                      <button
+                        type="button"
+                        onClick={generatePixCharge}
+                        className="bg-rose-600 hover:bg-rose-500 text-white font-extrabold px-4 py-2 rounded-xl cursor-pointer"
+                      >
+                        Tentar gerar novo Pix
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="bg-white p-3 rounded-2xl inline-block shadow-sm ring-1 ring-emerald-200">
+                        <QRCodeSVG value={pixCopyString} size={150} />
+                      </div>
 
-                  <div className="text-[11px] text-slate-600 font-medium flex items-center justify-center gap-1.5">
-                    <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                    <span>Conexão Segura SPI • Banco Central do Brasil</span>
-                  </div>
+                      {/* Split Transparente */}
+                      <div className="bg-white/80 rounded-xl p-2.5 border border-emerald-200/80 text-[11px] font-bold text-slate-700 flex items-center justify-around gap-2">
+                        <span>Anfitrião ({pixCharge.split?.hostSharePercent ?? 90}%): R$ {(pixCharge.split?.ownerPayout ?? totalPrice * 0.9).toFixed(2)}</span>
+                        <span>•</span>
+                        <span>Taxa VagaGo ({pixCharge.split?.feePercent ?? 10}%): R$ {(pixCharge.split?.platformFee ?? totalPrice * 0.1).toFixed(2)}</span>
+                      </div>
 
-                  <div className="flex items-center gap-2 bg-white p-2 rounded-xl border border-emerald-200">
-                    <input
-                      type="text"
-                      readOnly
-                      value={pixCopyString}
-                      className="text-[11px] font-mono text-slate-500 truncate flex-1 bg-transparent border-none outline-none px-1"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (navigator.clipboard) {
-                          navigator.clipboard.writeText(pixCopyString);
-                        }
-                        setCopiedPix(true);
-                        setTimeout(() => setCopiedPix(false), 2000);
-                      }}
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 shrink-0 transition cursor-pointer shadow-xs"
-                    >
-                      {copiedPix ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                      <span>{copiedPix ? "Copiado!" : "Copiar Chave"}</span>
-                    </button>
-                  </div>
+                      <div className="flex items-center gap-2 bg-white p-2 rounded-xl border border-emerald-200">
+                        <input
+                          type="text"
+                          readOnly
+                          value={pixCopyString}
+                          className="text-[11px] font-mono text-slate-500 truncate flex-1 bg-transparent border-none outline-none px-1"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (navigator.clipboard) {
+                              navigator.clipboard.writeText(pixCopyString);
+                            }
+                            setCopiedPix(true);
+                            setTimeout(() => setCopiedPix(false), 2000);
+                          }}
+                          className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 shrink-0 transition cursor-pointer shadow-xs"
+                        >
+                          {copiedPix ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                          <span>{copiedPix ? "Copiado!" : "Copiar Chave"}</span>
+                        </button>
+                      </div>
+
+                      {pixCharge.mode === 'live' && pixCharge.status !== 'APPROVED' && (
+                        <button
+                          type="button"
+                          onClick={checkPixPaymentStatus}
+                          className="text-xs font-extrabold text-emerald-800 hover:underline cursor-pointer"
+                        >
+                          Já paguei — Verificar confirmação Pix agora
+                        </button>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
 
