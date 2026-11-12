@@ -10,6 +10,7 @@ const LazyInteractiveMapCanvas = lazy(() => import('./InteractiveMapCanvas'));
  */
 export const InteractiveMap = ({
   eagerLoad = false,
+  fullScreen = false,
   className = 'w-full h-full min-h-[380px] rounded-3xl overflow-hidden border border-slate-200 shadow-sm relative group',
   ...props
 }) => {
@@ -71,13 +72,13 @@ export const InteractiveMap = ({
       ) : (
         <Suspense
           fallback={
-            <div className="w-full h-full min-h-[360px] bg-slate-100 flex flex-col items-center justify-center gap-2 text-slate-500 text-xs font-bold">
+            <div className={`w-full h-full ${fullScreen ? 'min-h-0' : 'min-h-[360px]'} bg-slate-100 flex flex-col items-center justify-center gap-2 text-slate-500 text-xs font-bold`}>
               <Loader2 className="w-6 h-6 text-sky-600 animate-spin" />
               <span>Carregando mapa leve de Itabuna...</span>
             </div>
           }
         >
-          <LazyInteractiveMapCanvas className="w-full h-full" {...props} />
+          <LazyInteractiveMapCanvas className="w-full h-full" fullScreen={fullScreen} {...props} />
         </Suspense>
       )}
     </div>

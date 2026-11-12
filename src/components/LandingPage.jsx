@@ -18,7 +18,6 @@ import {
   Zap,
   DollarSign,
   Star,
-  Sparkles,
   ArrowRight,
   Navigation,
   CheckCircle2,
@@ -27,10 +26,15 @@ import {
   RefreshCw,
   UserCheck,
   Camera,
-  PlusCircle
+  PlusCircle,
+  QrCode,
+  Clock,
+  Maximize2,
+  ChevronRight,
+  Tag
 } from 'lucide-react';
 
-export const LandingPage = () => {
+export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
   const {
     parkingSpaces,
     openSpotDetails,
@@ -41,9 +45,13 @@ export const LandingPage = () => {
     setSearchFilters,
     setIsAddSpotModalOpen,
     requestUserLocation,
+    userLocation,
     isAuthenticated,
+    currentUser,
+    openLoginModal,
     setActiveRole,
-    openRegisterModal
+    openRegisterModal,
+    coupons = []
   } = useApp();
 
   // Toggle no Hero: 'driver' ("Sou Motorista") | 'host' ("Sou Anfitrião")
@@ -64,8 +72,33 @@ export const LandingPage = () => {
 
   const estimatedMonthlyHostNet = quickHostHourly * quickHostHoursDay * 22 * 0.9;
 
+  const firstName =
+    isAuthenticated && currentUser?.name
+      ? currentUser.name.trim().split(/\s+/)[0]
+      : 'Motorista';
+
+  const activeCoupon = Array.isArray(coupons) && coupons.length > 0 ? coupons[0] : null;
+  const couponLabel = activeCoupon
+    ? `Cupom ${activeCoupon.code || 'VAGAGO10'}: ${activeCoupon.discountPercent || 10}% OFF na reserva`
+    : 'Cupom Primeira Reserva: 10% OFF com VAGAGO10';
+
+  const cleanSearchInput =
+    !searchLocation || searchLocation.trim().toLowerCase() === 'itabuna, ba'
+      ? ''
+      : searchLocation;
+
+  const cheapestPrice =
+    displaySpots.length > 0
+      ? Math.min(...displaySpots.map((s) => Number(s.priceHourly || 6)))
+      : 4;
+
   const handleSearchSubmit = (e) => {
     if (e && e.preventDefault) e.preventDefault();
+    setActiveTab('search');
+  };
+
+  const handleQuickDestination = (address) => {
+    setSearchLocation(address);
     setActiveTab('search');
   };
 
@@ -78,6 +111,14 @@ export const LandingPage = () => {
     }
   };
 
+  const handleQuickPixClick = () => {
+    if (!isAuthenticated) {
+      openLoginModal();
+      return;
+    }
+    onOpenDepositModal();
+  };
+
   const guaranteeIcons = {
     refund: RefreshCw,
     verified: UserCheck,
@@ -86,144 +127,243 @@ export const LandingPage = () => {
   };
 
   return (
-    <div className="space-y-16 sm:space-y-20 pb-16 bg-slate-50/50">
+    <div className="space-y-12 sm:space-y-16 pb-16 bg-slate-50">
       {/* ==================================================
-          1. HERO SECTION COM TOGGLE MOTORISTA / ANFITRIÃO
+          1. HERO MOBILE-FIRST ESTILO 99 (TOPO AMARELO + MAPA + "PARA ONDE VAMOS?")
          ================================================== */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-sky-50/70 via-slate-50/80 to-white pt-7 sm:pt-12 pb-14 sm:pb-20 border-b border-slate-200/80">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-6xl h-80 bg-gradient-to-r from-sky-400/10 to-emerald-400/10 blur-3xl pointer-events-none -z-10" />
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-          {/* Pilot Badge + Role Toggle no Topo */}
-          <div className="flex flex-col items-center gap-4 text-center">
-            <div className="inline-flex items-center gap-2 bg-emerald-50/90 border border-emerald-200/90 text-emerald-800 text-xs font-bold px-4 py-1.5 rounded-full shadow-2xs">
-              <Sparkles className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span>Operação Oficial em Itabuna - BA • Web App (PWA)</span>
-            </div>
-
-            <div
-              role="tablist"
-              aria-label="Selecione seu perfil no VagaGo"
-              className="inline-flex items-center p-1.5 bg-white border border-slate-200 rounded-2xl shadow-sm"
+      <section className="relative bg-gradient-to-b from-[#FFDC00] via-[#FFE64D] to-slate-50 pt-4 sm:pt-6 pb-6 border-b border-slate-200/70">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 space-y-4">
+          {/* Header Estilo 99: Avatar + "Olá, Nome!" + Atalho Pix/QR + Toggle Anfitrião */}
+          <div className="flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => (isAuthenticated ? setActiveTab('profile') : openLoginModal())}
+              className="flex items-center gap-3 text-left group cursor-pointer min-h-[44px]"
             >
-              <button
-                type="button"
-                role="tab"
-                aria-selected={heroAudience === 'driver'}
-                onClick={() => setHeroAudience('driver')}
-                className={`px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold flex items-center gap-2 transition cursor-pointer ${
-                  heroAudience === 'driver'
-                    ? 'bg-sky-600 text-white shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                }`}
-              >
-                <Car className="w-4 h-4" />
-                <span>Sou Motorista</span>
-              </button>
+              <img
+                src={
+                  currentUser?.avatar ||
+                  'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'
+                }
+                alt={firstName}
+                className="w-11 h-11 rounded-full object-cover ring-2 ring-white shadow-sm shrink-0"
+              />
+              <div>
+                <h1 className="text-lg sm:text-xl font-black text-slate-950 leading-tight group-hover:underline">
+                  Olá, {firstName}!
+                </h1>
+                <p className="text-xs font-bold text-slate-800/80 flex items-center gap-1">
+                  <MapPin className="w-3 h-3" />
+                  <span>{userLocation?.isLive ? 'GPS ativo em Itabuna' : 'Itabuna - BA • Estacione fácil'}</span>
+                </p>
+              </div>
+            </button>
 
+            <div className="flex items-center gap-2">
+              {/* Toggle Rápido Motorista / Anfitrião */}
+              <div
+                role="tablist"
+                aria-label="Selecione seu perfil no VagaGo"
+                className="hidden sm:inline-flex items-center p-1 bg-white/90 rounded-full shadow-xs border border-amber-300"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={heroAudience === 'driver'}
+                  onClick={() => setHeroAudience('driver')}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-extrabold flex items-center gap-1.5 transition cursor-pointer ${
+                    heroAudience === 'driver'
+                      ? 'bg-slate-900 text-white'
+                      : 'text-slate-700 hover:text-slate-950'
+                  }`}
+                >
+                  <Car className="w-3.5 h-3.5" />
+                  <span>Motorista</span>
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={heroAudience === 'host'}
+                  onClick={() => setHeroAudience('host')}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-extrabold flex items-center gap-1.5 transition cursor-pointer ${
+                    heroAudience === 'host'
+                      ? 'bg-emerald-600 text-white'
+                      : 'text-slate-700 hover:text-slate-950'
+                  }`}
+                >
+                  <Home className="w-3.5 h-3.5" />
+                  <span>Anfitrião</span>
+                </button>
+              </div>
+
+              {/* Atalho Pix + QR (Canto superior direito, igual imagem modelo) */}
               <button
                 type="button"
-                role="tab"
-                aria-selected={heroAudience === 'host'}
-                onClick={() => setHeroAudience('host')}
-                className={`px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold flex items-center gap-2 transition cursor-pointer ${
-                  heroAudience === 'host'
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                }`}
+                onClick={handleQuickPixClick}
+                className="relative min-w-[44px] min-h-[44px] px-2.5 py-1.5 bg-white/85 hover:bg-white rounded-2xl border border-amber-300/80 shadow-xs flex items-center justify-center transition cursor-pointer"
+                aria-label="Abrir Carteira Pix e QR Code"
+                title="Carteira Pix e QR Code"
               >
-                <Home className="w-4 h-4" />
-                <span>Sou Anfitrião (Alugar Vaga)</span>
+                <span className="absolute -top-1.5 left-1 bg-emerald-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full leading-none shadow-2xs">
+                  Pix
+                </span>
+                <QrCode className="w-5 h-5 text-slate-900 mt-1" />
               </button>
             </div>
           </div>
 
-          {heroAudience === 'driver' ? (
-            <>
-              <div className="text-center max-w-3xl mx-auto space-y-4">
-                <h1 className="text-3xl sm:text-5xl md:text-6xl font-black text-slate-900 tracking-tight leading-[1.14] text-balance">
-                  Encontre vagas de estacionamento <br className="hidden sm:block" />
-                  <span className="bg-gradient-to-r from-sky-600 via-sky-500 to-emerald-500 bg-clip-text text-transparent">
-                    perto de você em Itabuna
-                  </span>
-                </h1>
+          {/* Toggle Mobile Motorista / Anfitrião */}
+          <div
+            role="tablist"
+            aria-label="Alternar entre Motorista e Anfitrião"
+            className="grid grid-cols-2 sm:hidden p-1 bg-white/90 rounded-2xl shadow-xs border border-amber-300/80"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={heroAudience === 'driver'}
+              onClick={() => setHeroAudience('driver')}
+              className={`min-h-[40px] rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                heroAudience === 'driver' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-700'
+              }`}
+            >
+              <Car className="w-3.5 h-3.5" />
+              <span>Estacionar</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={heroAudience === 'host'}
+              onClick={() => setHeroAudience('host')}
+              className={`min-h-[40px] rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                heroAudience === 'host' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-700'
+              }`}
+            >
+              <Home className="w-3.5 h-3.5" />
+              <span>Alugar minha vaga</span>
+            </button>
+          </div>
 
-                <p className="text-slate-600 text-sm sm:text-base md:text-lg max-w-2xl mx-auto font-normal leading-relaxed text-balance">
-                  Garagens privativas e seguras por hora, diária ou mês no Centro, Av. do Cinquentenário, Shopping Jequitibá e bairros — veja fotos reais e reserve pelo celular.
-                </p>
+          {heroAudience === 'driver' ? (
+            <div className="space-y-4">
+              {/* Card do Mapa Vivo Integrado (Exatamente como a imagem modelo!) */}
+              <div className="relative h-52 sm:h-72 lg:h-80 rounded-3xl overflow-hidden shadow-lg border-2 border-white bg-sky-50">
+                <InteractiveMap
+                  eagerLoad={true}
+                  fullScreen={false}
+                  disablePopupOnSelect={true}
+                  spots={displaySpots}
+                  userLocation={userLocation}
+                  onSelectSpot={(spot) => openSpotDetails(spot)}
+                  className="w-full h-full min-h-0 relative"
+                />
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('search')}
+                  className="absolute bottom-4 left-3 z-[15] bg-slate-900/90 hover:bg-slate-900 text-white text-xs font-extrabold px-3.5 py-2 rounded-full shadow-lg flex items-center gap-1.5 backdrop-blur-xs transition cursor-pointer"
+                >
+                  <Maximize2 className="w-3.5 h-3.5 text-[#FFDC00]" />
+                  <span>Mapa em tela cheia</span>
+                </button>
               </div>
 
-              <div className="mt-6 max-w-4xl mx-auto">
+              {/* Faixa Verde de Cupom + Card "Para onde vamos?" sobreposto */}
+              <div className="-mt-6 relative z-20">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('search')}
+                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white px-4 pt-2.5 pb-4 rounded-t-2xl text-xs font-extrabold flex items-center justify-between transition cursor-pointer shadow-sm"
+                >
+                  <span className="flex items-center gap-1.5 truncate">
+                    <Tag className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">{couponLabel}</span>
+                  </span>
+                  <span className="text-[11px] bg-white/20 px-2 py-0.5 rounded-full shrink-0">
+                    Ver vagas →
+                  </span>
+                </button>
+
                 <form
                   onSubmit={handleSearchSubmit}
-                  className="bg-white rounded-3xl p-4 sm:p-7 shadow-xl shadow-slate-200/50 border border-slate-200/80 space-y-4 relative z-10"
+                  className="-mt-2.5 bg-white rounded-3xl p-4 sm:p-5 shadow-xl border border-slate-100 space-y-3"
                 >
-                  <div className="relative">
-                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-600 shrink-0" />
+                  {/* Barra "Para onde vamos?" */}
+                  <div className="flex items-center gap-2 bg-slate-50 border border-slate-200/90 rounded-2xl p-1.5 focus-within:bg-white focus-within:ring-2 focus-within:ring-sky-500/30 focus-within:border-sky-500 transition">
+                    <div className="w-10 h-10 rounded-xl bg-white shadow-2xs flex items-center justify-center text-slate-700 shrink-0">
+                      <Search className="w-5 h-5" />
+                    </div>
                     <input
                       type="text"
-                      placeholder="Buscar garagem em Itabuna (Ex: Centro, Av. Cinquentenário, Fátima...)"
-                      value={searchLocation}
+                      aria-label="Para onde vamos? Buscar vaga em Itabuna"
+                      placeholder="Para onde vamos?"
+                      value={cleanSearchInput}
                       onChange={(e) => setSearchLocation(e.target.value)}
-                      className="w-full bg-slate-50/80 hover:bg-slate-100/80 focus:bg-white border border-slate-200 rounded-2xl pl-12 pr-12 py-3.5 sm:py-4 text-xs sm:text-sm font-bold text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500 focus:outline-none transition shadow-2xs"
+                      className="flex-1 bg-transparent outline-none text-slate-900 placeholder:text-slate-600 font-black text-base sm:text-lg min-w-0 py-1.5"
                     />
                     <button
                       type="button"
-                      onClick={requestUserLocation}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-sky-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
-                      title="Usar minha localização atual via GPS"
+                      onClick={() => {
+                        requestUserLocation();
+                        setActiveTab('search');
+                      }}
+                      className="min-w-[44px] min-h-[44px] rounded-xl bg-sky-100 hover:bg-sky-200 text-sky-700 flex items-center justify-center transition cursor-pointer shrink-0"
+                      title="Usar minha localização atual"
+                      aria-label="Usar minha localização GPS"
                     >
-                      <Navigation className="w-4 h-4" />
+                      <Navigation className="w-5 h-5" />
                     </button>
                   </div>
 
-                  <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-1 text-xs">
-                    <span className="text-slate-400 font-semibold shrink-0">Populares em Itabuna:</span>
+                  {/* Destinos rápidos / recentes estilo 99 */}
+                  <div className="divide-y divide-slate-100">
                     {[
-                      'Centro - Av. Cinquentenário',
-                      'Shopping Jequitibá',
-                      'Góes Calmon',
-                      'Jardim Vitória',
-                      'São Caetano',
-                      'Bairro Fátima'
-                    ].map((nb) => (
-                      <button
-                        key={nb}
-                        type="button"
-                        onClick={() => {
-                          setSearchLocation(nb + ', Itabuna - BA');
-                          setActiveTab('search');
-                        }}
-                        className="bg-sky-50/80 hover:bg-sky-100 text-sky-800 border border-sky-200/80 px-3 py-1 rounded-full shrink-0 font-bold transition cursor-pointer"
-                      >
-                        📍 {nb}
-                      </button>
-                    ))}
+                      {
+                        icon: Home,
+                        title: 'Centro • Av. do Cinquentenário',
+                        sub: 'Av. do Cinquentenário, 193 - Itabuna',
+                        query: 'Centro - Av. Cinquentenário'
+                      },
+                      {
+                        icon: Clock,
+                        title: 'Shopping Jequitibá',
+                        sub: 'Rod. Jorge Amado, s/n - Salobrinho',
+                        query: 'Shopping Jequitibá'
+                      },
+                      {
+                        icon: MapPin,
+                        title: 'Bairro Fátima',
+                        sub: 'Rua Saturnino José Soares, 120',
+                        query: 'Bairro Fátima'
+                      }
+                    ].map((place) => {
+                      const PlaceIcon = place.icon;
+                      return (
+                        <button
+                          key={place.title}
+                          type="button"
+                          onClick={() => handleQuickDestination(place.query)}
+                          className="w-full py-2.5 px-1 flex items-center justify-between gap-3 hover:bg-slate-50 rounded-xl transition text-left cursor-pointer group"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span className="w-8 h-8 rounded-full bg-slate-100 group-hover:bg-sky-100 text-slate-600 group-hover:text-sky-700 flex items-center justify-center shrink-0 transition">
+                              <PlaceIcon className="w-4 h-4" />
+                            </span>
+                            <div className="min-w-0">
+                              <div className="text-sm font-extrabold text-slate-900 truncate">
+                                {place.title}
+                              </div>
+                              <div className="text-xs text-slate-500 truncate">{place.sub}</div>
+                            </div>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-sky-600 shrink-0" />
+                        </button>
+                      );
+                    })}
                   </div>
 
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-100">
-                    <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1">
-                      {[
-                        { id: 'agora', label: 'Agora' },
-                        { id: 'hoje', label: 'Hoje' },
-                        { id: 'amanha', label: 'Amanhã' }
-                      ].map((mode) => (
-                        <button
-                          type="button"
-                          key={mode.id}
-                          onClick={() => setSearchFilters({ ...safeFilters, dateType: mode.id })}
-                          className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
-                            safeFilters.dateType === mode.id
-                              ? 'bg-sky-600 text-white shadow-xs'
-                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200/80'
-                          }`}
-                        >
-                          {mode.label}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="flex items-center gap-1 overflow-x-auto scrollbar-none py-1">
+                  {/* Período + CTA Principal */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-2 border-t border-slate-100">
+                    <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
                       {[
                         { id: 'hora', label: 'Por hora' },
                         { id: 'diaria', label: 'Diária' },
@@ -234,62 +374,151 @@ export const LandingPage = () => {
                           type="button"
                           key={item.id}
                           onClick={() => setSearchFilters({ ...safeFilters, billingType: item.id })}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                          className={`px-3 py-1.5 rounded-full text-xs font-extrabold transition shrink-0 cursor-pointer ${
                             safeFilters.billingType === item.id
-                              ? 'bg-slate-900 text-white shadow-xs'
-                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200/80'
+                              ? 'bg-slate-900 text-white'
+                              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                           }`}
                         >
                           {item.label}
                         </button>
                       ))}
                     </div>
-                  </div>
 
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-1">
                     <button
                       type="submit"
-                      className="flex-1 bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white font-extrabold text-sm sm:text-base py-3.5 sm:py-4 px-6 rounded-2xl shadow-lg shadow-sky-600/25 hover:shadow-xl transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2 cursor-pointer"
+                      className="min-h-[44px] bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white font-black text-sm px-6 py-2.5 rounded-2xl shadow-md shadow-sky-600/25 flex items-center justify-center gap-2 transition cursor-pointer"
                     >
-                      <Search className="w-5 h-5" />
-                      <span>Reservar Agora</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const mapEl = document.getElementById('mapa-itabuna-section');
-                        if (mapEl) {
-                          mapEl.scrollIntoView({ behavior: 'smooth' });
-                        } else {
-                          setActiveTab('search');
-                        }
-                      }}
-                      className="sm:w-auto border-2 border-slate-300 hover:border-sky-600 hover:bg-sky-50/60 text-slate-700 hover:text-sky-700 font-extrabold text-xs sm:text-sm py-3.5 px-6 rounded-2xl transition flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                      <MapPin className="w-4 h-4 text-sky-600" />
-                      <span>Ver no mapa</span>
+                      <MapPin className="w-4 h-4" />
+                      <span>Abrir mapa de vagas</span>
                     </button>
                   </div>
                 </form>
               </div>
-            </>
+
+              {/* Banner Promocional Estilo Card (igual centro da imagem modelo) */}
+              <div className="bg-gradient-to-r from-sky-600 via-sky-500 to-[#FFDC00] rounded-3xl p-4 sm:p-5 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-white">
+                <div className="space-y-1">
+                  <span className="inline-block bg-slate-950 text-[#FFDC00] text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full">
+                    VagaGo Itabuna
+                  </span>
+                  <h2 className="text-lg sm:text-xl font-black leading-tight text-white drop-shadow-2xs">
+                    Estacione até 40% mais barato ou fature com sua vaga parada
+                  </h2>
+                  <p className="text-xs text-sky-50 font-semibold">
+                    Garagens verificadas a partir de R$ {cheapestPrice.toFixed(0)}/h • Anfitriões recebem 90% no PIX
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleStartHosting}
+                  className="min-h-[44px] bg-orange-500 hover:bg-orange-400 text-white font-black text-xs sm:text-sm px-5 py-2.5 rounded-2xl shadow-md shrink-0 transition cursor-pointer"
+                >
+                  ANUNCIAR GRÁTIS
+                </button>
+              </div>
+
+              {/* Vagas recomendadas na região (Hierarquia Preço + Distância estilo 99) */}
+              <div className="space-y-3 pt-1">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-base sm:text-lg font-black text-slate-900">
+                    Vagas recomendadas na região
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('search')}
+                    className="text-xs font-extrabold text-sky-700 hover:text-sky-800 flex items-center gap-0.5 cursor-pointer py-1 px-2"
+                  >
+                    <span>Mais</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {displaySpots.slice(0, 3).map((spot, idx) => {
+                    const priceFixed = Number(spot.priceHourly || 6).toFixed(2);
+                    const [intPart, decPart] = priceFixed.split('.');
+                    const thumb =
+                      (spot.photos && spot.photos[0]) ||
+                      spot.facadePhoto ||
+                      'https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=300&q=80';
+
+                    return (
+                      <div
+                        key={spot.id}
+                        onClick={() => openSpotDetails(spot)}
+                        className={`relative flex items-center justify-between p-3.5 rounded-2xl bg-white shadow-sm hover:shadow-md transition cursor-pointer gap-3 ${
+                          idx === 0 ? 'border-2 border-sky-500 bg-sky-50/30' : 'border border-slate-200'
+                        }`}
+                      >
+                        {idx === 0 && (
+                          <span className="absolute -top-2.5 left-3.5 bg-sky-600 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full">
+                            ⭐ RECOMENDADA
+                          </span>
+                        )}
+
+                        <div className="flex items-center gap-3 min-w-0">
+                          <img
+                            src={thumb}
+                            alt={spot.title}
+                            loading="lazy"
+                            className="w-16 h-16 rounded-xl object-cover shrink-0 bg-slate-100"
+                          />
+                          <div className="min-w-0 space-y-0.5">
+                            <h3 className="font-extrabold text-slate-900 text-sm truncate">
+                              {spot.title}
+                            </h3>
+                            <p className="text-xs text-slate-500 font-semibold flex items-center gap-1 truncate">
+                              <MapPin className="w-3 h-3 text-sky-600 shrink-0" />
+                              <span>{spot.distFormatted || '250 m'} • {spot.walkTime || '3 min a pé'}</span>
+                            </p>
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
+                              <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-400" />
+                              <span>{Number(spot.rating || 4.8).toFixed(1)}</span>
+                              {spot.isCovered && (
+                                <span className="bg-purple-100 text-purple-800 text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                                  Coberta
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="text-right shrink-0 space-y-1">
+                          <p className="text-xl font-black text-slate-900 leading-none">
+                            R$ {intPart}
+                            <span className="text-xs font-normal text-slate-500">,{decPart}/h</span>
+                          </p>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openSpotDetails(spot);
+                            }}
+                            className="min-h-[38px] bg-sky-600 hover:bg-sky-500 text-white text-xs font-extrabold px-3.5 py-1.5 rounded-xl transition cursor-pointer"
+                          >
+                            Reservar
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
           ) : (
             <>
-              <div className="text-center max-w-3xl mx-auto space-y-4 animate-in fade-in duration-200">
-                <h1 className="text-3xl sm:text-5xl md:text-6xl font-black text-slate-900 tracking-tight leading-[1.14] text-balance">
-                  Alugue sua garagem parada <br className="hidden sm:block" />
-                  <span className="bg-gradient-to-r from-emerald-600 via-teal-500 to-sky-600 bg-clip-text text-transparent">
-                    com segurança em Itabuna
-                  </span>
-                </h1>
-
-                <p className="text-slate-600 text-sm sm:text-base md:text-lg max-w-2xl mx-auto font-normal leading-relaxed text-balance">
+              <div className="text-center max-w-3xl mx-auto space-y-3 pt-2 animate-in fade-in duration-200">
+                <h2 className="text-2xl sm:text-4xl md:text-5xl font-black text-slate-950 tracking-tight leading-tight">
+                  Alugue sua garagem parada com segurança em Itabuna
+                </h2>
+                <p className="text-slate-800 text-xs sm:text-base max-w-2xl mx-auto font-semibold leading-relaxed">
                   Cadastre sua vaga residencial, comercial ou de condomínio gratuitamente. Motoristas chegam com CPF e placa verificados e você recebe <strong>90% direto no seu PIX</strong>.
                 </p>
               </div>
 
-              <div className="mt-6 max-w-4xl mx-auto bg-white rounded-3xl p-5 sm:p-8 shadow-xl shadow-slate-200/50 border border-emerald-200/80 grid grid-cols-1 md:grid-cols-12 gap-6 items-center animate-in fade-in duration-200">
+              <div className="mt-4 bg-white rounded-3xl p-5 sm:p-8 shadow-xl border border-emerald-200/80 grid grid-cols-1 md:grid-cols-12 gap-6 items-center animate-in fade-in duration-200">
                 <div className="md:col-span-7 space-y-4">
                   <div className="flex items-center justify-between text-xs font-bold text-slate-700">
                     <span>Valor por hora na sua região:</span>
@@ -350,7 +579,7 @@ export const LandingPage = () => {
                     <button
                       type="button"
                       onClick={handleStartHosting}
-                      className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs sm:text-sm py-3 px-4 rounded-xl transition flex items-center justify-center gap-2 cursor-pointer"
+                      className="w-full min-h-[44px] bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs sm:text-sm py-3 px-4 rounded-xl transition flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <PlusCircle className="w-4 h-4" />
                       <span>Anunciar Minha Garagem</span>
@@ -363,7 +592,7 @@ export const LandingPage = () => {
                         if (wlEl) wlEl.scrollIntoView({ behavior: 'smooth' });
                         else setActiveTab('host_landing');
                       }}
-                      className="w-full border border-slate-600 hover:border-emerald-400 text-slate-200 hover:text-white font-bold text-xs py-2.5 px-4 rounded-xl transition cursor-pointer"
+                      className="w-full min-h-[44px] border border-slate-600 hover:border-emerald-400 text-slate-200 hover:text-white font-bold text-xs py-2.5 px-4 rounded-xl transition cursor-pointer"
                     >
                       Entrar na Lista Prioritária
                     </button>
@@ -372,34 +601,6 @@ export const LandingPage = () => {
               </div>
             </>
           )}
-
-          {/* Barra de Credibilidade Realista */}
-          <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 max-w-4xl mx-auto text-center">
-            <div className="p-3.5 sm:p-4 bg-white/80 backdrop-blur-md rounded-2xl border border-slate-200/80 shadow-2xs">
-              <div className="text-base sm:text-lg font-black text-slate-900">A partir de R$ 4/h</div>
-              <div className="text-[11px] sm:text-xs text-slate-500 font-semibold mt-0.5">
-                Mais econômico que rotativos
-              </div>
-            </div>
-            <div className="p-3.5 sm:p-4 bg-white/80 backdrop-blur-md rounded-2xl border border-slate-200/80 shadow-2xs">
-              <div className="text-base sm:text-lg font-black text-emerald-600">Reembolso Imediato</div>
-              <div className="text-[11px] sm:text-xs text-slate-500 font-semibold mt-0.5">
-                Estorno se a vaga falhar
-              </div>
-            </div>
-            <div className="p-3.5 sm:p-4 bg-white/80 backdrop-blur-md rounded-2xl border border-slate-200/80 shadow-2xs">
-              <div className="text-base sm:text-lg font-black text-sky-600">CPF &amp; Placa Checados</div>
-              <div className="text-[11px] sm:text-xs text-slate-500 font-semibold mt-0.5">
-                Portão e senha protegidos
-              </div>
-            </div>
-            <div className="p-3.5 sm:p-4 bg-white/80 backdrop-blur-md rounded-2xl border border-slate-200/80 shadow-2xs">
-              <div className="text-base sm:text-lg font-black text-slate-900">Itabuna - BA</div>
-              <div className="text-[11px] sm:text-xs text-slate-500 font-semibold mt-0.5">
-                Centro, Jequitibá e Fátima
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 

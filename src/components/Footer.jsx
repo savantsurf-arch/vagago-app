@@ -15,7 +15,7 @@ export const Footer = ({ onOpenChatHelp = () => {} }) => {
   };
 
   return (
-    <footer className="bg-slate-900 text-white pt-12 pb-8 border-t border-slate-800 mt-auto">
+    <footer className="bg-slate-900 text-white pt-12 pb-24 md:pb-8 border-t border-slate-800 mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-8 border-b border-slate-800">
           {/* Coluna 1: Marca e Plataforma PWA */}

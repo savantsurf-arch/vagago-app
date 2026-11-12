@@ -61,16 +61,17 @@ const getPriceMarkerIcon = (spot, isSelected = false, isFavorite = false) => {
   }
 
   const html = `
-    <div style="background:${bgColor};color:#fff;font-weight:800;font-size:11px;padding:4px 9px;border-radius:16px;border:2px solid ${borderColor};box-shadow:0 3px 9px rgba(0,0,0,0.22);display:inline-flex;align-items:center;gap:3px;white-space:nowrap;cursor:pointer;transform:${isSelected ? 'scale(1.12)' : 'scale(1)'};">
+    <div style="background:${bgColor};color:#fff;font-weight:800;font-size:12px;padding:5px 10px;border-radius:9999px;border:2px solid ${borderColor};box-shadow:0 4px 12px rgba(15,23,42,0.28);display:inline-flex;align-items:center;gap:4px;white-space:nowrap;cursor:pointer;transform:${isSelected ? 'scale(1.14)' : 'scale(1)'};transition:transform 0.15s ease;">
       ${isFavorite ? '❤️' : ''}<span>${labelText}</span>
+      <span style="width:6px;height:6px;border-radius:9999px;background:${isSelected ? '#FFDC00' : '#93c5fd'};display:inline-block;"></span>
     </div>
   `;
 
   const icon = L.divIcon({
     html,
     className: 'custom-price-marker',
-    iconSize: [74, 28],
-    iconAnchor: [37, 14]
+    iconSize: [86, 30],
+    iconAnchor: [43, 15]
   });
   if (priceIconCache.size > 150) priceIconCache.clear();
   priceIconCache.set(cacheKey, icon);
@@ -92,8 +93,10 @@ function MapInvalidator() {
   return null;
 }
 
-function AutoFitBoundsController({ spots, userLocation, autoFitTrigger }) {
+function AutoFitBoundsController({ spots, userLocation, autoFitTrigger, fullScreen }) {
   const map = useMap();
+  const spotsCount = spots?.length || 0;
+  const isLive = Boolean(userLocation?.isLive);
 
   useEffect(() => {
     if (!spots || spots.length === 0) return;
@@ -107,14 +110,16 @@ function AutoFitBoundsController({ spots, userLocation, autoFitTrigger }) {
       const bounds = L.latLngBounds(points);
       if (bounds.isValid()) {
         map.fitBounds(bounds, {
-          padding: [36, 36],
+          paddingTopLeft: fullScreen ? [32, 128] : [36, 36],
+          paddingBottomRight: fullScreen ? [32, 220] : [36, 36],
           maxZoom: 15,
           animate: true,
           duration: 0.5
         });
       }
     }
-  }, [spots, userLocation, autoFitTrigger, map]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spotsCount, isLive, autoFitTrigger, map]);
 
   return null;
 }
@@ -140,6 +145,9 @@ export default function InteractiveMapCanvas({
   hoveredSpotId = null,
   favorites = [],
   onSelectSpot = () => {},
+  fullScreen = false,
+  disablePopupOnSelect = false,
+  controlsTopClass = '',
   center = [-14.7966, -39.2789],
   zoom = 14,
   className = "w-full h-full min-h-[380px] rounded-3xl overflow-hidden border border-slate-200 shadow-sm relative group"
@@ -154,14 +162,16 @@ export default function InteractiveMapCanvas({
   );
   const safeFavorites = Array.isArray(favorites) ? favorites : [];
 
+  const floatingTopPos = controlsTopClass || (fullScreen ? 'top-36 right-3 sm:top-28 sm:right-4' : 'top-3 right-3');
+
   return (
-    <div className={`relative overflow-hidden isolate ${className}`}>
+    <div className={`relative overflow-hidden isolate ${fullScreen ? 'min-h-0' : ''} ${className}`}>
       {/* Floating Map Controls */}
-      <div className="absolute top-3 right-3 z-[10] flex flex-col gap-2 pointer-events-auto">
+      <div className={`absolute ${floatingTopPos} z-[10] flex flex-col gap-2 pointer-events-auto`}>
         <button
           onClick={() => setAutoFitKey(prev => prev + 1)}
           type="button"
-          className="bg-white/95 hover:bg-white text-slate-800 text-xs font-bold px-3 py-2 rounded-xl shadow-md border border-slate-200 flex items-center gap-1.5 backdrop-blur-xs transition hover:scale-105 cursor-pointer"
+          className="bg-white/95 hover:bg-white text-slate-800 text-xs font-bold px-3 py-2 min-h-[40px] rounded-xl shadow-md border border-slate-200 flex items-center gap-1.5 backdrop-blur-xs transition hover:scale-105 cursor-pointer"
           title="Ajustar o mapa para ver todas as vagas cadastradas em Itabuna"
         >
           <Maximize2 className="w-4 h-4 text-sky-600" />
@@ -172,7 +182,8 @@ export default function InteractiveMapCanvas({
       <MapContainer
         center={effectiveCenter}
         zoom={zoom}
-        scrollWheelZoom={false}
+        scrollWheelZoom={fullScreen}
+        zoomControl={!fullScreen}
         preferCanvas={true}
         style={{ width: '100%', height: '100%', zIndex: 1, position: 'relative', borderRadius: 'inherit' }}
       >
@@ -182,6 +193,7 @@ export default function InteractiveMapCanvas({
           spots={validSpots}
           userLocation={userLocation}
           autoFitTrigger={autoFitKey}
+          fullScreen={fullScreen}
         />
 
         <PanToSelectedSpotController
@@ -243,6 +255,7 @@ export default function InteractiveMapCanvas({
                   click: () => onSelectSpot(spot)
                 }}
               >
+                {!disablePopupOnSelect && (
                 <Popup>
                   <div className="w-60 p-3 bg-white font-sans text-slate-800">
                     <div className="relative rounded-lg overflow-hidden h-24 mb-2 bg-slate-100">
@@ -296,6 +309,7 @@ export default function InteractiveMapCanvas({
                     </div>
                   </div>
                 </Popup>
+                )}
               </Marker>
 
               {spot.entranceLat && spot.entranceLng && !isNaN(Number(spot.entranceLat)) && !isNaN(Number(spot.entranceLng)) && (

@@ -38,34 +38,43 @@ export function estimateDrivingTime(distanceKm) {
   return `${minutes} min de carro`;
 }
 
-// Smart Geocoding Dictionary & Lookup function (maps user search terms to lat/lng)
+// Smart Geocoding Dictionary & Lookup function (Itabuna - BA + fallbacks locais)
 const KNOWN_LOCATIONS = {
-  "itabuna": { name: "Centro, Itabuna - BA", lat: -14.7966, lng: -39.2789 },
-  "centro de itabuna": { name: "Centro, Itabuna - BA", lat: -14.7966, lng: -39.2789 },
-  "paulista": { name: "Av. Paulista, São Paulo - SP", lat: -23.561414, lng: -46.655881 },
-  "bela vista": { name: "Bela Vista, São Paulo - SP", lat: -23.561414, lng: -46.655881 },
-  "faria lima": { name: "Faria Lima, São Paulo - SP", lat: -23.570198, lng: -46.689025 },
-  "pinheiros": { name: "Pinheiros, São Paulo - SP", lat: -23.570198, lng: -46.689025 },
-  "moema": { name: "Moema, São Paulo - SP", lat: -23.606821, lng: -46.662198 },
-  "copacabana": { name: "Copacabana, Rio de Janeiro - RJ", lat: -22.969821, lng: -43.186452 },
-  "centro": { name: "Centro Histórico, São Paulo - SP", lat: -23.5489, lng: -46.6388 }
+  "jequitiba": { name: "Shopping Jequitibá, Itabuna - BA", lat: -14.7879, lng: -39.2673 },
+  "shopping": { name: "Shopping Jequitibá, Itabuna - BA", lat: -14.7879, lng: -39.2673 },
+  "salobrinho": { name: "Rod. Jorge Amado / Salobrinho, Itabuna - BA", lat: -14.7885, lng: -39.2665 },
+  "cinquentenario": { name: "Av. do Cinquentenário, Centro, Itabuna - BA", lat: -14.7966, lng: -39.2789 },
+  "cinqüentenário": { name: "Av. do Cinquentenário, Centro, Itabuna - BA", lat: -14.7966, lng: -39.2789 },
+  "fatima": { name: "Bairro de Fátima, Itabuna - BA", lat: -14.7945, lng: -39.2862 },
+  "fátima": { name: "Bairro de Fátima, Itabuna - BA", lat: -14.7945, lng: -39.2862 },
+  "goes calmon": { name: "Góes Calmon, Itabuna - BA", lat: -14.7918, lng: -39.2768 },
+  "góes calmon": { name: "Góes Calmon, Itabuna - BA", lat: -14.7918, lng: -39.2768 },
+  "jardim vitoria": { name: "Jardim Vitória, Itabuna - BA", lat: -14.7858, lng: -39.2712 },
+  "jardim vitória": { name: "Jardim Vitória, Itabuna - BA", lat: -14.7858, lng: -39.2712 },
+  "sao caetano": { name: "São Caetano, Itabuna - BA", lat: -14.8012, lng: -39.2815 },
+  "são caetano": { name: "São Caetano, Itabuna - BA", lat: -14.8012, lng: -39.2815 },
+  "pontalzinho": { name: "Pontalzinho, Itabuna - BA", lat: -14.7988, lng: -39.2848 },
+  "conceicao": { name: "Conceição, Itabuna - BA", lat: -14.7975, lng: -39.2722 },
+  "conceição": { name: "Conceição, Itabuna - BA", lat: -14.7975, lng: -39.2722 },
+  "centro": { name: "Centro, Itabuna - BA", lat: -14.7966, lng: -39.2789 },
+  "itabuna": { name: "Centro, Itabuna - BA", lat: -14.7966, lng: -39.2789 }
 };
 
 export function geocodeAddress(addressQuery) {
   if (!addressQuery) return null;
   const clean = addressQuery.trim().toLowerCase();
-  
+
   for (const [key, val] of Object.entries(KNOWN_LOCATIONS)) {
     if (clean.includes(key)) {
       return val;
     }
   }
 
-  // Default fallback center if unknown address
+  // Fallback padrão em Itabuna - BA para nunca desviar para outra cidade
   return {
-    name: addressQuery,
-    lat: -23.561414,
-    lng: -46.655881
+    name: `${addressQuery}, Itabuna - BA`,
+    lat: -14.7966,
+    lng: -39.2789
   };
 }
 

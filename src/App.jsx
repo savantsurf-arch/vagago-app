@@ -24,6 +24,7 @@ import { NotificationsPage } from './components/NotificationsPage';
 import { NotificationToast } from './components/NotificationToast';
 import { Footer } from './components/Footer';
 import { LiveChatWidget } from './components/LiveChatWidget';
+import { MobileBottomNav } from './components/MobileBottomNav';
 import { RotateCcw, Sparkles } from 'lucide-react';
 
 
@@ -125,7 +126,9 @@ const MainContent = () => {
       <Navbar onOpenDepositModal={() => setIsDepositOpen(true)} />
 
       <div className={`flex-1 transition-opacity duration-300 ${isPageLoading ? 'opacity-70' : 'opacity-100'}`}>
-        {activeTab === 'landing' && <LandingPage />}
+        {activeTab === 'landing' && (
+          <LandingPage onOpenDepositModal={() => setIsDepositOpen(true)} />
+        )}
         {activeTab === 'host_landing' && <HostLandingPage />}
         {(activeTab === 'search' || activeTab === 'favorites') && <SearchPage />}
         {activeTab === 'terms' && <TermsPrivacyPage />}
@@ -145,8 +148,11 @@ const MainContent = () => {
       {/* Global Real-Time Notification Toast Alert */}
       <NotificationToast />
 
-      {/* Rodapé Global Completo + Chat Integrado (Crisp / Fallback Leve) */}
-      {activeTab !== 'admin_dashboard' && (
+      {/* Mobile Floating Pill Navigation (Estilo 99) */}
+      <MobileBottomNav onOpenDepositModal={() => setIsDepositOpen(true)} />
+
+      {/* Rodapé Global Completo + Chat Integrado (Oculto no mapa tela cheia e admin) */}
+      {activeTab !== 'admin_dashboard' && activeTab !== 'search' && activeTab !== 'favorites' && (
         <Footer onOpenChatHelp={() => setIsLiveChatOpen(true)} />
       )}
       <LiveChatWidget
