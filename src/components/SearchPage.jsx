@@ -1,8 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { InteractiveMap } from './InteractiveMap';
 import { ShareGarageModal } from './ShareGarageModal';
 import { GaragePhotoCarousel } from './GaragePhotoCarousel';
+import BotaoNavegacao from './BotaoNavegacao';
+import { fetchDrivingRoute } from '../services/geoUtils';
 import {
   Search,
   Star,
@@ -46,6 +48,32 @@ export const SearchPage = () => {
   const [focusedSpot, setFocusedSpot] = useState(null);
   const [sheetState, setSheetState] = useState('list'); // 'peek' | 'list' | 'focused'
   const [sharingSpot, setSharingSpot] = useState(null);
+  const [routeData, setRouteData] = useState(null);
+  const [showRouteInMap, setShowRouteInMap] = useState(true);
+
+  useEffect(() => {
+    if (sheetState !== 'focused' || !focusedSpot) {
+      setRouteData(null);
+      return;
+    }
+
+    let cancelled = false;
+    setShowRouteInMap(true);
+    const fromLat = userLocation?.lat || -14.7966;
+    const fromLng = userLocation?.lng || -39.2789;
+    const toLat = focusedSpot.lat || -14.7966;
+    const toLng = focusedSpot.lng || -39.2789;
+
+    fetchDrivingRoute(fromLat, fromLng, toLat, toLng).then((result) => {
+      if (!cancelled && result) {
+        setRouteData(result);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sheetState, focusedSpot, userLocation]);
 
   const safeFilters = useMemo(() => searchFilters || {}, [searchFilters]);
   const isFavoritesMode = activeTab === 'favorites';
@@ -251,6 +279,7 @@ export const SearchPage = () => {
           className="w-full h-full min-h-0 relative"
           spots={sortedSpots}
           userLocation={userLocation}
+          routePolyline={sheetState === 'focused' && focusedSpot && showRouteInMap ? routeData?.coordinates : null}
           favorites={favorites}
           selectedSpotId={selectedSpotId}
           hoveredSpotId={hoveredSpotId}
@@ -691,15 +720,27 @@ export const SearchPage = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() => openSpotDetails(focusedSpot)}
-                className="flex-1 min-h-[48px] bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white font-black text-sm rounded-2xl shadow-lg shadow-sky-600/25 flex items-center justify-center gap-1.5 transition cursor-pointer"
-              >
-                <span>Reservar agora</span>
-                <ChevronRight className="w-4 h-4" />
-              </button>
+            <div className="space-y-2.5 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-start">
+                <BotaoNavegacao
+                  compact={true}
+                  latitude={focusedSpot.lat || -14.7966}
+                  longitude={focusedSpot.lng || -39.2789}
+                  endereco={focusedSpot.address || focusedSpot.neighborhood || 'Itabuna - BA'}
+                  onPreviewRoute={() => setShowRouteInMap((prev) => !prev)}
+                  isShowingRoute={showRouteInMap}
+                  routeInfo={routeData}
+                />
+
+                <button
+                  type="button"
+                  onClick={() => openSpotDetails(focusedSpot)}
+                  className="w-full min-h-[48px] bg-gradient-to-r from-[#002A66] to-[#017AFC] hover:from-[#002050] hover:to-[#0068DA] text-white font-black text-sm rounded-2xl shadow-lg shadow-[#017AFC]/25 flex items-center justify-center gap-1.5 transition cursor-pointer"
+                >
+                  <span>Ver detalhes e reservar</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
         ) : (

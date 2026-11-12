@@ -131,15 +131,33 @@ function AutoFitBoundsController({ spots, userLocation, autoFitTrigger, fullScre
   return null;
 }
 
-function PanToSelectedSpotController({ selectedSpotId, spots }) {
+function PanToSelectedSpotController({ selectedSpotId, spots, hasActiveRoute }) {
   const map = useMap();
   useEffect(() => {
-    if (!selectedSpotId || !spots || spots.length === 0) return;
+    if (hasActiveRoute || !selectedSpotId || !spots || spots.length === 0) return;
     const spot = spots.find(s => s && s.id === selectedSpotId);
     if (spot && spot.lat && spot.lng && !isNaN(Number(spot.lat)) && !isNaN(Number(spot.lng))) {
       map.panTo([Number(spot.lat), Number(spot.lng)], { animate: true, duration: 0.4 });
     }
-  }, [selectedSpotId, spots, map]);
+  }, [selectedSpotId, spots, hasActiveRoute, map]);
+  return null;
+}
+
+function FitRouteBoundsController({ routePolyline, fullScreen }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!Array.isArray(routePolyline) || routePolyline.length < 2) return;
+    const bounds = L.latLngBounds(routePolyline);
+    if (bounds.isValid()) {
+      map.fitBounds(bounds, {
+        paddingTopLeft: fullScreen ? [32, 132] : [28, 28],
+        paddingBottomRight: fullScreen ? [32, 260] : [28, 28],
+        maxZoom: 16,
+        animate: true,
+        duration: 0.45
+      });
+    }
+  }, [routePolyline, fullScreen, map]);
   return null;
 }
 
@@ -207,6 +225,12 @@ export default function InteractiveMapCanvas({
         <PanToSelectedSpotController
           selectedSpotId={selectedSpotId}
           spots={validSpots}
+          hasActiveRoute={Boolean(routePolyline && routePolyline.length > 1)}
+        />
+
+        <FitRouteBoundsController
+          routePolyline={routePolyline}
+          fullScreen={fullScreen}
         />
 
         {/* CartoDB Voyager Tile Layer optimized for mobile 4G/5G data savings */}
@@ -222,7 +246,7 @@ export default function InteractiveMapCanvas({
         {routePolyline && routePolyline.length > 1 && (
           <Polyline
             positions={routePolyline}
-            pathOptions={{ color: '#0284c7', weight: 6, opacity: 0.9 }}
+            pathOptions={{ color: '#017AFC', weight: 5, opacity: 0.92 }}
           />
         )}
 

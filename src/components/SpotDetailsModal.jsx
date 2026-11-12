@@ -17,7 +17,6 @@ import {
   ChevronLeft,
   Heart,
   Info,
-  Compass,
   MessageSquare,
   Sparkles,
   ArrowLeft,
@@ -26,7 +25,8 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { InteractiveMap } from './InteractiveMap';
-import { openExternalNavigation } from '../services/geoUtils';
+import BotaoNavegacao from './BotaoNavegacao';
+import { fetchDrivingRoute } from '../services/geoUtils';
 import { calculateBookingPricing, getOccupiedSlotsForDate } from '../services/pricingUtils';
 
 export const SpotDetailsModal = () => {
@@ -58,6 +58,8 @@ export const SpotDetailsModal = () => {
   const [startTime, setStartTime] = useState('14:00');
   const [endTime, setEndTime] = useState('18:00');
   const [isDescExpanded, setIsDescExpanded] = useState(false);
+  const [showRouteInMap, setShowRouteInMap] = useState(true);
+  const [routeData, setRouteData] = useState(null);
 
   const handleClose = () => {
     if (typeof setIsSpotDetailsOpen === 'function') {
@@ -79,11 +81,33 @@ export const SpotDetailsModal = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isSpotDetailsOpen]);
 
-  // Reset active photo index when selectedSpot changes
+  // Reset active photo index and fetch blue driving route when selectedSpot changes
   useEffect(() => {
     setActivePhotoIdx(0);
     setIsDescExpanded(false);
-  }, [selectedSpot?.id]);
+    setShowRouteInMap(true);
+
+    if (!isSpotDetailsOpen || !selectedSpot) {
+      setRouteData(null);
+      return;
+    }
+
+    let cancelled = false;
+    const fromLat = userLocation?.lat || -14.7966;
+    const fromLng = userLocation?.lng || -39.2789;
+    const toLat = selectedSpot.lat || -14.7877;
+    const toLng = selectedSpot.lng || -39.2789;
+
+    fetchDrivingRoute(fromLat, fromLng, toLat, toLng).then((result) => {
+      if (!cancelled && result) {
+        setRouteData(result);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isSpotDetailsOpen, selectedSpot, userLocation]);
 
   if (!isSpotDetailsOpen || !selectedSpot) return null;
 
@@ -515,17 +539,16 @@ export const SpotDetailsModal = () => {
                 )}
               </div>
 
-              {/* Localização Exata no Mapa */}
+              {/* Localização Exata no Mapa + Botão "Como Chegar" (Waze / Google Maps / Apple Maps) */}
               <div>
                 <div className="flex items-center justify-between mb-2.5">
-                  <h4 className="font-extrabold text-slate-900 text-sm">Localização no Mapa</h4>
+                  <h4 className="font-extrabold text-slate-900 text-sm">Localização e Trajeto no Mapa</h4>
                   <button
                     type="button"
-                    onClick={() => openExternalNavigation(selectedSpot.lat, selectedSpot.lng, selectedSpot.address)}
-                    className="text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-lg flex items-center gap-1 transition"
+                    onClick={() => setShowRouteInMap((prev) => !prev)}
+                    className="text-xs font-bold text-[#002A66] bg-sky-50 hover:bg-sky-100 border border-sky-200 px-2.5 py-1 rounded-lg transition cursor-pointer"
                   >
-                    <Compass className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Abrir GPS</span>
+                    {showRouteInMap ? 'Ocultar trajeto' : 'Mostrar rota azul'}
                   </button>
                 </div>
 
@@ -533,12 +556,23 @@ export const SpotDetailsModal = () => {
                   <InteractiveMap
                     eagerLoad={true}
                     spots={[selectedSpot]}
+                    userLocation={userLocation}
+                    routePolyline={showRouteInMap ? routeData?.coordinates : null}
                     selectedSpotId={selectedSpot.id}
                     center={[Number(selectedSpot.lat || -14.7877), Number(selectedSpot.lng || -39.2789)]}
                     zoom={15}
                     className="w-full h-full"
                   />
                 </div>
+
+                <BotaoNavegacao
+                  latitude={selectedSpot.lat || -14.7966}
+                  longitude={selectedSpot.lng || -39.2789}
+                  endereco={selectedSpot.address || selectedSpot.neighborhood || 'Itabuna - BA'}
+                  onPreviewRoute={() => setShowRouteInMap((prev) => !prev)}
+                  isShowingRoute={showRouteInMap}
+                  routeInfo={routeData}
+                />
               </div>
 
             </div>

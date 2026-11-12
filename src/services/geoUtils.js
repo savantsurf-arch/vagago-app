@@ -175,15 +175,88 @@ export function calculateSmartParkOptions(spots = [], userLat, userLng) {
   };
 }
 
+// Links padronizados para apps externos de navegação ("Como Chegar")
+export function getNavigationLinks(lat, lng, address = '') {
+  const hasCoords =
+    lat !== null &&
+    lat !== undefined &&
+    lng !== null &&
+    lng !== undefined &&
+    !Number.isNaN(Number(lat)) &&
+    !Number.isNaN(Number(lng));
+
+  const dest = hasCoords
+    ? `${Number(lat)},${Number(lng)}`
+    : encodeURIComponent(address || 'Itabuna, BA');
+
+  return {
+    googleMapsUrl: `https://www.google.com/maps/dir/?api=1&destination=${dest}&travelmode=driving`,
+    wazeUrl: hasCoords
+      ? `https://waze.com/ul?ll=${Number(lat)},${Number(lng)}&navigate=yes`
+      : `https://waze.com/ul?q=${encodeURIComponent(address || 'Itabuna, BA')}&navigate=yes`,
+    appleMapsUrl: `https://maps.apple.com/?daddr=${dest}&dirflg=d`
+  };
+}
+
+// Busca trajeto de carro via OSRM (OpenStreetMap gratuito) com fallback em linha reta
+export async function fetchDrivingRoute(fromLat, fromLng, toLat, toLng) {
+  const fLat = Number(fromLat);
+  const fLng = Number(fromLng);
+  const tLat = Number(toLat);
+  const tLng = Number(toLng);
+
+  if ([fLat, fLng, tLat, tLng].some((v) => Number.isNaN(v))) {
+    return null;
+  }
+
+  const straightDistKm = calculateDistanceKm(fLat, fLng, tLat, tLng);
+  const fallbackRoute = {
+    coordinates: [
+      [fLat, fLng],
+      [tLat, tLng]
+    ],
+    distanceKm: straightDistKm,
+    durationMin: Math.max(1, Math.round((straightDistKm / 25) * 60)),
+    isEstimated: true
+  };
+
+  if (typeof fetch !== 'function') {
+    return fallbackRoute;
+  }
+
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timeoutId = controller ? setTimeout(() => controller.abort(), 3500) : null;
+
+  try {
+    const url = `https://router.project-osrm.org/route/v1/driving/${fLng},${fLat};${tLng},${tLat}?overview=full&geometries=geojson`;
+    const res = await fetch(url, { signal: controller?.signal });
+    if (!res.ok) return fallbackRoute;
+
+    const data = await res.json();
+    const route = data?.routes?.[0];
+    const rawCoords = route?.geometry?.coordinates;
+    if (!Array.isArray(rawCoords) || rawCoords.length < 2) {
+      return fallbackRoute;
+    }
+
+    return {
+      coordinates: rawCoords.map(([lng, lat]) => [lat, lng]),
+      distanceKm: Number(((route.distance || straightDistKm * 1000) / 1000).toFixed(2)),
+      durationMin: Math.max(1, Math.round((route.duration || 60) / 60)),
+      isEstimated: false
+    };
+  } catch {
+    return fallbackRoute;
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
 // Open native maps app for navigation ("🧭 COMO CHEGAR")
 export function openExternalNavigation(lat, lng, address = '') {
-  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-  
-  if (isMobile && /iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-    // Apple Maps
-    window.open(`https://maps.apple.com/?daddr=${lat},${lng}&dirflg=d`, '_blank');
-  } else {
-    // Google Maps API / Deep Link
-    window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
-  }
+  const { appleMapsUrl, googleMapsUrl } = getNavigationLinks(lat, lng, address);
+  const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+  const isIOS = /iPhone|iPad|iPod/i.test(ua);
+
+  window.open(isIOS ? appleMapsUrl : googleMapsUrl, '_blank', 'noopener,noreferrer');
 }
