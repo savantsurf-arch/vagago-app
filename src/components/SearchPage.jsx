@@ -744,11 +744,16 @@ export const SearchPage = () => {
                               </span>
                             </p>
 
-                            <div className="flex items-center gap-1 text-xs font-bold text-slate-700">
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 flex-wrap">
                               <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-400" />
                               <span>{Number(spot.rating || 4.8).toFixed(1)}</span>
                               {Number(spot.reviewsCount || 0) > 0 && (
                                 <span className="text-slate-400 font-medium">({spot.reviewsCount})</span>
+                              )}
+                              {spot.isVerifiedHost !== false && (
+                                <span className="inline-flex items-center gap-0.5 text-[11px] font-extrabold text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded-md">
+                                  <ShieldCheck className="w-3 h-3 text-sky-600" /> Verificado
+                                </span>
                               )}
                             </div>
                           </div>

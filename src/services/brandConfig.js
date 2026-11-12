@@ -8,10 +8,17 @@ export const BRAND_CONFIG = {
   city: 'Itabuna - BA',
   supportEmail: 'suporte@vagago.com.br',
   privacyEmail: 'privacidade@vagago.com.br',
+  whatsappNumber: (env.VITE_WHATSAPP_NUMBER || '5573999990000').replace(/\D/g, ''),
+  whatsappDisplay: env.VITE_WHATSAPP_DISPLAY || '(73) 99999-0000',
   // Configure VITE_CRISP_WEBSITE_ID no .env / Vercel para ativar seu painel Crisp.chat
   crispWebsiteId: (env.VITE_CRISP_WEBSITE_ID || '').trim(),
   serviceHours: 'Atendimento online • Seg a Sáb • 07h às 21h'
 };
+
+export function getWhatsAppUrl(message = 'Olá! Preciso de ajuda com uma vaga no VagaGo Itabuna.') {
+  const digits = BRAND_CONFIG.whatsappNumber || '5573999990000';
+  return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
+}
 
 // Garantias operacionais reais descritas nos Termos e fluxos da plataforma
 export const PLATFORM_GUARANTEES = [

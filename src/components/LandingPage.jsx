@@ -473,9 +473,14 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
                               <MapPin className="w-3 h-3 text-sky-600 shrink-0" />
                               <span>{spot.distFormatted || '250 m'} • {spot.walkTime || '3 min a pé'}</span>
                             </p>
-                            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 flex-wrap">
                               <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-400" />
                               <span>{Number(spot.rating || 4.8).toFixed(1)}</span>
+                              {spot.isVerifiedHost !== false && (
+                                <span className="bg-sky-50 text-sky-700 text-[10px] px-1.5 py-0.5 rounded-full font-extrabold inline-flex items-center gap-0.5">
+                                  <ShieldCheck className="w-3 h-3 text-sky-600" /> Verificado
+                                </span>
+                              )}
                               {spot.isCovered && (
                                 <span className="bg-purple-100 text-purple-800 text-[10px] px-1.5 py-0.5 rounded-full font-bold">
                                   Coberta

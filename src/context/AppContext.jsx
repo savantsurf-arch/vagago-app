@@ -733,6 +733,12 @@ export const AppProvider = ({ children, initialRoute = '' }) => {
 
   useEffect(() => {
     try {
+      localStorage.setItem('vagago_reviews', JSON.stringify(reviews));
+    } catch (e) {}
+  }, [reviews]);
+
+  useEffect(() => {
+    try {
       localStorage.setItem('vagago_withdrawals', JSON.stringify(withdrawals));
     } catch (e) {}
   }, [withdrawals]);

@@ -1,25 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
+import { BRAND_CONFIG, getWhatsAppUrl } from '../services/brandConfig';
 import {
   ShieldCheck,
-  FileText,
   Car,
   Home,
   Lock,
-  Eye,
-  CheckCircle2,
   ArrowLeft,
   Scale,
-  Sparkles,
   Cookie,
-  BarChart3,
-  HelpCircle,
-  Clock,
-  Database,
+  RefreshCw,
+  MessageCircle,
   Mail,
-  UserCheck,
-  Gift,
-  AlertCircle
+  Clock,
+  CheckCircle2,
+  MapPin,
+  Database,
+  UserCheck
 } from 'lucide-react';
 
 export const TermsPrivacyPage = () => {
@@ -73,7 +70,7 @@ export const TermsPrivacyPage = () => {
         </div>
 
         {/* Navigation Switch / Tabs Bar */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 bg-white p-2 rounded-2xl border border-slate-200 shadow-sm text-xs font-extrabold">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 bg-white p-2 rounded-2xl border border-slate-200 shadow-sm text-xs font-extrabold">
           
           <button
             type="button"
@@ -98,7 +95,7 @@ export const TermsPrivacyPage = () => {
             }`}
           >
             <Car className="w-4 h-4 shrink-0" />
-            <span>Termos do Motorista</span>
+            <span>Termos Motorista</span>
           </button>
 
           <button
@@ -111,7 +108,33 @@ export const TermsPrivacyPage = () => {
             }`}
           >
             <Home className="w-4 h-4 shrink-0" />
-            <span>Termos do Anfitrião</span>
+            <span>Termos Anfitrião</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSelectLegalTab('cancellation')}
+            className={`p-3 rounded-xl transition flex flex-col sm:flex-row items-center justify-center gap-2 cursor-pointer ${
+              activeLegalTab === 'cancellation'
+                ? 'bg-amber-600 text-white shadow-sm'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <RefreshCw className="w-4 h-4 shrink-0" />
+            <span>Cancelamento</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSelectLegalTab('contact')}
+            className={`p-3 rounded-xl transition flex flex-col sm:flex-row items-center justify-center gap-2 cursor-pointer ${
+              activeLegalTab === 'contact'
+                ? 'bg-emerald-700 text-white shadow-sm'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <MessageCircle className="w-4 h-4 shrink-0" />
+            <span>Contato & WhatsApp</span>
           </button>
 
           <button
@@ -124,7 +147,7 @@ export const TermsPrivacyPage = () => {
             }`}
           >
             <Cookie className="w-4 h-4 shrink-0" />
-            <span>Cookies & Google</span>
+            <span>Cookies</span>
           </button>
 
         </div>
@@ -390,14 +413,130 @@ export const TermsPrivacyPage = () => {
             </div>
           )}
 
+          {/* TAB 5: POLÍTICA DE CANCELAMENTO */}
+          {activeLegalTab === 'cancellation' && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <div className="border-b border-slate-100 pb-4">
+                <span className="text-xs font-bold text-amber-700 uppercase tracking-wider">Regras Claras de Reembolso</span>
+                <h2 className="text-2xl font-black text-slate-900 mt-1">Política de Cancelamento e Reembolso Pix</h2>
+                <p className="text-xs text-slate-500 mt-1">Transparência para motoristas e proteção para anfitriões em Itabuna - BA</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl space-y-1.5">
+                  <div className="font-black text-emerald-900 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span>Até 1 hora antes</span>
+                  </div>
+                  <p className="text-emerald-950 font-semibold leading-relaxed">
+                    Reembolso integral de <strong>100%</strong> em saldo na Carteira VagaGo ou estorno Pix sem burocracia.
+                  </p>
+                </div>
+
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl space-y-1.5">
+                  <div className="font-black text-amber-900 flex items-center gap-1.5">
+                    <Clock className="w-4 h-4 text-amber-600" />
+                    <span>Menos de 1 hora</span>
+                  </div>
+                  <p className="text-amber-950 font-semibold leading-relaxed">
+                    Reembolso de <strong>50%</strong> do valor reservado para compensar o bloqueio recente da garagem do anfitrião.
+                  </p>
+                </div>
+
+                <div className="p-4 bg-sky-50 border border-sky-200 rounded-2xl space-y-1.5">
+                  <div className="font-black text-sky-900 flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-sky-600" />
+                    <span>Garantia na chegada</span>
+                  </div>
+                  <p className="text-sky-950 font-semibold leading-relaxed">
+                    Se a vaga estiver obstruída ou indisponível no check-in, garantimos <strong>estorno de 100%</strong> e suporte imediato via WhatsApp.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3 text-sm text-slate-700">
+                <h3 className="text-base font-bold text-slate-900">Tolerância e No-Show</h3>
+                <p>
+                  Todas as reservas incluem tolerância de <strong>15 minutos</strong> para entrada ou saída. Caso não ocorra comparecimento nem aviso prévio até o início da reserva, não há reembolso automático.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 6: CONTATO & WHATSAPP */}
+          {activeLegalTab === 'contact' && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <div className="border-b border-slate-100 pb-4">
+                <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Atendimento Humano Local</span>
+                <h2 className="text-2xl font-black text-slate-900 mt-1">Contato, Suporte WhatsApp e Ouvidoria</h2>
+                <p className="text-xs text-slate-500 mt-1">{BRAND_CONFIG.serviceHours}</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="p-5 bg-emerald-50 border border-emerald-200 rounded-2xl space-y-3">
+                  <div className="font-black text-emerald-950 text-base flex items-center gap-2">
+                    <MessageCircle className="w-5 h-5 text-emerald-600" />
+                    <span>WhatsApp Oficial VagaGo</span>
+                  </div>
+                  <p className="text-xs text-emerald-900 leading-relaxed">
+                    Precisa de ajuda com uma reserva, acesso ao portão, verificação de anfitrião ou repasse Pix? Fale direto com nossa equipe de Itabuna.
+                  </p>
+                  <a
+                    href={getWhatsAppUrl('Olá! Vim pelo site VagaGo e preciso de atendimento.')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2 min-h-[44px] bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs px-5 py-3 rounded-xl shadow-sm transition"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    <span>Chamar no WhatsApp ({BRAND_CONFIG.whatsappDisplay})</span>
+                  </a>
+                </div>
+
+                <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-3 text-xs">
+                  <div className="font-black text-slate-900 text-base flex items-center gap-2">
+                    <Mail className="w-5 h-5 text-sky-600" />
+                    <span>Canais Institucionais & LGPD</span>
+                  </div>
+                  <div className="space-y-2 text-slate-700">
+                    <div>
+                      <strong className="block text-slate-900">Suporte geral:</strong>
+                      <a href={`mailto:${BRAND_CONFIG.supportEmail}`} className="text-sky-700 font-bold hover:underline">
+                        {BRAND_CONFIG.supportEmail}
+                      </a>
+                    </div>
+                    <div>
+                      <strong className="block text-slate-900">Encarregado de Dados (LGPD):</strong>
+                      <a href={`mailto:${BRAND_CONFIG.privacyEmail}`} className="text-sky-700 font-bold hover:underline">
+                        {BRAND_CONFIG.privacyEmail}
+                      </a>
+                    </div>
+                    <div className="flex items-center gap-1.5 pt-1 text-slate-600">
+                      <MapPin className="w-4 h-4 text-sky-600 shrink-0" />
+                      <span>Operação local em {BRAND_CONFIG.city} • {BRAND_CONFIG.cnpjDisplay}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
 
         {/* Footer Support Card */}
-        <div className="p-6 bg-slate-100 rounded-2xl border border-slate-200 text-center space-y-2">
-          <div className="text-xs font-bold text-slate-800">Dúvidas jurídicas ou precisa de suporte?</div>
-          <p className="text-xs text-slate-500">
-            Nossa equipe jurídica e de atendimento ao usuário está à disposição pelo e-mail <strong>suporte@vagago.com.br</strong>
+        <div className="p-6 bg-slate-100 rounded-2xl border border-slate-200 text-center space-y-3">
+          <div className="text-xs font-bold text-slate-800">Dúvidas jurídicas ou precisa de suporte rápido?</div>
+          <p className="text-xs text-slate-600">
+            Atendimento pelo e-mail <strong>{BRAND_CONFIG.supportEmail}</strong> ou direto no WhatsApp.
           </p>
+          <a
+            href={getWhatsAppUrl('Olá! Preciso de suporte no VagaGo.')}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl transition"
+          >
+            <MessageCircle className="w-4 h-4" />
+            <span>Falar no WhatsApp</span>
+          </a>
         </div>
 
       </div>

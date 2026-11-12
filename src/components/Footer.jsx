@@ -1,7 +1,7 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import { BRAND_CONFIG } from '../services/brandConfig';
-import { MessageSquare, Mail, MapPin, ShieldCheck, Smartphone } from 'lucide-react';
+import { BRAND_CONFIG, getWhatsAppUrl } from '../services/brandConfig';
+import { MessageSquare, MessageCircle, Mail, MapPin, ShieldCheck, Smartphone } from 'lucide-react';
 
 export const Footer = ({ onOpenChatHelp = () => {} }) => {
   const { setActiveTab, openTermsPage } = useApp();
@@ -106,6 +106,24 @@ export const Footer = ({ onOpenChatHelp = () => {} }) => {
               <li>
                 <button
                   type="button"
+                  onClick={() => handleOpenLegal('cancellation')}
+                  className="hover:text-white transition cursor-pointer"
+                >
+                  Política de Cancelamento
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => handleOpenLegal('contact')}
+                  className="hover:text-white transition cursor-pointer"
+                >
+                  Contato &amp; WhatsApp
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
                   onClick={() => handleOpenLegal('google_cookies')}
                   className="hover:text-white transition cursor-pointer"
                 >
@@ -115,20 +133,31 @@ export const Footer = ({ onOpenChatHelp = () => {} }) => {
             </ul>
           </div>
 
-          {/* Coluna 4: Suporte via Chat Integrado */}
+          {/* Coluna 4: Suporte via WhatsApp e Chat Online */}
           <div className="space-y-3 text-xs">
             <div className="font-black text-white uppercase tracking-wider text-[11px]">
               Atendimento Online
             </div>
             <div className="space-y-2">
-              <button
-                type="button"
-                onClick={onOpenChatHelp}
-                className="inline-flex items-center justify-center gap-2 bg-sky-600 hover:bg-sky-500 text-white font-extrabold px-4 py-2.5 rounded-xl transition shadow-sm cursor-pointer w-full sm:w-auto"
-              >
-                <MessageSquare className="w-4 h-4" />
-                <span>Abrir Chat Online</span>
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <a
+                  href={getWhatsAppUrl()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold px-4 py-2.5 rounded-xl transition shadow-sm cursor-pointer"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>WhatsApp</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={onOpenChatHelp}
+                  className="inline-flex items-center justify-center gap-2 bg-sky-600 hover:bg-sky-500 text-white font-extrabold px-4 py-2.5 rounded-xl transition shadow-sm cursor-pointer"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  <span>Chat Online</span>
+                </button>
+              </div>
               <div className="text-slate-400 flex items-center gap-1.5 pt-1">
                 <Mail className="w-3.5 h-3.5 text-sky-400 shrink-0" />
                 <a href={`mailto:${BRAND_CONFIG.supportEmail}`} className="hover:text-white transition">

@@ -67,7 +67,29 @@ CREATE TABLE IF NOT EXISTS public.parking_spaces (
   status TEXT DEFAULT 'Aprovado',
   availability_status TEXT DEFAULT 'Disponível',
   is_available BOOLEAN DEFAULT true,
+  is_verified_host BOOLEAN DEFAULT true,
   available_hours TEXT DEFAULT '24 horas',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 4B. TABELA DE AVALIAÇÕES PÓS-RESERVA
+CREATE TABLE IF NOT EXISTS public.reviews (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  booking_id UUID REFERENCES public.bookings(id) ON DELETE SET NULL,
+  space_id UUID REFERENCES public.parking_spaces(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
+  user_name TEXT NOT NULL,
+  rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+  comment TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 4C. LISTA DE ESPERA DE ANFITRIÕES
+CREATE TABLE IF NOT EXISTS public.host_waitlist (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT NOT NULL,
+  whatsapp TEXT NOT NULL,
+  neighborhood TEXT NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

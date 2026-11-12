@@ -310,10 +310,15 @@ export const AddSpotModal = () => {
       }
     }
 
-    // Step 3: Fotos
+    // Step 3: Fotos (Mínimo 3 fotos reais: fachada/portão, área interna e iluminação/acesso)
     else if (currentStep === 3) {
-      if (!formData.photos || formData.photos.length === 0) {
-        setFormError('Adicione ao menos 1 foto real da sua garagem (tire com a câmera ou escolha da galeria).');
+      if (!formData.photos || formData.photos.length < 3) {
+        setFormError(
+          `Adicione ao menos 3 fotos reais da garagem (portão, vaga interna e iluminação). Faltam ${Math.max(
+            1,
+            3 - (formData.photos?.length || 0)
+          )} foto(s).`
+        );
         return;
       }
     }
@@ -376,9 +381,20 @@ export const AddSpotModal = () => {
 
     try {
       const fullAddress = `${formData.address}${formData.number ? `, ${formData.number}` : ''}${formData.complement ? ` - ${formData.complement}` : ''} - ${formData.neighborhood}, ${formData.city} - ${formData.state}`;
-      
+
+      const rawPhotos = Array.isArray(formData.photos) ? formData.photos : [];
+      const coverIdx = Number(formData.coverPhotoIndex || 0);
+      const orderedPhotos =
+        coverIdx > 0 && coverIdx < rawPhotos.length
+          ? [rawPhotos[coverIdx], ...rawPhotos.filter((_, idx) => idx !== coverIdx)]
+          : rawPhotos;
+
       const payload = {
         ...formData,
+        photos: orderedPhotos,
+        facadePhoto: orderedPhotos[0] || formData.facadePhoto,
+        coverPhotoIndex: 0,
+        isVerifiedHost: true,
         address: fullAddress,
         status: 'Ativa',
         isAvailable: true,
@@ -789,15 +805,19 @@ export const AddSpotModal = () => {
               {formData.photos.length === 0 ? (
                 <div className="p-8 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-300 text-center space-y-2">
                   <Camera className="w-8 h-8 text-slate-400 mx-auto" />
-                  <div className="text-xs font-extrabold text-slate-700">Nenhuma foto adicionada ainda</div>
+                  <div className="text-xs font-extrabold text-slate-700">
+                    Mínimo de 3 fotos obrigatórias (Portão, Vaga interna e Iluminação)
+                  </div>
                   <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
-                    Use os botões acima para tirar foto com a câmera ou escolher do seu aparelho. Mínimo de 1 foto para publicar.
+                    Use os botões acima para tirar foto com a câmera ou escolher do seu aparelho. Fotos reais geram 3x mais reservas.
                   </p>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <div className="text-xs font-bold text-slate-700 flex items-center justify-between">
-                    <span>Fotos Selecionadas ({formData.photos.length})</span>
+                  <div className="text-xs font-bold text-slate-700 flex items-center justify-between flex-wrap gap-2">
+                    <span className={formData.photos.length >= 3 ? 'text-emerald-700 font-extrabold' : 'text-amber-700 font-extrabold'}>
+                      Fotos Selecionadas ({formData.photos.length}/3 mín.)
+                    </span>
                     <span className="text-[11px] text-slate-400">Passe o mouse ou toque para definir a Foto Principal</span>
                   </div>
 

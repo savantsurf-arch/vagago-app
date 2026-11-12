@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { X, Star, CheckCircle2, ThumbsUp, ShieldCheck, Sparkles } from 'lucide-react';
+import { X, Star, CheckCircle2 } from 'lucide-react';
 
 export const ReviewModal = ({ isOpen, onClose, booking }) => {
   const { currentUser, addReview } = useApp();
@@ -50,7 +50,12 @@ export const ReviewModal = ({ isOpen, onClose, booking }) => {
 
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-in fade-in">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Avaliar sua experiência na garagem"
+      className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-in fade-in"
+    >
       <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col">
         
         {/* Header */}
@@ -143,9 +148,9 @@ export const ReviewModal = ({ isOpen, onClose, booking }) => {
               <button
                 type="button"
                 onClick={handleSubmitReview}
-                className="w-full bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-extrabold text-xs py-3 rounded-2xl shadow-lg shadow-amber-500/30 transition flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full min-h-[44px] bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-extrabold text-xs py-3 rounded-2xl shadow-lg shadow-amber-500/30 transition flex items-center justify-center gap-2 cursor-pointer"
               >
-                <span>Enviar Avaliação de 5 Estrelas</span>
+                <span>Enviar Avaliação ({rating} {rating === 1 ? 'Estrela' : 'Estrelas'})</span>
               </button>
             </>
           )}

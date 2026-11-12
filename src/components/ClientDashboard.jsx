@@ -354,15 +354,24 @@ export const ClientDashboard = ({
                       </button>
 
 
-                      <button
-                        type="button"
-                        onClick={() => { setReviewBooking(b); setIsReviewOpen(true); }}
-                        className="bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold px-3 py-2 rounded-xl flex items-center gap-1.5 transition border border-amber-200 cursor-pointer"
-                        title="Avaliar Estadia pós Check-out"
-                      >
-                        <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                        <span>Avaliar</span>
-                      </button>
+                      {(b.bookingStatus === 'Concluído' || b.status === 'completed') ? (
+                        b.hasReviewed ? (
+                          <span className="bg-emerald-50 text-emerald-700 text-xs font-extrabold px-3 py-2 rounded-xl border border-emerald-200 flex items-center gap-1">
+                            <Star className="w-3.5 h-3.5 text-emerald-600 fill-emerald-600" />
+                            <span>Avaliada</span>
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => { setReviewBooking(b); setIsReviewOpen(true); }}
+                            className="bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold px-3 py-2 rounded-xl flex items-center gap-1.5 transition border border-amber-200 cursor-pointer"
+                            title="Avaliar estadia pós check-out"
+                          >
+                            <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                            <span>Avaliar</span>
+                          </button>
+                        )
+                      ) : null}
 
                       <button
                         type="button"
