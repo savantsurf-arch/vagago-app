@@ -7,15 +7,9 @@ import {
   Lock,
   Eye,
   EyeOff,
-  User,
-  Phone,
-  Shield,
-  KeyRound,
   CheckCircle2,
   AlertCircle,
-  ArrowRight,
-  RefreshCw,
-  UserCheck
+  RefreshCw
 } from 'lucide-react';
 
 export const AuthModal = () => {
@@ -39,7 +33,7 @@ export const AuthModal = () => {
   // Register extra fields
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [cpf, setCpf] = useState('');
+  const [cpf] = useState('');
   const [accountType, setAccountType] = useState('CLIENTE'); // CLIENTE or PROPRIETÁRIO
   const [confirmPassword, setConfirmPassword] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(true);
@@ -91,16 +85,16 @@ export const AuthModal = () => {
 
     setIsLoading(true);
     try {
-      const success = await login(cleanEmail, password);
+      const res = await login(cleanEmail, password);
       setIsLoading(false);
-      if (success) {
+      if (res && (res === true || res.success === true)) {
         setIsAuthModalOpen(false);
         setEmail('');
         setPassword('');
       } else {
-        setErrorMessage('E-mail ou senha incorretos. Verifique suas credenciais.');
+        setErrorMessage(res?.message || 'E-mail ou senha incorretos. Verifique suas credenciais.');
       }
-    } catch (err) {
+    } catch {
       setIsLoading(false);
       setErrorMessage('Erro ao conectar ao servidor. Tente novamente.');
     }
@@ -134,7 +128,7 @@ export const AuthModal = () => {
 
     setIsLoading(true);
     try {
-      await register({
+      const res = await register({
         name: name.trim(),
         email: email.trim().toLowerCase(),
         password,
@@ -143,6 +137,10 @@ export const AuthModal = () => {
         role: accountType
       });
       setIsLoading(false);
+      if (res && res.success === false) {
+        setErrorMessage(res.message || 'Não foi possível cadastrar a conta.');
+        return;
+      }
       setSuccessMessage('Conta criada com sucesso! Seja bem-vindo ao VagaGo.');
       setTimeout(() => {
         setIsAuthModalOpen(false);
@@ -153,7 +151,7 @@ export const AuthModal = () => {
       }, 1000);
     } catch (err) {
       setIsLoading(false);
-      setErrorMessage('Não foi possível cadastrar a conta. Tente novamente.');
+      setErrorMessage(err?.message || 'Não foi possível cadastrar a conta. Tente novamente.');
     }
   };
 

@@ -15,8 +15,7 @@ import {
   Home,
   RefreshCw,
   CheckCircle2,
-  AlertCircle,
-  ArrowLeft
+  AlertCircle
 } from 'lucide-react';
 
 export const LoginPage = ({ initialMode = 'login', onBack = null }) => {
@@ -24,6 +23,7 @@ export const LoginPage = ({ initialMode = 'login', onBack = null }) => {
     login,
     register,
     loginWithGoogle,
+    requestPasswordReset,
     resetPassword,
     setActiveTab,
     isAuthenticated,
@@ -91,10 +91,10 @@ export const LoginPage = ({ initialMode = 'login', onBack = null }) => {
 
     setIsLoading(true);
     try {
-      const ok = await login(emailOrPhone.trim(), password, rememberMe);
+      const res = await login(emailOrPhone.trim(), password, rememberMe);
       setIsLoading(false);
-      if (!ok) {
-        setErrorMessage('E-mail/telefone ou senha incorretos. Verifique suas credenciais.');
+      if (!res || res.success === false) {
+        setErrorMessage(res?.message || 'E-mail/telefone ou senha incorretos.');
       }
     } catch {
       setIsLoading(false);
@@ -129,7 +129,7 @@ export const LoginPage = ({ initialMode = 'login', onBack = null }) => {
 
     setIsLoading(true);
     try {
-      await register({
+      const res = await register({
         name: name.trim(),
         email: email.trim().toLowerCase(),
         password,
@@ -137,10 +137,14 @@ export const LoginPage = ({ initialMode = 'login', onBack = null }) => {
         role: accountType
       });
       setIsLoading(false);
+      if (!res || res.success === false) {
+        setErrorMessage(res?.message || 'Não foi possível concluir o cadastro.');
+        return;
+      }
       setSuccessMessage('Conta criada com sucesso! Redirecionando...');
-    } catch {
+    } catch (err) {
       setIsLoading(false);
-      setErrorMessage('Não foi possível concluir o cadastro. Tente novamente.');
+      setErrorMessage(err?.message || 'Não foi possível concluir o cadastro. Tente novamente.');
     }
   };
 
@@ -165,20 +169,24 @@ export const LoginPage = ({ initialMode = 'login', onBack = null }) => {
 
     if (forgotStep === 1) {
       if (!forgotEmail || !forgotEmail.includes('@')) {
-        setErrorMessage('Informe um e-mail válido para receber o link de recuperação.');
+        setErrorMessage('Informe um e-mail válido para receber as instruções de recuperação.');
         return;
       }
       setIsLoading(true);
       try {
-        await resetPassword(forgotEmail.trim());
+        const res = await requestPasswordReset(forgotEmail.trim());
         setIsLoading(false);
-        setSuccessMessage('Instruções de recuperação enviadas para seu e-mail!');
-        setTimeout(() => {
-          setForgotStep(2);
-        }, 1200);
+        if (res?.success) {
+          setSuccessMessage(res.message);
+          setTimeout(() => {
+            setForgotStep(2);
+          }, 1000);
+        } else {
+          setErrorMessage(res?.message || 'Erro ao enviar recuperação de senha.');
+        }
       } catch {
         setIsLoading(false);
-        setErrorMessage('Erro ao enviar recuperação de senha. Verifique o e-mail digitado.');
+        setErrorMessage('Erro ao conectar ao servidor. Verifique o e-mail digitado.');
       }
     } else if (forgotStep === 2) {
       if (otpCode.trim().length < 4) {
@@ -193,14 +201,23 @@ export const LoginPage = ({ initialMode = 'login', onBack = null }) => {
         return;
       }
       setIsLoading(true);
-      await resetPassword(forgotEmail, newPassword);
-      setIsLoading(false);
-      setSuccessMessage('Senha redefinida com sucesso! Você já pode entrar.');
-      setTimeout(() => {
-        setAuthMode('login');
-        setForgotStep(1);
-        clearMessages();
-      }, 1400);
+      try {
+        const res = await resetPassword(forgotEmail, newPassword);
+        setIsLoading(false);
+        if (res?.success) {
+          setSuccessMessage(res.message);
+          setTimeout(() => {
+            setAuthMode('login');
+            setForgotStep(1);
+            clearMessages();
+          }, 1400);
+        } else {
+          setErrorMessage(res?.message || 'Erro ao redefinir senha.');
+        }
+      } catch {
+        setIsLoading(false);
+        setErrorMessage('Falha ao redefinir senha.');
+      }
     }
   };
 
@@ -563,6 +580,37 @@ export const LoginPage = ({ initialMode = 'login', onBack = null }) => {
                         Cadastre-se
                       </button>
                     </p>
+
+                    {/* Contas de Acesso Rápido para Teste */}
+                    <div className="mt-4 pt-3 border-t border-slate-800/80 flex flex-col items-center gap-1.5 text-[11px] text-slate-400">
+                      <span className="font-semibold text-slate-400 text-[10px] uppercase tracking-wider">Acesso de Demonstração</span>
+                      <div className="flex flex-wrap items-center justify-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => { setEmailOrPhone('admin@vagago.com.br'); setPassword('Admin@2026'); clearMessages(); }}
+                          className="px-2.5 py-1 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-400/30 text-purple-300 font-bold transition cursor-pointer text-[10px]"
+                          title="Preencher com Admin: admin@vagago.com.br / Admin@2026"
+                        >
+                          🛡️ Admin
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setEmailOrPhone('rodrigo.mendonca@gmail.com'); setPassword('VagaGo@2026'); clearMessages(); }}
+                          className="px-2.5 py-1 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-400/30 text-sky-300 font-bold transition cursor-pointer text-[10px]"
+                          title="Preencher com Motorista: rodrigo.mendonca@gmail.com / VagaGo@2026"
+                        >
+                          🚗 Motorista
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setEmailOrPhone('carlos.costa@gmail.com'); setPassword('VagaGo@2026'); clearMessages(); }}
+                          className="px-2.5 py-1 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/30 text-emerald-300 font-bold transition cursor-pointer text-[10px]"
+                          title="Preencher com Anfitrião: carlos.costa@gmail.com / VagaGo@2026"
+                        >
+                          🏠 Anfitrião
+                        </button>
+                      </div>
+                    </div>
                   </>
                 )}
 

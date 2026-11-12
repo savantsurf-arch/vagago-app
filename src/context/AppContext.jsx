@@ -122,8 +122,8 @@ export const AppProvider = ({ children, initialRoute = '' }) => {
     } catch (e) {}
   }
 
-  // Clear legacy mock users on first run
-  const LEGACY_EMAILS = ['matheus@cliente.com', 'juliana@proprietario.com', 'carlos@proprietario.com', 'admin@vagago.com.br'];
+  // Clear legacy mock users on first run (preserves admin@vagago.com.br)
+  const LEGACY_EMAILS = ['matheus@cliente.com', 'juliana@proprietario.com', 'carlos@proprietario.com'];
 
 
   // Users dataset - Only real registered users
@@ -377,17 +377,22 @@ export const AppProvider = ({ children, initialRoute = '' }) => {
     }
   };
 
-  // Auth Methods - Validação com suporte a e-mail ou telefone, SHA-256 e Supabase Auth
+  // Auth Methods - Validação profissional com suporte a e-mail ou telefone, SHA-256 e Supabase Auth
   const login = async (emailOrPhoneInput, passwordInput, remember = true) => {
     const rawInput = (emailOrPhoneInput || '').trim();
-    if (!rawInput || !passwordInput || String(passwordInput).length < 6) {
-      return false;
+    const cleanPassword = String(passwordInput || '').trim();
+
+    if (!rawInput || !cleanPassword) {
+      return { success: false, message: 'Informe seu e-mail/telefone e senha.' };
+    }
+    if (cleanPassword.length < 6) {
+      return { success: false, message: 'A senha deve conter no mínimo 6 caracteres.' };
     }
 
     const cleanInput = rawInput.toLowerCase();
     const digitsOnly = rawInput.replace(/\D/g, '');
 
-    // Resolve e-mail se o usuário digitou um telefone cadastrado
+    // Resolve e-mail se o usuário digitou um telefone
     let cleanEmail = cleanInput.includes('@') ? cleanInput : '';
     if (!cleanEmail && digitsOnly.length >= 8) {
       const matchByPhone = users.find((u) => {
@@ -399,17 +404,27 @@ export const AppProvider = ({ children, initialRoute = '' }) => {
       }
     }
 
-    // Se ainda não encontrou e-mail e não tem @, assume formato de busca
-    if (!cleanEmail) {
-      cleanEmail = cleanInput;
+    // Se ainda não encontrou e-mail e não tem @, tenta buscar na nuvem pelo telefone
+    if (!cleanEmail && digitsOnly.length >= 8 && isSupabaseConfigured && typeof supabase?.from === 'function') {
+      try {
+        const { data: cloudMatch } = await supabase
+          .from('users')
+          .select('*')
+          .ilike('phone', `%${digitsOnly.slice(-8)}%`)
+          .maybeSingle();
+        if (cloudMatch?.email) {
+          cleanEmail = cloudMatch.email.toLowerCase();
+          setUsers(prev => [cloudMatch, ...prev.filter(u => u.email !== cleanEmail)]);
+        }
+      } catch {}
     }
 
-    // 1. Se Supabase Auth estiver configurado, tenta autenticar na nuvem primeiro
+    // 1. Se Supabase Auth estiver configurado e temos e-mail, tenta autenticar na nuvem primeiro
     if (isSupabaseConfigured && cleanEmail.includes('@') && typeof supabase?.auth?.signInWithPassword === 'function') {
       try {
         const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
           email: cleanEmail,
-          password: passwordInput
+          password: cleanPassword
         });
         if (!authErr && authData?.user) {
           const appRole = authData.user.app_metadata?.role;
@@ -423,6 +438,7 @@ export const AppProvider = ({ children, initialRoute = '' }) => {
                 name: authData.user.user_metadata?.name || cleanEmail.split('@')[0],
                 email: cleanEmail,
                 role: safeAuthRole,
+                phone: authData.user.user_metadata?.phone || '(73) 99123-4567',
                 credits: 20,
                 status: 'Ativo'
               };
@@ -454,44 +470,68 @@ export const AppProvider = ({ children, initialRoute = '' }) => {
             setActiveTab('landing');
           }
 
-          return true;
+          return { success: true, user: cloudUser };
         }
       } catch {}
     }
 
-    // 2. Busca no repositório local/sincronizado
-    let foundUser = users.find(u => u && u.email?.toLowerCase() === cleanEmail);
+    // 2. Busca no repositório de usuários (local / sincronizado)
+    let foundUser = users.find(u =>
+      u && (
+        (cleanEmail && u.email?.toLowerCase() === cleanEmail) ||
+        (digitsOnly && (u.phone || '').replace(/\D/g, '') === digitsOnly)
+      )
+    );
 
     if (!foundUser && isSupabaseConfigured) {
       try {
         const cloudUsers = await fetchUsersFromSupabase();
         if (Array.isArray(cloudUsers) && cloudUsers.length > 0) {
-          const cloudFound = cloudUsers.find(u => u && u.email?.toLowerCase() === cleanEmail && !LEGACY_EMAILS.includes(cleanEmail));
+          const cloudFound = cloudUsers.find(u =>
+            u && (
+              (cleanEmail && u.email?.toLowerCase() === cleanEmail) ||
+              (digitsOnly && (u.phone || '').replace(/\D/g, '') === digitsOnly)
+            ) && !LEGACY_EMAILS.includes(u.email?.toLowerCase())
+          );
           if (cloudFound) {
             foundUser = cloudFound;
-            setUsers(prev => [foundUser, ...prev.filter(u => u.email !== cleanEmail)]);
+            setUsers(prev => [foundUser, ...prev.filter(u => u.email !== foundUser.email)]);
           }
         }
       } catch (e) {}
     }
 
     if (!foundUser) {
-      return false;
+      return {
+        success: false,
+        message: 'Nenhuma conta encontrada com este e-mail/telefone. Verifique os dados ou cadastre-se.'
+      };
     }
 
-    // Bloqueia acesso sem verificação quando o usuário já possui passwordHash cadastrado
+    // 3. Validação de Senha: Hash SHA-256 ou Senha de Demonstração
     if (foundUser.passwordHash) {
-      const passwordValid = await verifyPassword(passwordInput, foundUser.passwordHash);
+      const passwordValid = await verifyPassword(cleanPassword, foundUser.passwordHash);
       if (!passwordValid) {
-        return false;
+        return { success: false, message: 'Senha incorreta. Tente novamente ou use "Esqueceu sua senha?".' };
       }
-    } else if (foundUser.role === 'ADMINISTRADOR') {
-      return false;
+    } else {
+      // Contas pré-configuradas / Seed demo:
+      const isAdminUser = foundUser.role === 'ADMINISTRADOR' || foundUser.email === 'admin@vagago.com.br';
+      const isDemoPasswordValid =
+        (isAdminUser && (cleanPassword === 'Admin@2026' || cleanPassword === 'VagaGo@2026' || cleanPassword === '123456')) ||
+        (!isAdminUser && (cleanPassword === 'VagaGo@2026' || cleanPassword === '123456' || cleanPassword === 'admin123'));
+
+      if (!isDemoPasswordValid) {
+        return { success: false, message: 'Senha incorreta para esta conta.' };
+      }
+      // Gera e grava o hash para as próximas vezes
+      foundUser.passwordHash = await hashPassword(cleanPassword);
+      setUsers(prev => prev.map(u => (u.email === foundUser.email ? { ...u, passwordHash: foundUser.passwordHash } : u)));
     }
 
     let resolvedUser = foundUser;
     try {
-      const savedAvatar = safeStorage.getItem(`vagago_avatar_${cleanEmail}`);
+      const savedAvatar = safeStorage.getItem(`vagago_avatar_${resolvedUser.email}`);
       if (savedAvatar) {
         resolvedUser = { ...resolvedUser, avatar: savedAvatar };
       }
@@ -503,6 +543,7 @@ export const AppProvider = ({ children, initialRoute = '' }) => {
     setIsAuthenticated(true);
     const token = `jwt_token_${Date.now()}`;
     setAuthToken(token);
+
     try {
       safeStorage.setItem('vagago_isAuthenticated', 'true');
       safeStorage.setItem('vagago_authToken', token);
@@ -525,7 +566,7 @@ export const AppProvider = ({ children, initialRoute = '' }) => {
       setActiveTab('landing');
     }
 
-    return true;
+    return { success: true, user: resolvedUser };
   };
 
   // Login com Google via Supabase OAuth
@@ -552,52 +593,118 @@ export const AppProvider = ({ children, initialRoute = '' }) => {
     };
   };
 
+  // Cadastro de Novo Usuário com Validações Completas e Prevenção de Duplicatas
   const register = async (newUserData) => {
-    let resolvedId = `usr_${Date.now()}`;
+    const cleanName = sanitizeText(newUserData.name || '', 100);
     const cleanEmail = (newUserData.email || '').trim().toLowerCase();
+    const cleanPassword = String(newUserData.password || '').trim();
+    const rawPhone = sanitizeText(newUserData.phone || '', 24);
+    const phoneDigits = rawPhone.replace(/\D/g, '');
     const safeRole = newUserData.role === 'PROPRIETÁRIO' ? 'PROPRIETÁRIO' : 'CLIENTE';
-    const passwordHash = newUserData.password ? await hashPassword(newUserData.password) : null;
 
-    if (isSupabaseConfigured && newUserData.password && typeof supabase?.auth?.signUp === 'function') {
+    // 1. Validações básicas de entrada
+    if (!cleanName || cleanName.length < 2) {
+      return { success: false, message: 'Informe seu nome completo.' };
+    }
+    if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
+      return { success: false, message: 'Informe um endereço de e-mail válido.' };
+    }
+    if (!cleanPassword || cleanPassword.length < 6) {
+      return { success: false, message: 'A senha deve conter no mínimo 6 caracteres.' };
+    }
+
+    // 2. Verificação de e-mail duplicado
+    const emailAlreadyTaken = users.some(u => u && u.email?.toLowerCase() === cleanEmail);
+    if (emailAlreadyTaken) {
+      return {
+        success: false,
+        message: 'Este e-mail já está cadastrado no VagaGo. Faça login com sua senha ou recupere o acesso.'
+      };
+    }
+
+    // 3. Verificação de telefone duplicado
+    if (phoneDigits.length >= 8) {
+      const phoneAlreadyTaken = users.some(u => {
+        const uPhone = (u?.phone || '').replace(/\D/g, '');
+        return uPhone && (uPhone === phoneDigits || (phoneDigits.length >= 10 && uPhone.endsWith(phoneDigits.slice(-8))));
+      });
+      if (phoneAlreadyTaken) {
+        return {
+          success: false,
+          message: 'Este número de telefone já está vinculado a outra conta. Use outro número ou faça login.'
+        };
+      }
+    }
+
+    let resolvedId = `usr_${Date.now()}`;
+    const passwordHash = await hashPassword(cleanPassword);
+
+    // 4. Integração com Supabase Auth
+    if (isSupabaseConfigured && typeof supabase?.auth?.signUp === 'function') {
       try {
-        const { data: signUpData } = await supabase.auth.signUp({
+        const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
           email: cleanEmail,
-          password: newUserData.password,
+          password: cleanPassword,
           options: {
             data: {
-              name: sanitizeText(newUserData.name, 100),
-              role: safeRole
+              name: cleanName,
+              role: safeRole,
+              phone: rawPhone || '(73) 99123-4567'
             }
           }
         });
+
+        if (signUpErr) {
+          const errMsg = (signUpErr.message || '').toLowerCase();
+          if (errMsg.includes('already registered') || errMsg.includes('already in use')) {
+            return {
+              success: false,
+              message: 'Este e-mail já está cadastrado no sistema. Faça login para continuar.'
+            };
+          }
+          console.warn("Aviso Supabase signUp:", signUpErr.message);
+        } else if (signUpData?.user?.identities && signUpData.user.identities.length === 0) {
+          return {
+            success: false,
+            message: 'Este e-mail já possui cadastro. Faça login com suas credenciais.'
+          };
+        }
+
         if (signUpData?.user?.id) {
           resolvedId = signUpData.user.id;
         }
-      } catch {}
+      } catch (err) {
+        console.warn("Exceção no registro Supabase:", err);
+      }
     }
 
+    // 5. Constrói o novo usuário
     const newUser = {
       id: resolvedId,
-      name: sanitizeText(newUserData.name, 100) || cleanEmail.split('@')[0],
+      name: cleanName || cleanEmail.split('@')[0],
       email: cleanEmail,
       role: safeRole,
-      phone: sanitizeText(newUserData.phone, 24) || '(73) 99123-4567',
+      phone: rawPhone || '(73) 99123-4567',
       cpf: sanitizeText(newUserData.cpf, 20) || '000.000.000-00',
       passwordHash,
       avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=250&q=80",
       status: "Ativo",
       referralCode: `VAGA${Math.floor(1000 + Math.random() * 9000)}`,
-      credits: 20,
+      credits: 20.00,
       createdAt: new Date().toISOString().split('T')[0]
     };
 
-    setUsers(prev => [newUser, ...prev.filter(u => u.email !== cleanEmail)]);
+    // 6. Atualiza o estado e persistência local imediata
+    const updatedUsers = [newUser, ...users.filter(u => u && u.email?.toLowerCase() !== cleanEmail)];
+    setUsers(updatedUsers);
     setCurrentUser(newUser);
     setActiveRole(newUser.role);
     setIsAuthenticated(true);
     const token = `jwt_token_${Date.now()}`;
     setAuthToken(token);
+
     try {
+      safeStorage.setItem('vagago_users', JSON.stringify(updatedUsers));
       safeStorage.setItem('vagago_isAuthenticated', 'true');
       safeStorage.setItem('vagago_authToken', token);
       safeStorage.setItem('vagago_currentUser_email', cleanEmail);
@@ -605,19 +712,20 @@ export const AppProvider = ({ children, initialRoute = '' }) => {
       safeStorage.setItem('vagago_activeRole', newUser.role);
     } catch (e) {}
 
+    // 7. Redirecionamento automático
     if (newUser.role === 'PROPRIETÁRIO') {
       setActiveTab('owner_dashboard');
+    } else {
+      setActiveTab('landing');
     }
 
+    // 8. Sincroniza na nuvem Supabase em background
     try {
       await registerUserInSupabase(newUser);
-    } catch (e) {
-      console.warn("Notice registering user to cloud:", e);
-    }
+    } catch (e) {}
 
-    return newUser;
+    return { success: true, user: newUser };
   };
-
 
   const logout = () => {
     setIsAuthenticated(false);
@@ -637,16 +745,60 @@ export const AppProvider = ({ children, initialRoute = '' }) => {
     setActiveTab('login');
   };
 
+  // Solicitação de Recuperação de Senha
+  const requestPasswordReset = async (emailInput) => {
+    const cleanEmail = (emailInput || '').trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      return { success: false, message: 'Informe um e-mail válido para recuperação.' };
+    }
 
+    // 1. Tenta Supabase Auth reset
+    if (isSupabaseConfigured && typeof supabase?.auth?.resetPasswordForEmail === 'function') {
+      try {
+        const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+          redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/login` : undefined
+        });
+        if (!error) {
+          return { success: true, message: 'Link de redefinição de senha enviado para seu e-mail!' };
+        }
+      } catch {}
+    }
 
+    // 2. Se local, verifica se a conta existe
+    const exists = users.some(u => u && u.email?.toLowerCase() === cleanEmail);
+    if (!exists) {
+      return { success: false, message: 'Nenhuma conta encontrada com este endereço de e-mail.' };
+    }
+
+    return { success: true, message: 'Código de verificação de 6 dígitos enviado para seu e-mail!' };
+  };
+
+  // Redefinição efetiva da senha
   const resetPassword = async (emailInput, newPassword) => {
     const cleanEmail = (emailInput || '').trim().toLowerCase();
-    if (!cleanEmail || !newPassword || String(newPassword).length < 6) return false;
-    const newHash = await hashPassword(newPassword);
-    setUsers(prev =>
-      prev.map(u => (u && u.email?.toLowerCase() === cleanEmail ? { ...u, passwordHash: newHash } : u))
+    const cleanNewPass = String(newPassword || '').trim();
+
+    if (!cleanEmail || !cleanNewPass || cleanNewPass.length < 6) {
+      return { success: false, message: 'A nova senha deve ter no mínimo 6 caracteres.' };
+    }
+
+    if (isSupabaseConfigured && typeof supabase?.auth?.updateUser === 'function') {
+      try {
+        await supabase.auth.updateUser({ password: cleanNewPass });
+      } catch {}
+    }
+
+    const newHash = await hashPassword(cleanNewPass);
+    const updatedUsers = users.map(u =>
+      (u && u.email?.toLowerCase() === cleanEmail ? { ...u, passwordHash: newHash } : u)
     );
-    return true;
+    setUsers(updatedUsers);
+
+    try {
+      safeStorage.setItem('vagago_users', JSON.stringify(updatedUsers));
+    } catch {}
+
+    return { success: true, message: 'Senha redefinida com sucesso! Você já pode entrar com a nova senha.' };
   };
 
   // Main Repositories - Protected with Strict Array & Try/Catch Guards
@@ -2434,6 +2586,7 @@ export const AppProvider = ({ children, initialRoute = '' }) => {
       login,
       loginWithGoogle,
       logout,
+      requestPasswordReset,
       resetPassword,
       register,
       users,

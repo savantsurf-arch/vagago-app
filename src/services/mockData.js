@@ -126,6 +126,19 @@ export const INITIAL_USERS = [
     credits: 620.00,
     status: "Ativo",
     createdAt: "2026-01-08"
+  },
+  {
+    id: "usr_admin_master",
+    name: "Administrador VagaGo",
+    email: "admin@vagago.com.br",
+    role: "ADMINISTRADOR",
+    phone: "(73) 99999-0001",
+    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=250&q=80",
+    cpf: "000.000.000-01",
+    birthDate: "1988-05-10",
+    credits: 999.00,
+    status: "Ativo",
+    createdAt: "2026-01-01"
   }
 ];
 
