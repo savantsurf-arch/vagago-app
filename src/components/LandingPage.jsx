@@ -129,9 +129,9 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
   return (
     <div className="space-y-12 sm:space-y-16 pb-16 bg-slate-50">
       {/* ==================================================
-          1. HERO MOBILE-FIRST ESTILO 99 (TOPO AZUL VAGAGO + MAPA + "PARA ONDE VAMOS?")
+          1. HERO MOBILE-FIRST ESTILO 99 (CORES OFICIAIS VAGAGO: AZUL MARINHO + AZUL + VERDE GO)
          ================================================== */}
-      <section className="relative bg-gradient-to-b from-blue-600 via-sky-500 to-slate-50 pt-4 sm:pt-6 pb-6 border-b border-slate-200/70">
+      <section className="relative bg-gradient-to-b from-[#062B5B] via-[#0070F3] to-slate-50 pt-4 sm:pt-6 pb-6 border-b border-slate-200/70">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 space-y-4">
           {/* Header Estilo 99: Avatar + "Olá, Nome!" + Atalho Pix/QR + Toggle Anfitrião */}
           <div className="flex items-center justify-between gap-3">
@@ -173,7 +173,7 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
                   onClick={() => setHeroAudience('driver')}
                   className={`px-3.5 py-1.5 rounded-full text-xs font-extrabold flex items-center gap-1.5 transition cursor-pointer ${
                     heroAudience === 'driver'
-                      ? 'bg-slate-900 text-white'
+                      ? 'bg-[#062B5B] text-white'
                       : 'text-slate-700 hover:text-slate-950'
                   }`}
                 >
@@ -187,7 +187,7 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
                   onClick={() => setHeroAudience('host')}
                   className={`px-3.5 py-1.5 rounded-full text-xs font-extrabold flex items-center gap-1.5 transition cursor-pointer ${
                     heroAudience === 'host'
-                      ? 'bg-emerald-600 text-white'
+                      ? 'bg-[#00A838] text-white'
                       : 'text-slate-700 hover:text-slate-950'
                   }`}
                 >
@@ -204,10 +204,10 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
                 aria-label="Abrir Carteira Pix e QR Code"
                 title="Carteira Pix e QR Code"
               >
-                <span className="absolute -top-1.5 left-1 bg-emerald-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full leading-none shadow-2xs">
+                <span className="absolute -top-1.5 left-1 bg-[#00A838] text-white text-[10px] font-black px-1.5 py-0.5 rounded-full leading-none shadow-2xs">
                   Pix
                 </span>
-                <QrCode className="w-5 h-5 text-slate-900 mt-1" />
+                <QrCode className="w-5 h-5 text-[#062B5B] mt-1" />
               </button>
             </div>
           </div>
@@ -224,7 +224,7 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
               aria-selected={heroAudience === 'driver'}
               onClick={() => setHeroAudience('driver')}
               className={`min-h-[40px] rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition cursor-pointer ${
-                heroAudience === 'driver' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-700'
+                heroAudience === 'driver' ? 'bg-[#062B5B] text-white shadow-xs' : 'text-slate-700'
               }`}
             >
               <Car className="w-3.5 h-3.5" />
@@ -236,7 +236,7 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
               aria-selected={heroAudience === 'host'}
               onClick={() => setHeroAudience('host')}
               className={`min-h-[40px] rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition cursor-pointer ${
-                heroAudience === 'host' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-700'
+                heroAudience === 'host' ? 'bg-[#00A838] text-white shadow-xs' : 'text-slate-700'
               }`}
             >
               <Home className="w-3.5 h-3.5" />
@@ -260,19 +260,19 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
                 <button
                   type="button"
                   onClick={() => setActiveTab('search')}
-                  className="absolute bottom-4 left-3 z-[15] bg-slate-900/90 hover:bg-slate-900 text-white text-xs font-extrabold px-3.5 py-2 rounded-full shadow-lg flex items-center gap-1.5 backdrop-blur-xs transition cursor-pointer"
+                  className="absolute bottom-4 left-3 z-[15] bg-[#062B5B]/95 hover:bg-[#062B5B] text-white text-xs font-extrabold px-3.5 py-2 rounded-full shadow-lg flex items-center gap-1.5 backdrop-blur-xs transition cursor-pointer"
                 >
-                  <Maximize2 className="w-3.5 h-3.5 text-sky-400" />
+                  <Maximize2 className="w-3.5 h-3.5 text-[#00D26A]" />
                   <span>Mapa em tela cheia</span>
                 </button>
               </div>
 
-              {/* Faixa Verde de Cupom + Card "Para onde vamos?" sobreposto */}
+              {/* Faixa Verde VagaGo de Cupom + Card "Para onde vamos?" sobreposto */}
               <div className="-mt-6 relative z-20">
                 <button
                   type="button"
                   onClick={() => setActiveTab('search')}
-                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white px-4 pt-2.5 pb-4 rounded-t-2xl text-xs font-extrabold flex items-center justify-between transition cursor-pointer shadow-sm"
+                  className="w-full bg-gradient-to-r from-[#00A838] to-[#00C853] hover:from-[#009632] hover:to-[#00B84B] text-white px-4 pt-2.5 pb-4 rounded-t-2xl text-xs font-extrabold flex items-center justify-between transition cursor-pointer shadow-sm"
                 >
                   <span className="flex items-center gap-1.5 truncate">
                     <Tag className="w-3.5 h-3.5 shrink-0" />
@@ -376,7 +376,7 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
                           onClick={() => setSearchFilters({ ...safeFilters, billingType: item.id })}
                           className={`px-3 py-1.5 rounded-full text-xs font-extrabold transition shrink-0 cursor-pointer ${
                             safeFilters.billingType === item.id
-                              ? 'bg-slate-900 text-white'
+                              ? 'bg-[#062B5B] text-white'
                               : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                           }`}
                         >
@@ -387,7 +387,7 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
 
                     <button
                       type="submit"
-                      className="min-h-[44px] bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white font-black text-sm px-6 py-2.5 rounded-2xl shadow-md shadow-sky-600/25 flex items-center justify-center gap-2 transition cursor-pointer"
+                      className="min-h-[44px] bg-gradient-to-r from-[#062B5B] to-[#0070F3] hover:from-[#05234A] hover:to-[#0060D6] text-white font-black text-sm px-6 py-2.5 rounded-2xl shadow-md shadow-[#0070F3]/25 flex items-center justify-center gap-2 transition cursor-pointer"
                     >
                       <MapPin className="w-4 h-4" />
                       <span>Abrir mapa de vagas</span>
@@ -396,10 +396,10 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
                 </form>
               </div>
 
-              {/* Banner Promocional Estilo Card (igual centro da imagem modelo) */}
-              <div className="bg-gradient-to-r from-blue-700 via-sky-600 to-cyan-500 rounded-3xl p-4 sm:p-5 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-white">
+              {/* Banner Promocional com a paleta oficial VagaGo (Azul Marinho + Azul + Verde Go) */}
+              <div className="bg-gradient-to-r from-[#062B5B] via-[#0070F3] to-[#00A838] rounded-3xl p-4 sm:p-5 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-white">
                 <div className="space-y-1">
-                  <span className="inline-block bg-white text-blue-700 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full">
+                  <span className="inline-block bg-white text-[#062B5B] text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full">
                     VagaGo Itabuna
                   </span>
                   <h2 className="text-lg sm:text-xl font-black leading-tight text-white drop-shadow-2xs">
@@ -413,7 +413,7 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
                 <button
                   type="button"
                   onClick={handleStartHosting}
-                  className="min-h-[44px] bg-orange-500 hover:bg-orange-400 text-white font-black text-xs sm:text-sm px-5 py-2.5 rounded-2xl shadow-md shrink-0 transition cursor-pointer"
+                  className="min-h-[44px] bg-[#00C853] hover:bg-[#00B049] text-white font-black text-xs sm:text-sm px-5 py-2.5 rounded-2xl shadow-md shrink-0 transition cursor-pointer"
                 >
                   ANUNCIAR GRÁTIS
                 </button>
@@ -515,11 +515,11 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
           ) : (
             <>
               <div className="text-center max-w-3xl mx-auto space-y-3 pt-2 animate-in fade-in duration-200">
-                <h2 className="text-2xl sm:text-4xl md:text-5xl font-black text-slate-950 tracking-tight leading-tight">
+                <h2 className="text-2xl sm:text-4xl md:text-5xl font-black text-white tracking-tight leading-tight drop-shadow-2xs">
                   Alugue sua garagem parada com segurança em Itabuna
                 </h2>
-                <p className="text-slate-800 text-xs sm:text-base max-w-2xl mx-auto font-semibold leading-relaxed">
-                  Cadastre sua vaga residencial, comercial ou de condomínio gratuitamente. Motoristas chegam com CPF e placa verificados e você recebe <strong>90% direto no seu PIX</strong>.
+                <p className="text-sky-100 text-xs sm:text-base max-w-2xl mx-auto font-semibold leading-relaxed">
+                  Cadastre sua vaga residencial, comercial ou de condomínio gratuitamente. Motoristas chegam com CPF e placa verificados e você recebe <strong className="text-white">90% direto no seu PIX</strong>.
                 </p>
               </div>
 

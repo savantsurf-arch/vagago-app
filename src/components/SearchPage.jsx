@@ -308,7 +308,7 @@ export const SearchPage = () => {
             >
               <SlidersHorizontal className="w-4 h-4" />
               {activeFiltersCount > 0 && (
-                <span className="bg-sky-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
+                <span className="bg-[#00A838] text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
                   {activeFiltersCount}
                 </span>
               )}
@@ -319,8 +319,8 @@ export const SearchPage = () => {
               onClick={requestUserLocation}
               className={`min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center transition cursor-pointer shrink-0 ${
                 userLocation?.isLive
-                  ? 'bg-emerald-600 text-white shadow-md'
-                  : 'bg-sky-100 hover:bg-sky-200 text-sky-700'
+                  ? 'bg-[#00A838] text-white shadow-md'
+                  : 'bg-sky-100 hover:bg-sky-200 text-[#062B5B]'
               }`}
               aria-label="Usar minha localização atual"
               title="Usar minha localização GPS"
@@ -335,7 +335,7 @@ export const SearchPage = () => {
               aria-label="Filtrar por período de cobrança"
               value={billingType}
               onChange={(e) => setSearchFilters({ ...safeFilters, billingType: e.target.value })}
-              className="px-3 py-2 rounded-full text-xs font-extrabold shadow-sm border border-sky-700 bg-sky-600 text-white shrink-0 cursor-pointer outline-none"
+              className="px-3 py-2 rounded-full text-xs font-extrabold shadow-sm border border-[#062B5B] bg-[#062B5B] text-white shrink-0 cursor-pointer outline-none"
             >
               <option value="hora">⏱️ Por hora</option>
               <option value="diaria">📅 Diária</option>

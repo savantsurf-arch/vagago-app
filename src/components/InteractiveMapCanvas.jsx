@@ -70,7 +70,7 @@ const getPriceMarkerIcon = (spot, isSelected = false, isFavorite = false, billin
   const html = `
     <div style="background:${bgColor};color:#fff;font-weight:800;font-size:12px;padding:5px 10px;border-radius:9999px;border:2px solid ${borderColor};box-shadow:0 4px 12px rgba(15,23,42,0.28);display:inline-flex;align-items:center;gap:4px;white-space:nowrap;cursor:pointer;transform:${isSelected ? 'scale(1.14)' : 'scale(1)'};transition:transform 0.15s ease;">
       ${isFavorite ? '❤️' : ''}<span>${labelText}</span>
-      <span style="width:6px;height:6px;border-radius:9999px;background:${isSelected ? '#FFDC00' : '#93c5fd'};display:inline-block;"></span>
+      <span style="width:6px;height:6px;border-radius:9999px;background:${isSelected ? '#00d26a' : '#93c5fd'};display:inline-block;"></span>
     </div>
   `;
 

@@ -2,11 +2,11 @@
 
 @layer base {
   :root {
-    --brand-blue: #0284c7;
-    --brand-blue-dark: #0369a1;
-    --brand-navy: #0f172a;
-    --brand-green: #10b981;
-    --brand-green-light: #34d399;
+    --brand-blue: #0070f3;
+    --brand-blue-dark: #062b5b;
+    --brand-navy: #062b5b;
+    --brand-green: #00a838;
+    --brand-green-light: #00d26a;
   }
 
   body {
