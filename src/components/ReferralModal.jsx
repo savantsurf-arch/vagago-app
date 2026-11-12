@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { X, Gift, Copy, Check, Share2, Sparkles, DollarSign } from 'lucide-react';
+import { X, Gift, Copy, Check, Share2 } from 'lucide-react';
 
 export const ReferralModal = () => {
   const { isReferralModalOpen, setIsReferralModalOpen, currentUser } = useApp();
@@ -24,10 +24,11 @@ export const ReferralModal = () => {
       <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col">
         
         {/* Header */}
-        <div className="p-6 bg-gradient-to-br from-amber-500 via-amber-600 to-orange-600 text-white relative">
+        <div className="p-6 bg-gradient-to-br from-[#002A66] via-[#017AFC] to-[#029518] text-white relative">
           <button
             onClick={() => setIsReferralModalOpen(false)}
             className="absolute top-4 right-4 p-1.5 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition"
+            aria-label="Fechar janela de indicação"
           >
             <X className="w-5 h-5" />
           </button>
@@ -39,7 +40,7 @@ export const ReferralModal = () => {
             Programa de Indicação VagaGo
           </span>
           <h3 className="text-2xl font-black mt-2">Ganhe R$ 20 em Créditos!</h3>
-          <p className="text-xs text-amber-100 mt-1 leading-relaxed">
+          <p className="text-xs text-sky-100 mt-1 leading-relaxed">
             Indique um amigo ou proprietário de garagem. Quando ele fizer a primeira reserva ou cadastrar uma vaga, ambos ganham R$ 20!
           </p>
         </div>

@@ -31,7 +31,8 @@ import {
   Clock,
   Maximize2,
   ChevronRight,
-  Tag
+  Tag,
+  Gift
 } from 'lucide-react';
 
 export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
@@ -44,6 +45,7 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
     searchFilters,
     setSearchFilters,
     setIsAddSpotModalOpen,
+    setIsReferralModalOpen,
     requestUserLocation,
     userLocation,
     isAuthenticated,
@@ -79,18 +81,13 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
 
   const activeCoupon = Array.isArray(coupons) && coupons.length > 0 ? coupons[0] : null;
   const couponLabel = activeCoupon
-    ? `Cupom ${activeCoupon.code || 'VAGAGO10'}: ${activeCoupon.discountPercent || 10}% OFF na reserva`
-    : 'Cupom Primeira Reserva: 10% OFF com VAGAGO10';
+    ? `Cupom de primeira reserva (${activeCoupon.code || 'VAGAGO10'}): ${activeCoupon.discountPercent || 10}% OFF`
+    : 'Cupom de primeira reserva: 10% OFF com VAGAGO10';
 
   const cleanSearchInput =
     !searchLocation || searchLocation.trim().toLowerCase() === 'itabuna, ba'
       ? ''
       : searchLocation;
-
-  const cheapestPrice =
-    displaySpots.length > 0
-      ? Math.min(...displaySpots.map((s) => Number(s.priceHourly || 6)))
-      : 4;
 
   const handleSearchSubmit = (e) => {
     if (e && e.preventDefault) e.preventDefault();
@@ -294,8 +291,8 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
                     </div>
                     <input
                       type="text"
-                      aria-label="Para onde vamos? Buscar vaga em Itabuna"
-                      placeholder="Para onde vamos?"
+                      aria-label="Onde você vai estacionar? Buscar vaga em Itabuna"
+                      placeholder="Onde você vai estacionar?"
                       value={cleanSearchInput}
                       onChange={(e) => setSearchLocation(e.target.value)}
                       className="flex-1 bg-transparent outline-none text-slate-900 placeholder:text-slate-600 font-black text-base sm:text-lg min-w-0 py-1.5"
@@ -396,30 +393,32 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
                 </form>
               </div>
 
-              {/* Banner Promocional com a paleta oficial VagaGo (Azul Marinho + Azul + Verde Go) */}
-              <div className="bg-gradient-to-r from-[#062B5B] via-[#0070F3] to-[#00A838] rounded-3xl p-4 sm:p-5 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-white">
+              {/* Banner "Indique e ganhe" adaptado para vagas e garagens */}
+              <div className="bg-gradient-to-r from-[#002A66] via-[#017AFC] to-[#029518] rounded-3xl p-4 sm:p-5 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-white">
                 <div className="space-y-1">
-                  <span className="inline-block bg-white text-[#062B5B] text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full">
-                    VagaGo Itabuna
+                  <span className="inline-flex items-center gap-1 bg-white text-[#002A66] text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full">
+                    <Gift className="w-3 h-3 text-[#029518]" />
+                    <span>Indique e ganhe • VagaGo</span>
                   </span>
                   <h2 className="text-lg sm:text-xl font-black leading-tight text-white drop-shadow-2xs">
-                    Estacione até 40% mais barato ou fature com sua vaga parada
+                    Indique amigos e ganhe R$ 20 para estacionar ou anunciar vagas
                   </h2>
                   <p className="text-xs text-sky-50 font-semibold">
-                    Garagens verificadas a partir de R$ {cheapestPrice.toFixed(0)}/h • Anfitriões recebem 90% no PIX
+                    Quando seu indicado fizer a primeira reserva ou cadastrar uma garagem em Itabuna, ambos ganham R$ 20 em créditos!
                   </p>
                 </div>
 
                 <button
                   type="button"
-                  onClick={handleStartHosting}
-                  className="min-h-[44px] bg-[#00C853] hover:bg-[#00B049] text-white font-black text-xs sm:text-sm px-5 py-2.5 rounded-2xl shadow-md shrink-0 transition cursor-pointer"
+                  onClick={() => setIsReferralModalOpen(true)}
+                  className="min-h-[44px] bg-[#00C853] hover:bg-[#00B049] text-white font-black text-xs sm:text-sm px-5 py-2.5 rounded-2xl shadow-md shrink-0 transition cursor-pointer flex items-center gap-1.5"
                 >
-                  ANUNCIAR GRÁTIS
+                  <Gift className="w-4 h-4" />
+                  <span>INDICAR E GANHAR</span>
                 </button>
               </div>
 
-              {/* Vagas recomendadas na região (Hierarquia Preço + Distância estilo 99) */}
+              {/* Carrossel de vagas recomendadas na região (Swipe horizontal no mobile + grid desktop) */}
               <div className="space-y-3 pt-1">
                 <div className="flex items-center justify-between">
                   <h2 className="text-base sm:text-lg font-black text-slate-900">
@@ -430,13 +429,13 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
                     onClick={() => setActiveTab('search')}
                     className="text-xs font-extrabold text-sky-700 hover:text-sky-800 flex items-center gap-0.5 cursor-pointer py-1 px-2"
                   >
-                    <span>Mais</span>
+                    <span>Ver todas</span>
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {displaySpots.slice(0, 3).map((spot, idx) => {
+                <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 pt-3 pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-2 lg:grid-cols-3 md:overflow-visible scrollbar-none">
+                  {displaySpots.slice(0, 6).map((spot, idx) => {
                     const priceFixed = Number(spot.priceHourly || 6).toFixed(2);
                     const [intPart, decPart] = priceFixed.split('.');
                     const thumb =
@@ -448,7 +447,7 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
                       <div
                         key={spot.id}
                         onClick={() => openSpotDetails(spot)}
-                        className={`relative flex items-center justify-between p-3.5 rounded-2xl bg-white shadow-sm hover:shadow-md transition cursor-pointer gap-3 ${
+                        className={`relative min-w-[84vw] sm:min-w-[300px] md:min-w-0 snap-start shrink-0 flex items-center justify-between p-3.5 rounded-2xl bg-white shadow-sm hover:shadow-md transition cursor-pointer gap-3 ${
                           idx === 0 ? 'border-2 border-sky-500 bg-sky-50/30' : 'border border-slate-200'
                         }`}
                       >
