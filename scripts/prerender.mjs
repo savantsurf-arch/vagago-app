@@ -10,7 +10,7 @@ const ROUTES = [
   {
     route: '/',
     outFile: 'index.html',
-    title: 'VagaGo | Vagas de Estacionamento e Garagens em Itabuna - BA',
+    title: 'VagaGo | Acesse sua conta ou crie um cadastro para estacionar',
     url: 'https://vagago-app.vercel.app/'
   },
   {
@@ -18,6 +18,12 @@ const ROUTES = [
     outFile: 'login/index.html',
     title: 'Entrar no VagaGo | Acesse sua conta de Motorista ou Anfitrião',
     url: 'https://vagago-app.vercel.app/login'
+  },
+  {
+    route: '/mapa',
+    outFile: 'mapa/index.html',
+    title: 'VagaGo | Vagas de Estacionamento e Garagens em Itabuna - BA',
+    url: 'https://vagago-app.vercel.app/mapa'
   },
   {
     route: '/buscar',

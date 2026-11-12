@@ -51,6 +51,7 @@ async function runTests() {
   const expectedFiles = [
     'index.html',
     'login/index.html',
+    'mapa/index.html',
     'buscar/index.html',
     'anfitriao/index.html',
     'termos/index.html',
@@ -80,11 +81,12 @@ async function runTests() {
   assert.ok(homeHtml.includes('twitter:card'), 'twitter:card ausente');
   assert.ok(homeHtml.includes('rel="canonical"'), 'canonical ausente');
   const cleanHomeText = homeHtml.replace(/<!--.*?-->/g, '');
-  assert.ok(cleanHomeText.includes('Olá, Motorista!'), 'Conteudo SSR da Home nao renderizado');
-  assert.ok(cleanHomeText.includes('Onde você vai estacionar?'), 'Placeholder adaptado nao renderizado');
-  assert.ok(cleanHomeText.includes('Cupom de primeira reserva'), 'Cupom de primeira reserva ausente');
-  assert.ok(cleanHomeText.includes('Indique e ganhe'), 'Banner Indique e ganhe ausente');
-  assert.ok(homeHtml.includes('#002A66') || homeHtml.includes('#062B5B'), 'Paleta oficial VagaGo ausente na Home');
+  assert.ok(cleanHomeText.includes('Bem-vindo de volta!'), 'Conteudo Principal (Login) nao renderizado na raiz');
+  assert.ok(cleanHomeText.includes('rápida e segura!'), 'Frase de impacto ausente na Home');
+  assert.ok(cleanHomeText.includes('Entrar com Google'), 'Botao Google ausente na Home');
+
+  const mapaHtml = fs.readFileSync(path.join(distDir, 'mapa/index.html'), 'utf-8').replace(/<!--.*?-->/g, '');
+  assert.ok(mapaHtml.includes('Onde você vai estacionar?'), 'Placeholder do Mapa ausente');
 
   const loginHtml = fs.readFileSync(path.join(distDir, 'login/index.html'), 'utf-8').replace(/<!--.*?-->/g, '');
   assert.ok(loginHtml.includes('Bem-vindo de volta!'), 'Conteudo SSR da Pagina de Login ausente');
@@ -273,6 +275,7 @@ async function runTests() {
         const routesToVerify = [
           '/',
           '/login',
+          '/mapa',
           '/buscar',
           '/anfitriao',
           '/termos',

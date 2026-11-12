@@ -66,9 +66,10 @@ const safeStorage = {
 };
 
 const ROUTE_TO_TAB = {
-  '/': { tab: 'landing' },
+  '/': { tab: 'login' },
   '/login': { tab: 'login' },
   '/cadastro': { tab: 'login', initialMode: 'register' },
+  '/mapa': { tab: 'landing' },
   '/buscar': { tab: 'search' },
   '/anfitriao': { tab: 'host_landing' },
   '/termos': { tab: 'terms', legalTab: 'driver' },
@@ -79,8 +80,8 @@ const ROUTE_TO_TAB = {
 };
 
 const TAB_TO_ROUTE = {
-  landing: '/',
-  login: '/login',
+  login: '/',
+  landing: '/mapa',
   search: '/buscar',
   host_landing: '/anfitriao',
   terms: '/termos',
@@ -93,7 +94,7 @@ function resolveRouteState(pathname = '/', hash = '') {
   if (cleanPath === '/admin' || cleanHash === '#admin' || cleanHash === '#/admin') {
     return { tab: 'admin_dashboard' };
   }
-  return ROUTE_TO_TAB[cleanPath] || { tab: 'landing' };
+  return ROUTE_TO_TAB[cleanPath] || { tab: 'login' };
 }
 
 const AppContext = createContext();
@@ -633,7 +634,7 @@ export const AppProvider = ({ children, initialRoute = '' }) => {
       safeStorage.removeItem('vagago_currentUser');
       safeStorage.setItem('vagago_activeRole', 'CLIENTE');
     } catch (e) {}
-    setActiveTab('landing');
+    setActiveTab('login');
   };
 
 
@@ -1219,9 +1220,19 @@ export const AppProvider = ({ children, initialRoute = '' }) => {
       return resolveRouteState(initialRoute, '').tab;
     }
     if (typeof window !== 'undefined') {
-      return resolveRouteState(window.location.pathname, window.location.hash).tab;
+      const resolved = resolveRouteState(window.location.pathname, window.location.hash);
+      const savedUser = safeStorage.getItem('vagago_currentUser');
+      if (savedUser && (resolved.tab === 'login' || window.location.pathname === '/' || window.location.pathname === '/login')) {
+        try {
+          const u = JSON.parse(savedUser);
+          if (u?.role === 'PROPRIETÁRIO') return 'owner_dashboard';
+          if (u?.role === 'ADMINISTRADOR') return 'admin_dashboard';
+          return 'landing';
+        } catch {}
+      }
+      return resolved.tab;
     }
-    return 'landing';
+    return 'login';
   });
   const [isPageLoading, setIsPageLoading] = useState(false);
   const [legalTab, setLegalTab] = useState(() => {

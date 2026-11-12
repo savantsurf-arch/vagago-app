@@ -289,16 +289,16 @@ export const LoginPage = ({ initialMode = 'login', onBack = null }) => {
         <div className="absolute bottom-0 inset-x-0 h-14 bg-gradient-to-t from-[#06152D]/80 to-transparent" />
       </div>
 
-      {/* Discreet Return Action in Top-Right */}
+      {/* Discreet Explore Action in Top-Right */}
       <div className="absolute top-4 sm:top-6 right-4 sm:right-8 z-30">
         <button
           type="button"
           onClick={handleNavigateHome}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-white transition cursor-pointer px-3 py-1.5 rounded-full bg-slate-900/40 hover:bg-slate-900/80 border border-slate-800/80 backdrop-blur-md"
-          title="Voltar ao início"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-300 hover:text-white transition cursor-pointer px-3.5 py-1.5 rounded-full bg-slate-900/50 hover:bg-slate-900/90 border border-slate-800/80 backdrop-blur-md shadow-sm"
+          title="Ver vagas disponíveis no mapa"
         >
-          <ArrowLeft className="w-3.5 h-3.5 text-[#00D9FF]" />
-          <span>Voltar ao mapa</span>
+          <Search className="w-3.5 h-3.5 text-[#00D9FF]" />
+          <span>Explorar vagas no mapa</span>
         </button>
       </div>
 
