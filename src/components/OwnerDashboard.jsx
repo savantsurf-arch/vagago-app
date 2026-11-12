@@ -41,7 +41,8 @@ import {
   Info,
   Phone,
   MapPin,
-  Sparkles
+  Sparkles,
+  Star
 } from 'lucide-react';
 import { HostChatModal } from './HostChatModal';
 
@@ -53,6 +54,7 @@ export const OwnerDashboard = () => {
     openEditProfileModal,
     parkingSpaces = [],
     bookings = [],
+    reviews = [],
     withdrawals = [],
     requestWithdrawal,
     deleteParkingSpace,
@@ -126,12 +128,21 @@ export const OwnerDashboard = () => {
     mySpaces.some(space => space.id === b.spaceId || space.id === b.parkingId || space.id === b.parking_id || space.id === b.space_id)
   ));
 
+  const myReviews = (Array.isArray(reviews) ? reviews : []).filter(
+    (r) => r && mySpaces.some((sp) => sp.id === r.spaceId || sp.id === r.spotId)
+  );
+
+  // Apenas reservas válidas (exclui Cancelado / Recusado do faturamento)
+  const billableBookings = myBookings.filter(
+    (b) => b && b.bookingStatus !== 'Cancelado' && b.bookingStatus !== 'Recusado' && b.status !== 'cancelled'
+  );
+
   // Real Monthly Aggregation for Revenue Chart (No fake numbers!)
   const monthlyRevenueData = useMemo(() => {
-    if (!myBookings || myBookings.length === 0) return [];
+    if (!billableBookings || billableBookings.length === 0) return [];
 
     const monthMap = {};
-    myBookings.forEach(b => {
+    billableBookings.forEach(b => {
       const rawDate = b.date || b.startDate || b.createdAt;
       let monthName = 'Recente';
       if (rawDate) {
@@ -154,7 +165,7 @@ export const OwnerDashboard = () => {
     });
 
     return Object.values(monthMap);
-  }, [myBookings]);
+  }, [billableBookings]);
 
   // Real Peak Hours from Bookings
   const peakHoursData = useMemo(() => {
@@ -216,10 +227,10 @@ export const OwnerDashboard = () => {
     return true;
   });
 
-  // Real Revenue Calculations (100% real data)
-  const grossRevenue = myBookings.reduce((sum, b) => sum + Number(b.subtotal || b.totalPrice || 0), 0);
-  const platformCommissions = myBookings.reduce((sum, b) => sum + Number(b.platformFee || ((b.totalPrice || 0) * 0.1)), 0);
-  const netEarnings = grossRevenue > 0 ? (grossRevenue - platformCommissions) : 0;
+  // Real Revenue Calculations (Exclui reservas canceladas ou recusadas)
+  const grossRevenue = billableBookings.reduce((sum, b) => sum + Number(b.subtotal || b.totalPrice || 0), 0);
+  const platformCommissions = billableBookings.reduce((sum, b) => sum + Number(b.platformFee ?? ((b.totalPrice || 0) * 0.1)), 0);
+  const netEarnings = grossRevenue > 0 ? Math.max(0, grossRevenue - platformCommissions) : 0;
 
   // Real withdrawals math
   const totalWithdrawn = (withdrawals || [])
@@ -390,6 +401,7 @@ export const OwnerDashboard = () => {
           { id: 'visãogeral', label: 'Visão Geral & Desempenho', icon: LayoutDashboard, tabKey: 'owner_dashboard' },
           { id: 'vagas', label: `Minhas Vagas (${mySpaces.length})`, icon: Car, tabKey: 'owner_spots' },
           { id: 'reservas', label: `Reservas Recebidas (${myBookings.length})`, icon: Calendar, tabKey: 'owner_reservas' },
+          { id: 'avaliacoes', label: `Avaliações (${myReviews.length})`, icon: Star, tabKey: 'owner_dashboard' },
           { id: 'disponibilidade', label: 'Disponibilidade & Horários', icon: Clock, tabKey: 'owner_dashboard' },
           { id: 'financeiro', label: 'Meus Ganhos & Saques', icon: DollarSign, tabKey: 'owner_finance' }
         ].map((tab) => {
@@ -1050,14 +1062,14 @@ export const OwnerDashboard = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
-                  {myBookings.length === 0 ? (
+                  {billableBookings.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="p-6 text-center text-slate-400">
                         Nenhuma transação financeira registrada até o momento.
                       </td>
                     </tr>
                   ) : (
-                    myBookings.map((b) => (
+                    billableBookings.map((b) => (
                       <tr key={b.id} className="hover:bg-slate-50/60 transition">
                         <td className="p-3 font-bold text-slate-900 font-mono">#{b.bookingNumber}</td>
                         <td className="p-3">{b.date || b.startDate || 'Recente'}</td>
@@ -1083,6 +1095,61 @@ export const OwnerDashboard = () => {
               </table>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 6: AVALIAÇÕES RECEBIDAS DOS MOTORISTAS */}
+      {/* ========================================================================= */}
+      {activeOwnerTab === 'avaliacoes' && (
+        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="font-extrabold text-slate-900 text-base">Avaliações Recebidas</h3>
+              <p className="text-xs text-slate-500">
+                Comentários e notas enviados por motoristas após o check-out nas suas garagens.
+              </p>
+            </div>
+            <div className="inline-flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-900 px-3.5 py-2 rounded-2xl text-xs font-black">
+              <Star className="w-4 h-4 text-amber-500 fill-amber-400" />
+              <span>
+                {myReviews.length > 0
+                  ? `${(myReviews.reduce((acc, r) => acc + Number(r.rating || 5), 0) / myReviews.length).toFixed(1)} de média (${myReviews.length})`
+                  : 'Sem avaliações ainda'}
+              </span>
+            </div>
+          </div>
+
+          {myReviews.length === 0 ? (
+            <div className="p-10 bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-center space-y-2">
+              <Star className="w-10 h-10 text-slate-300 mx-auto" />
+              <p className="text-xs font-extrabold text-slate-700">Ainda não há avaliações para suas vagas</p>
+              <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                Após concluir as primeiras locações, os motoristas poderão avaliar segurança, acesso e atendimento.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {myReviews.map((rev) => {
+                const spaceObj = mySpaces.find((s) => s.id === (rev.spaceId || rev.spotId));
+                return (
+                  <div key={rev.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2 text-xs">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-black text-slate-900">{rev.userName || 'Motorista VagaGo'}</span>
+                      <span className="text-[11px] text-slate-400">{rev.date || 'Recente'}</span>
+                    </div>
+                    {spaceObj && (
+                      <div className="text-[11px] font-bold text-sky-700 truncate">{spaceObj.title}</div>
+                    )}
+                    <div className="flex items-center gap-0.5 text-amber-400">
+                      {'★'.repeat(Math.max(1, Math.min(5, Number(rev.rating || 5))))}
+                    </div>
+                    <p className="text-slate-700 leading-relaxed">{rev.comment}</p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 

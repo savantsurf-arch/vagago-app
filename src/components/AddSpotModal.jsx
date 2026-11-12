@@ -41,6 +41,7 @@ export const AddSpotModal = () => {
   const galleryInputRef = useRef(null);
 
   const [currentStep, setCurrentStep] = useState(1);
+  const [isQuickMode, setIsQuickMode] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCompressing, setIsCompressing] = useState(false);
   const [compressionFeedback, setCompressionFeedback] = useState('');
@@ -106,6 +107,7 @@ export const AddSpotModal = () => {
   useEffect(() => {
     setFormError('');
     setCurrentStep(1);
+    setIsQuickMode(!editingSpot);
     setCompressionFeedback('');
     if (editingSpot) {
       setFormData({
@@ -300,6 +302,20 @@ export const AddSpotModal = () => {
         setFormError('Informe o bairro em Itabuna onde a garagem está localizada.');
         return;
       }
+
+      if (isQuickMode) {
+        if (!formData.title?.trim()) {
+          const autoTitle = `Garagem ${formData.isCovered ? 'Coberta' : 'Privativa'} — ${cleanNeighborhood}`;
+          const autoDesc = `Vaga privativa na ${cleanAddress}, ${cleanNumber} (${cleanNeighborhood}), Itabuna - BA. Acesso rápido e seguro.`;
+          setFormData((prev) => ({
+            ...prev,
+            title: prev.title || autoTitle,
+            description: prev.description || autoDesc
+          }));
+        }
+        setCurrentStep(3);
+        return;
+      }
     }
 
     // Step 2: Características & Veículos
@@ -319,6 +335,10 @@ export const AddSpotModal = () => {
             3 - (formData.photos?.length || 0)
           )} foto(s).`
         );
+        return;
+      }
+      if (isQuickMode) {
+        setCurrentStep(6);
         return;
       }
     }
@@ -429,57 +449,117 @@ export const AddSpotModal = () => {
     { num: 8, title: 'Revisão' }
   ];
 
+  const quickStepsList = [
+    { num: 1, label: '1. Local & Tipo' },
+    { num: 3, label: '2. Fotos (3 mín.)' },
+    { num: 6, label: '3. Preço & Publicar' }
+  ];
+
+  const isPublishStep = isQuickMode ? currentStep === 6 : currentStep === 8;
+
+  const handleStepBack = () => {
+    setFormError('');
+    if (isQuickMode) {
+      if (currentStep === 6) setCurrentStep(3);
+      else if (currentStep === 3) setCurrentStep(1);
+      return;
+    }
+    setCurrentStep((prev) => Math.max(1, prev - 1));
+  };
+
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Cadastrar vaga de garagem"
+      className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+    >
       <div className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl overflow-hidden my-6 border border-slate-200">
         
         {/* Top Header */}
-        <div className="bg-slate-900 p-5 text-white flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-black">
+        <div className="bg-slate-900 p-5 text-white flex items-center justify-between gap-2">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-black shrink-0">
               🏠
             </div>
-            <div>
-              <h2 className="text-base sm:text-lg font-black leading-tight">
-                {editingSpot ? 'Editar Anúncio de Garagem' : 'Cadastrar Vaga para Locação'}
+            <div className="min-w-0">
+              <h2 className="text-base sm:text-lg font-black leading-tight truncate">
+                {editingSpot ? 'Editar Anúncio de Garagem' : 'Cadastrar Vaga no Celular'}
               </h2>
-              <p className="text-xs text-slate-400">
-                Etapa {currentStep} de 8 — {stepsList[currentStep - 1].title}
+              <p className="text-xs text-slate-400 truncate">
+                {isQuickMode
+                  ? 'Modo Rápido (3 passos • ~2 min)'
+                  : `Modo Detalhado — Etapa ${currentStep} de 8 (${stepsList[currentStep - 1].title})`}
               </p>
             </div>
           </div>
-          <button
-            onClick={() => {
-              setIsAddSpotModalOpen(false);
-              setEditingSpot(null);
-            }}
-            className="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800 transition cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                setIsQuickMode((prev) => !prev);
+                setCurrentStep(1);
+                setFormError('');
+              }}
+              className="text-[11px] font-extrabold px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-emerald-300 border border-white/15 cursor-pointer"
+            >
+              {isQuickMode ? '8 etapas' : 'Modo 2 min'}
+            </button>
+            <button
+              type="button"
+              aria-label="Fechar cadastro"
+              onClick={() => {
+                setIsAddSpotModalOpen(false);
+                setEditingSpot(null);
+              }}
+              className="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800 transition cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Wizard Stepper Progress Bar */}
         <div className="bg-slate-100 px-5 py-3 border-b border-slate-200">
-          <div className="flex items-center justify-between gap-1 overflow-x-auto pb-1">
-            {stepsList.map((st) => (
-              <button
-                key={st.num}
-                type="button"
-                onClick={() => setCurrentStep(st.num)}
-                className={`flex items-center gap-1 text-[11px] font-extrabold px-2.5 py-1 rounded-xl whitespace-nowrap transition cursor-pointer ${
-                  currentStep === st.num
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : currentStep > st.num
-                    ? 'bg-emerald-100 text-emerald-800'
-                    : 'text-slate-500 hover:bg-slate-200'
-                }`}
-              >
-                <span>{st.num}.</span>
-                <span>{st.title}</span>
-              </button>
-            ))}
-          </div>
+          {isQuickMode ? (
+            <div className="grid grid-cols-3 gap-2">
+              {quickStepsList.map((qs) => (
+                <div
+                  key={qs.num}
+                  className={`text-center text-[11px] font-extrabold px-2 py-1.5 rounded-xl transition ${
+                    currentStep === qs.num
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : currentStep > qs.num
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : 'text-slate-500 bg-white/70'
+                  }`}
+                >
+                  {qs.label}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-1 overflow-x-auto pb-1">
+              {stepsList.map((st) => (
+                <button
+                  key={st.num}
+                  type="button"
+                  onClick={() => setCurrentStep(st.num)}
+                  className={`flex items-center gap-1 text-[11px] font-extrabold px-2.5 py-1 rounded-xl whitespace-nowrap transition cursor-pointer ${
+                    currentStep === st.num
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : currentStep > st.num
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : 'text-slate-500 hover:bg-slate-200'
+                  }`}
+                >
+                  <span>{st.num}.</span>
+                  <span>{st.title}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Content Body */}
@@ -970,9 +1050,28 @@ export const AddSpotModal = () => {
           {currentStep === 6 && (
             <div className="space-y-4">
               <div>
-                <h3 className="font-black text-slate-900 text-base">Definição de Preços e Cobrança</h3>
-                <p className="text-xs text-slate-500">Escolha os valores para cada modalidade com transparência total de repasse.</p>
+                <h3 className="font-black text-slate-900 text-base">
+                  {isQuickMode ? 'Título e Preço da Vaga' : 'Definição de Preços e Cobrança'}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  {isQuickMode
+                    ? 'Confirme o nome do anúncio e o valor por hora — diária e mensal são calculados automaticamente.'
+                    : 'Escolha os valores para cada modalidade com transparência total de repasse.'}
+                </p>
               </div>
+
+              {isQuickMode && (
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-700">Título do Anúncio *</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Garagem Coberta — Centro Itabuna"
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 outline-hidden"
+                  />
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* Preço Por Hora */}
@@ -986,7 +1085,15 @@ export const AddSpotModal = () => {
                     step="0.50"
                     min="1"
                     value={formData.priceHourly}
-                    onChange={(e) => setFormData({ ...formData, priceHourly: parseFloat(e.target.value) || 0 })}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value) || 0;
+                      setFormData((prev) => ({
+                        ...prev,
+                        priceHourly: val,
+                        priceDaily: isQuickMode ? Number((val * 5).toFixed(2)) : prev.priceDaily,
+                        priceMonthly: isQuickMode ? Number((val * 45).toFixed(2)) : prev.priceMonthly
+                      }));
+                    }}
                     className="w-full bg-white border border-emerald-300 rounded-xl px-3 py-2 text-base font-black text-emerald-900 outline-hidden shadow-2xs"
                   />
                   <div className="text-[11px] space-y-0.5 pt-1 border-t border-emerald-200/60 text-slate-600">
@@ -1237,12 +1344,12 @@ export const AddSpotModal = () => {
         </div>
 
         {/* Bottom Navigation Buttons */}
-        <div className="bg-slate-50 p-4 px-6 border-t border-slate-200 flex items-center justify-between">
+        <div className="bg-slate-50 p-4 px-6 border-t border-slate-200 flex items-center justify-between gap-2">
           {currentStep > 1 ? (
             <button
               type="button"
-              onClick={() => setCurrentStep(prev => prev - 1)}
-              className="bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs px-4 py-2.5 rounded-xl border border-slate-200 transition cursor-pointer flex items-center gap-1.5"
+              onClick={handleStepBack}
+              className="min-h-[44px] bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs px-4 py-2.5 rounded-xl border border-slate-200 transition cursor-pointer flex items-center gap-1.5"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Voltar</span>
@@ -1251,11 +1358,11 @@ export const AddSpotModal = () => {
             <div></div>
           )}
 
-          {currentStep < 8 ? (
+          {!isPublishStep ? (
             <button
               type="button"
               onClick={validateAndNext}
-              className="bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs px-6 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md"
+              className="min-h-[44px] bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs px-6 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md"
             >
               <span>Avançar</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -1265,7 +1372,7 @@ export const AddSpotModal = () => {
               type="button"
               onClick={handleFinalPublish}
               disabled={isSubmitting}
-              className="bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 text-white font-black text-xs px-7 py-3 rounded-xl transition cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-600/30"
+              className="min-h-[44px] bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 text-white font-black text-xs px-7 py-3 rounded-xl transition cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-600/30"
             >
               {isSubmitting ? (
                 <span className="flex items-center gap-2">
