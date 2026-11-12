@@ -10,6 +10,7 @@ import { NotificationToast } from './components/NotificationToast';
 import { Footer } from './components/Footer';
 import { LiveChatWidget } from './components/LiveChatWidget';
 import { MobileBottomNav } from './components/MobileBottomNav';
+import { LoginPage } from './components/LoginPage';
 import { reportError } from './services/telemetry';
 import { RotateCcw, Sparkles, ShieldAlert } from 'lucide-react';
 
@@ -122,7 +123,7 @@ class ErrorBoundary extends Component {
 }
 
 const MainContent = () => {
-  const { activeTab, activeRole, isAuthenticated, currentUser, openLoginModal, setActiveTab, isPageLoading } = useApp();
+  const { activeTab, activeRole, isAuthenticated, currentUser, openLoginModal, setActiveTab, isPageLoading, authModalMode } = useApp();
   const [trackingBooking, setTrackingBooking] = useState(null);
   const [extendingBooking, setExtendingBooking] = useState(null);
   const [isDepositOpen, setIsDepositOpen] = useState(false);
@@ -131,8 +132,10 @@ const MainContent = () => {
   const isAdminAuthorized =
     isAuthenticated && (activeRole === 'ADMINISTRADOR' || currentUser?.role === 'ADMINISTRADOR');
 
+  const isLoginScreen = activeTab === 'login';
+
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans relative">
+    <main className={`min-h-screen ${isLoginScreen ? 'bg-[#06152D] text-white' : 'bg-slate-50 text-slate-900'} flex flex-col font-sans relative`}>
       {/* Top Animated Progress Loading Bar for Page Transitions */}
       {isPageLoading && (
         <div className="fixed top-0 left-0 right-0 z-50 h-1 bg-slate-100 overflow-hidden">
@@ -140,11 +143,14 @@ const MainContent = () => {
         </div>
       )}
 
-      <Navbar onOpenDepositModal={() => setIsDepositOpen(true)} />
+      {!isLoginScreen && <Navbar onOpenDepositModal={() => setIsDepositOpen(true)} />}
 
       <div className={`flex-1 transition-opacity duration-300 ${isPageLoading ? 'opacity-70' : 'opacity-100'}`}>
         {activeTab === 'landing' && (
           <LandingPage onOpenDepositModal={() => setIsDepositOpen(true)} />
+        )}
+        {activeTab === 'login' && (
+          <LoginPage initialMode={authModalMode === 'register' ? 'register' : 'login'} />
         )}
         {activeTab === 'host_landing' && <HostLandingPage />}
         {(activeTab === 'search' || activeTab === 'favorites') && <SearchPage />}
@@ -200,8 +206,8 @@ const MainContent = () => {
       {/* Mobile Floating Pill Navigation (Estilo 99) */}
       <MobileBottomNav onOpenDepositModal={() => setIsDepositOpen(true)} />
 
-      {/* Rodapé Global Completo + Chat Integrado (Oculto no mapa tela cheia e admin) */}
-      {activeTab !== 'admin_dashboard' && activeTab !== 'search' && activeTab !== 'favorites' && (
+      {/* Rodapé Global Completo + Chat Integrado (Oculto no mapa tela cheia, login e admin) */}
+      {!isLoginScreen && activeTab !== 'admin_dashboard' && activeTab !== 'search' && activeTab !== 'favorites' && (
         <Footer onOpenChatHelp={() => setIsLiveChatOpen(true)} />
       )}
       <LiveChatWidget

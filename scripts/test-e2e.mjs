@@ -50,6 +50,7 @@ async function runTests() {
   const distDir = path.resolve(process.cwd(), 'dist');
   const expectedFiles = [
     'index.html',
+    'login/index.html',
     'buscar/index.html',
     'anfitriao/index.html',
     'termos/index.html',
@@ -84,6 +85,11 @@ async function runTests() {
   assert.ok(cleanHomeText.includes('Cupom de primeira reserva'), 'Cupom de primeira reserva ausente');
   assert.ok(cleanHomeText.includes('Indique e ganhe'), 'Banner Indique e ganhe ausente');
   assert.ok(homeHtml.includes('#002A66') || homeHtml.includes('#062B5B'), 'Paleta oficial VagaGo ausente na Home');
+
+  const loginHtml = fs.readFileSync(path.join(distDir, 'login/index.html'), 'utf-8').replace(/<!--.*?-->/g, '');
+  assert.ok(loginHtml.includes('Bem-vindo de volta!'), 'Conteudo SSR da Pagina de Login ausente');
+  assert.ok(loginHtml.includes('Entrar com Google'), 'Botao Google na Pagina de Login ausente');
+  assert.ok(loginHtml.includes('rápida e segura!'), 'Frase da Pagina de Login ausente');
 
   console.log('2. Testando fluxo E2E: Buscar -> Navegar -> Reservar -> Pagar (Pix)...');
   // 2A. Buscar + Links de Navegacao (Waze / Google Maps / Apple Maps) + Trajeto azul
@@ -266,6 +272,7 @@ async function runTests() {
         const { port } = server.address();
         const routesToVerify = [
           '/',
+          '/login',
           '/buscar',
           '/anfitriao',
           '/termos',

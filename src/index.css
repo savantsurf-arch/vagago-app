@@ -2,9 +2,13 @@
 
 @layer base {
   :root {
+    --brand-dark: #06152d;
+    --brand-electric: #087bff;
+    --brand-neon-green: #19e600;
+    --brand-cyan: #00d9ff;
     --brand-blue: #0070f3;
     --brand-blue-dark: #062b5b;
-    --brand-navy: #062b5b;
+    --brand-navy: #06152d;
     --brand-green: #00a838;
     --brand-green-light: #00d26a;
   }

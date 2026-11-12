@@ -67,6 +67,8 @@ const safeStorage = {
 
 const ROUTE_TO_TAB = {
   '/': { tab: 'landing' },
+  '/login': { tab: 'login' },
+  '/cadastro': { tab: 'login', initialMode: 'register' },
   '/buscar': { tab: 'search' },
   '/anfitriao': { tab: 'host_landing' },
   '/termos': { tab: 'terms', legalTab: 'driver' },
@@ -78,6 +80,7 @@ const ROUTE_TO_TAB = {
 
 const TAB_TO_ROUTE = {
   landing: '/',
+  login: '/login',
   search: '/buscar',
   host_landing: '/anfitriao',
   terms: '/termos',
@@ -373,16 +376,35 @@ export const AppProvider = ({ children, initialRoute = '' }) => {
     }
   };
 
-  // Auth Methods - Validação de senha com hash SHA-256 + suporte a Supabase Auth
-  const login = async (emailInput, passwordInput) => {
-    const cleanEmail = (emailInput || '').trim().toLowerCase();
-
-    if (!cleanEmail || !passwordInput || String(passwordInput).length < 6) {
+  // Auth Methods - Validação com suporte a e-mail ou telefone, SHA-256 e Supabase Auth
+  const login = async (emailOrPhoneInput, passwordInput, remember = true) => {
+    const rawInput = (emailOrPhoneInput || '').trim();
+    if (!rawInput || !passwordInput || String(passwordInput).length < 6) {
       return false;
     }
 
+    const cleanInput = rawInput.toLowerCase();
+    const digitsOnly = rawInput.replace(/\D/g, '');
+
+    // Resolve e-mail se o usuário digitou um telefone cadastrado
+    let cleanEmail = cleanInput.includes('@') ? cleanInput : '';
+    if (!cleanEmail && digitsOnly.length >= 8) {
+      const matchByPhone = users.find((u) => {
+        const uPhone = (u?.phone || '').replace(/\D/g, '');
+        return uPhone && (uPhone === digitsOnly || uPhone.endsWith(digitsOnly) || digitsOnly.endsWith(uPhone));
+      });
+      if (matchByPhone && matchByPhone.email) {
+        cleanEmail = matchByPhone.email.toLowerCase();
+      }
+    }
+
+    // Se ainda não encontrou e-mail e não tem @, assume formato de busca
+    if (!cleanEmail) {
+      cleanEmail = cleanInput;
+    }
+
     // 1. Se Supabase Auth estiver configurado, tenta autenticar na nuvem primeiro
-    if (isSupabaseConfigured && typeof supabase?.auth?.signInWithPassword === 'function') {
+    if (isSupabaseConfigured && cleanEmail.includes('@') && typeof supabase?.auth?.signInWithPassword === 'function') {
       try {
         const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
           email: cleanEmail,
@@ -406,7 +428,31 @@ export const AppProvider = ({ children, initialRoute = '' }) => {
           setCurrentUser(cloudUser);
           setActiveRole(cloudUser.role || 'CLIENTE');
           setIsAuthenticated(true);
-          setAuthToken(authData.session?.access_token || `sb_session_${Date.now()}`);
+          const token = authData.session?.access_token || `sb_session_${Date.now()}`;
+          setAuthToken(token);
+
+          try {
+            safeStorage.setItem('vagago_isAuthenticated', 'true');
+            safeStorage.setItem('vagago_authToken', token);
+            safeStorage.setItem('vagago_currentUser_email', cloudUser.email);
+            safeStorage.setItem('vagago_currentUser', JSON.stringify(cloudUser));
+            safeStorage.setItem('vagago_activeRole', cloudUser.role || 'CLIENTE');
+            if (remember) {
+              safeStorage.setItem('vagago_rememberMe', 'true');
+            } else {
+              safeStorage.removeItem('vagago_rememberMe');
+            }
+          } catch (e) {}
+
+          // Redirecionamento por papel
+          if (cloudUser.role === 'PROPRIETÁRIO') {
+            setActiveTab('owner_dashboard');
+          } else if (cloudUser.role === 'ADMINISTRADOR') {
+            setActiveTab('admin_dashboard');
+          } else {
+            setActiveTab('landing');
+          }
+
           return true;
         }
       } catch {}
@@ -462,13 +508,47 @@ export const AppProvider = ({ children, initialRoute = '' }) => {
       safeStorage.setItem('vagago_currentUser_email', resolvedUser.email);
       safeStorage.setItem('vagago_currentUser', JSON.stringify(resolvedUser));
       safeStorage.setItem('vagago_activeRole', userRole);
+      if (remember) {
+        safeStorage.setItem('vagago_rememberMe', 'true');
+      } else {
+        safeStorage.removeItem('vagago_rememberMe');
+      }
     } catch (e) {}
 
+    // Redirecionamento inteligente por perfil
     if (userRole === 'PROPRIETÁRIO') {
       setActiveTab('owner_dashboard');
+    } else if (userRole === 'ADMINISTRADOR') {
+      setActiveTab('admin_dashboard');
+    } else {
+      setActiveTab('landing');
     }
 
     return true;
+  };
+
+  // Login com Google via Supabase OAuth
+  const loginWithGoogle = async () => {
+    if (isSupabaseConfigured && typeof supabase?.auth?.signInWithOAuth === 'function') {
+      try {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/` : undefined
+          }
+        });
+        if (error) {
+          return { success: false, message: error.message };
+        }
+        return { success: true };
+      } catch (err) {
+        return { success: false, message: err?.message || 'Erro ao conectar com Google.' };
+      }
+    }
+    return {
+      success: false,
+      message: 'Autenticação Google pode ser habilitada no painel do Supabase em Authentication -> Providers -> Google.'
+    };
   };
 
   const register = async (newUserData) => {
@@ -2341,6 +2421,7 @@ export const AppProvider = ({ children, initialRoute = '' }) => {
       isAuthenticated,
       authToken,
       login,
+      loginWithGoogle,
       logout,
       resetPassword,
       register,

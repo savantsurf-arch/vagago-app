@@ -14,6 +14,12 @@ const ROUTES = [
     url: 'https://vagago-app.vercel.app/'
   },
   {
+    route: '/login',
+    outFile: 'login/index.html',
+    title: 'Entrar no VagaGo | Acesse sua conta de Motorista ou Anfitrião',
+    url: 'https://vagago-app.vercel.app/login'
+  },
+  {
     route: '/buscar',
     outFile: 'buscar/index.html',
     title: 'Buscar Vagas no Mapa em Itabuna - BA | VagaGo',

@@ -40,6 +40,7 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
     setIsAuthModalOpen,
     openLoginModal,
     openRegisterModal,
+    setAuthModalMode,
     openEditProfileModal,
     notifications = [],
     favorites = [],
@@ -353,7 +354,10 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
                 <div className="flex items-center gap-1.5 sm:gap-2 pl-1 sm:pl-2 border-l border-slate-200">
                   <button
                     type="button"
-                    onClick={openLoginModal}
+                    onClick={() => {
+                      setAuthModalMode('login');
+                      setActiveTab('login');
+                    }}
                     className="text-xs font-bold text-slate-700 hover:text-sky-600 px-2.5 sm:px-3 py-2 rounded-xl hover:bg-slate-100 transition flex items-center gap-1 cursor-pointer"
                   >
                     <LogIn className="w-4 h-4 text-sky-600" />
@@ -362,7 +366,10 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
 
                   <button
                     type="button"
-                    onClick={openRegisterModal}
+                    onClick={() => {
+                      setAuthModalMode('register');
+                      setActiveTab('login');
+                    }}
                     className="bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white text-xs font-extrabold px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl shadow-xs hover:shadow-sm transition flex items-center gap-1 cursor-pointer"
                   >
                     <UserPlus className="w-4 h-4 text-sky-200" />
@@ -431,15 +438,23 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
                 <div className="pt-2 border-t border-slate-100 flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => { openLoginModal(); setIsMobileMenuOpen(false); }}
-                    className="flex-1 py-2 text-center text-xs font-extrabold text-slate-700 bg-slate-100 rounded-xl"
+                    onClick={() => {
+                      setAuthModalMode('login');
+                      setActiveTab('login');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="flex-1 py-2.5 text-center text-xs font-extrabold text-slate-700 bg-slate-100 rounded-xl"
                   >
                     Entrar
                   </button>
                   <button
                     type="button"
-                    onClick={() => { openRegisterModal(); setIsMobileMenuOpen(false); }}
-                    className="flex-1 py-2 text-center text-xs font-extrabold text-white bg-sky-600 rounded-xl"
+                    onClick={() => {
+                      setAuthModalMode('register');
+                      setActiveTab('login');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="flex-1 py-2.5 text-center text-xs font-extrabold text-white bg-sky-600 rounded-xl"
                   >
                     Criar Conta
                   </button>

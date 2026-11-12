@@ -5,8 +5,8 @@ import { Car, MapPin, Heart, Home } from 'lucide-react';
 export const MobileBottomNav = () => {
   const { activeTab, setActiveTab, activeRole, isAuthenticated } = useApp();
 
-  // Não sobrepor o mapa em tela cheia nem o painel admin
-  if (activeTab === 'search' || activeTab === 'admin_dashboard') {
+  // Não sobrepor o mapa em tela cheia, tela de login nem o painel admin
+  if (activeTab === 'search' || activeTab === 'admin_dashboard' || activeTab === 'login') {
     return null;
   }
 
