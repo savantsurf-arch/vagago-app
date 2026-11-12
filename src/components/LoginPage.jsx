@@ -309,23 +309,23 @@ export const LoginPage = ({ initialMode = 'login', onBack = null }) => {
       </div>
 
       {/* ==========================================================
-          MAIN CONTAINER: 2-COLUMN SPLIT SCREEN
+          MAIN CONTAINER: 2-COLUMN SPLIT SCREEN (Mobile-Optimized)
          ========================================================== */}
-      <div className="relative z-20 w-full max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 py-10 sm:py-14 min-h-screen flex items-center">
+      <div className="relative z-20 w-full max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 py-6 sm:py-14 min-h-[100dvh] flex items-center">
         <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
 
           {/* ==========================================================
-              LADO ESQUERDO — APRESENTAÇÃO
+              APRESENTAÇÃO (Desktop à esquerda / Mobile abaixo do card)
              ========================================================== */}
           <section
             aria-label="Apresentação VagaGo"
-            className="lg:col-span-7 flex flex-col justify-between space-y-8 sm:space-y-10"
+            className="order-2 lg:order-1 lg:col-span-7 flex flex-col justify-between space-y-6 sm:space-y-10 mt-4 lg:mt-0"
           >
-            {/* Top: Logo do VagaGo */}
+            {/* Top: Logo do VagaGo (apenas no desktop para evitar logo duplicada no mobile) */}
             <div className="space-y-6 sm:space-y-8">
               <div
                 onClick={handleNavigateHome}
-                className="cursor-pointer inline-block group"
+                className="cursor-pointer hidden lg:inline-block group"
                 title="VagaGo — Início"
               >
                 <img
@@ -338,7 +338,7 @@ export const LoginPage = ({ initialMode = 'login', onBack = null }) => {
               </div>
 
               {/* Frase de Impacto */}
-              <h1 className="text-2xl sm:text-3xl lg:text-[40px] font-extrabold text-white tracking-tight leading-[1.2]">
+              <h1 className="text-xl sm:text-3xl lg:text-[40px] font-extrabold text-white tracking-tight leading-[1.2] text-center lg:text-left">
                 Encontre e reserve vagas de garagem<br />
                 de forma{' '}
                 <span className="text-[#19E600] drop-shadow-[0_0_22px_rgba(25,230,0,0.6)]">
@@ -347,39 +347,39 @@ export const LoginPage = ({ initialMode = 'login', onBack = null }) => {
               </h1>
 
               {/* 3 Benefícios com Ícones em Círculos Verdes e Linhas Divisórias */}
-              <div className="pt-2 flex items-center gap-5 sm:gap-8 max-w-md">
+              <div className="pt-2 flex items-center justify-between gap-3 sm:gap-8 max-w-md mx-auto lg:mx-0">
                 {/* 1. Busque vagas próximas */}
                 <div className="flex flex-col items-center text-center flex-1">
-                  <div className="w-11 h-11 rounded-full border-[1.5px] border-[#19E600] flex items-center justify-center mb-2 shadow-[0_0_15px_rgba(25,230,0,0.35)]">
-                    <Search className="w-5 h-5 text-[#19E600]" strokeWidth={2.2} />
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full border-[1.5px] border-[#19E600] flex items-center justify-center mb-1.5 sm:mb-2 shadow-[0_0_15px_rgba(25,230,0,0.35)]">
+                    <Search className="w-4 h-4 sm:w-5 sm:h-5 text-[#19E600]" strokeWidth={2.2} />
                   </div>
-                  <span className="text-xs sm:text-[13px] font-semibold text-white leading-tight">
+                  <span className="text-[11px] sm:text-[13px] font-semibold text-white leading-tight">
                     Busque<br />vagas próximas
                   </span>
                 </div>
 
                 {/* Divisor 1 */}
-                <div className="h-12 w-[1px] bg-slate-700/60 shrink-0" />
+                <div className="h-10 sm:h-12 w-[1px] bg-slate-700/60 shrink-0" />
 
                 {/* 2. Reserve com facilidade */}
                 <div className="flex flex-col items-center text-center flex-1">
-                  <div className="w-11 h-11 rounded-full border-[1.5px] border-[#19E600] flex items-center justify-center mb-2 shadow-[0_0_15px_rgba(25,230,0,0.35)]">
-                    <Calendar className="w-5 h-5 text-[#19E600]" strokeWidth={2.2} />
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full border-[1.5px] border-[#19E600] flex items-center justify-center mb-1.5 sm:mb-2 shadow-[0_0_15px_rgba(25,230,0,0.35)]">
+                    <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-[#19E600]" strokeWidth={2.2} />
                   </div>
-                  <span className="text-xs sm:text-[13px] font-semibold text-white leading-tight">
+                  <span className="text-[11px] sm:text-[13px] font-semibold text-white leading-tight">
                     Reserve<br />com facilidade
                   </span>
                 </div>
 
                 {/* Divisor 2 */}
-                <div className="h-12 w-[1px] bg-slate-700/60 shrink-0" />
+                <div className="h-10 sm:h-12 w-[1px] bg-slate-700/60 shrink-0" />
 
                 {/* 3. Estacione com tranquilidade */}
                 <div className="flex flex-col items-center text-center flex-1">
-                  <div className="w-11 h-11 rounded-full border-[1.5px] border-[#19E600] flex items-center justify-center mb-2 shadow-[0_0_15px_rgba(25,230,0,0.35)]">
-                    <ShieldCheck className="w-5 h-5 text-[#19E600]" strokeWidth={2.2} />
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full border-[1.5px] border-[#19E600] flex items-center justify-center mb-1.5 sm:mb-2 shadow-[0_0_15px_rgba(25,230,0,0.35)]">
+                    <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5 text-[#19E600]" strokeWidth={2.2} />
                   </div>
-                  <span className="text-xs sm:text-[13px] font-semibold text-white leading-tight">
+                  <span className="text-[11px] sm:text-[13px] font-semibold text-white leading-tight">
                     Estacione<br />com tranquilidade
                   </span>
                 </div>
@@ -387,7 +387,7 @@ export const LoginPage = ({ initialMode = 'login', onBack = null }) => {
             </div>
 
             {/* Bottom: Texto Institucional */}
-            <div className="pt-8 sm:pt-14 lg:pt-20">
+            <div className="pt-4 sm:pt-14 lg:pt-20 text-center lg:text-left">
               <p className="text-xs sm:text-sm font-medium text-slate-300">
                 <span className="text-[#19E600] font-black">VagaGo</span>
                 <span className="text-slate-400 mx-2">•</span>
@@ -397,24 +397,24 @@ export const LoginPage = ({ initialMode = 'login', onBack = null }) => {
           </section>
 
           {/* ==========================================================
-              LADO DIREITO — CARD DE ACESSO COM BORDA DUAL GLOW
+              CARD DE ACESSO (Mobile no topo / Desktop à direita)
              ========================================================== */}
           <section
             aria-label="Área de Acesso"
-            className="lg:col-span-5 w-full flex justify-center lg:justify-end"
+            className="order-1 lg:order-2 lg:col-span-5 w-full flex justify-center lg:justify-end"
           >
             {/* Moldura com Borda Dupla Gradiente Luminosa (Ciano / Azul no topo, Verde Neon embaixo) */}
-            <div className="relative w-full max-w-[420px] p-[1.5px] rounded-[32px] bg-gradient-to-br from-[#00D9FF] via-[#087BFF]/70 to-[#19E600] shadow-[0_0_45px_rgba(8,123,255,0.3),0_0_35px_rgba(25,230,0,0.25)]">
-              <div className="w-full rounded-[30.5px] bg-[#07162E]/92 backdrop-blur-2xl p-7 sm:p-9 flex flex-col">
+            <div className="relative w-full max-w-[420px] mx-auto p-[1.5px] rounded-[28px] sm:rounded-[32px] bg-gradient-to-br from-[#00D9FF] via-[#087BFF]/70 to-[#19E600] shadow-[0_0_40px_rgba(8,123,255,0.25),0_0_30px_rgba(25,230,0,0.2)]">
+              <div className="w-full rounded-[26.5px] sm:rounded-[30.5px] bg-[#07162E]/94 backdrop-blur-2xl p-5 sm:p-9 flex flex-col">
 
                 {/* Logo Centralizada no topo do Card */}
-                <div className="flex justify-center mb-3">
+                <div className="flex justify-center mb-2.5 sm:mb-3">
                   <img
                     src="/logo-vagago-tight.png"
                     alt="VagaGo"
                     width="140"
                     height="42"
-                    className="h-10 sm:h-11 w-auto object-contain"
+                    className="h-9 sm:h-11 w-auto object-contain"
                   />
                 </div>
 
@@ -423,11 +423,11 @@ export const LoginPage = ({ initialMode = 'login', onBack = null }) => {
                    ========================================================== */}
                 {authMode === 'login' && (
                   <>
-                    <div className="text-center mb-6">
-                      <h2 className="text-2xl sm:text-[26px] font-black text-white tracking-tight">
+                    <div className="text-center mb-4 sm:mb-6">
+                      <h2 className="text-xl sm:text-[26px] font-black text-white tracking-tight">
                         Bem-vindo de volta!
                       </h2>
-                      <p className="text-xs sm:text-sm text-slate-400 mt-1 font-medium">
+                      <p className="text-xs sm:text-sm text-slate-400 mt-0.5 sm:mt-1 font-medium">
                         Faça login para continuar
                       </p>
                     </div>
@@ -446,35 +446,41 @@ export const LoginPage = ({ initialMode = 'login', onBack = null }) => {
                       </div>
                     )}
 
-                    <form onSubmit={handleLoginSubmit} className="space-y-3.5">
-                      {/* Campo E-mail ou Telefone */}
-                      <div className="relative flex items-center bg-[#061224] border border-[#192A45] rounded-2xl px-4 py-3.5 focus-within:border-[#00D9FF] focus-within:ring-1 focus-within:ring-[#00D9FF]/40 transition group">
+                    <form onSubmit={handleLoginSubmit} className="space-y-3 sm:space-y-3.5">
+                      {/* Campo E-mail ou Telefone (Altura fixa de 52px e fonte 16px no mobile) */}
+                      <div className="relative flex items-center h-[52px] bg-[#061224] border border-[#192A45] rounded-2xl px-3.5 sm:px-4 focus-within:border-[#00D9FF] focus-within:ring-1 focus-within:ring-[#00D9FF]/40 transition group">
                         <User className="w-5 h-5 text-slate-400 group-focus-within:text-[#00D9FF] transition mr-3 shrink-0" strokeWidth={2} />
                         <input
                           type="text"
                           value={emailOrPhone}
                           onChange={(e) => setEmailOrPhone(e.target.value)}
                           placeholder="Seu e-mail ou telefone"
-                          className="bg-transparent text-sm text-white placeholder-slate-400 focus:outline-none w-full font-medium"
+                          className="bg-transparent text-base sm:text-sm text-white placeholder-slate-400 focus:outline-none w-full font-medium"
                           autoComplete="username"
+                          autoCapitalize="none"
+                          autoCorrect="off"
+                          spellCheck={false}
                         />
                       </div>
 
-                      {/* Campo Senha */}
-                      <div className="relative flex items-center bg-[#061224] border border-[#192A45] rounded-2xl px-4 py-3.5 focus-within:border-[#00D9FF] focus-within:ring-1 focus-within:ring-[#00D9FF]/40 transition group">
+                      {/* Campo Senha (Mesma altura de 52px e alinhamento perfeito) */}
+                      <div className="relative flex items-center h-[52px] bg-[#061224] border border-[#192A45] rounded-2xl px-3.5 sm:px-4 focus-within:border-[#00D9FF] focus-within:ring-1 focus-within:ring-[#00D9FF]/40 transition group">
                         <Lock className="w-5 h-5 text-slate-400 group-focus-within:text-[#00D9FF] transition mr-3 shrink-0" strokeWidth={2} />
                         <input
                           type={showPassword ? 'text' : 'password'}
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           placeholder="Sua senha"
-                          className="bg-transparent text-sm text-white placeholder-slate-400 focus:outline-none w-full font-medium"
+                          className="bg-transparent text-base sm:text-sm text-white placeholder-slate-400 focus:outline-none w-full font-medium pr-1"
                           autoComplete="current-password"
+                          autoCapitalize="none"
+                          autoCorrect="off"
+                          spellCheck={false}
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="text-slate-400 hover:text-white transition cursor-pointer p-1 shrink-0"
+                          className="text-slate-400 hover:text-white transition cursor-pointer h-full px-2 flex items-center justify-center shrink-0"
                           aria-label={showPassword ? 'Ocultar senha' : 'Ver senha'}
                         >
                           {showPassword ? (
@@ -486,21 +492,21 @@ export const LoginPage = ({ initialMode = 'login', onBack = null }) => {
                       </div>
 
                       {/* Opções: Lembrar de mim & Esqueceu sua senha? */}
-                      <div className="flex items-center justify-between text-xs sm:text-sm pt-1">
-                        <label className="flex items-center gap-2 cursor-pointer text-slate-300 select-none group">
+                      <div className="flex items-center justify-between gap-2 text-xs sm:text-sm pt-1">
+                        <label className="flex items-center gap-2 cursor-pointer text-slate-300 select-none group shrink-0">
                           <input
                             type="checkbox"
                             checked={rememberMe}
                             onChange={(e) => setRememberMe(e.target.checked)}
                             className="w-4 h-4 rounded border-slate-700 bg-[#061224] text-[#19E600] focus:ring-0 focus:ring-offset-0 cursor-pointer accent-[#19E600]"
                           />
-                          <span className="text-xs text-slate-300 group-hover:text-white transition">Lembrar de mim</span>
+                          <span className="text-xs text-slate-300 group-hover:text-white transition whitespace-nowrap">Lembrar de mim</span>
                         </label>
 
                         <button
                           type="button"
                           onClick={() => { clearMessages(); setAuthMode('forgot'); }}
-                          className="text-xs text-[#19E600] hover:underline font-semibold transition cursor-pointer"
+                          className="text-xs text-[#19E600] hover:underline font-semibold transition cursor-pointer text-right shrink-0 whitespace-nowrap"
                         >
                           Esqueceu sua senha?
                         </button>
@@ -510,7 +516,7 @@ export const LoginPage = ({ initialMode = 'login', onBack = null }) => {
                       <button
                         type="submit"
                         disabled={isLoading}
-                        className="w-full mt-2 py-3.5 px-4 rounded-2xl bg-[#19E600] hover:bg-[#16d000] text-[#06152D] font-black text-sm sm:text-base flex items-center justify-center gap-2 shadow-[0_0_22px_rgba(25,230,0,0.45)] hover:shadow-[0_0_30px_rgba(25,230,0,0.65)] transition transform active:scale-[0.98] cursor-pointer disabled:opacity-60"
+                        className="w-full h-[50px] sm:h-[52px] mt-2 rounded-2xl bg-[#19E600] hover:bg-[#16d000] text-[#06152D] font-black text-sm sm:text-base flex items-center justify-center gap-2 shadow-[0_0_22px_rgba(25,230,0,0.45)] hover:shadow-[0_0_30px_rgba(25,230,0,0.65)] transition transform active:scale-[0.98] cursor-pointer disabled:opacity-60"
                       >
                         {isLoading ? (
                           <RefreshCw className="w-5 h-5 animate-spin text-[#06152D]" />
@@ -524,18 +530,18 @@ export const LoginPage = ({ initialMode = 'login', onBack = null }) => {
                     </form>
 
                     {/* Divisor "ou" */}
-                    <div className="flex items-center my-4">
+                    <div className="flex items-center my-3.5 sm:my-4">
                       <div className="flex-1 h-[1px] bg-slate-800" />
                       <span className="px-3 text-xs text-slate-400 font-medium">ou</span>
                       <div className="flex-1 h-[1px] bg-slate-800" />
                     </div>
 
-                    {/* Botão Entrar com Google */}
+                    {/* Botão Entrar com Google (Mesma altura padronizada de 50px/52px) */}
                     <button
                       type="button"
                       onClick={handleGoogleLogin}
                       disabled={isLoading}
-                      className="w-full py-3 px-4 rounded-2xl bg-[#08172F] hover:bg-[#0D2140] border border-[#1B2D4B] hover:border-slate-700 text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-3 transition cursor-pointer shadow-sm"
+                      className="w-full h-[50px] sm:h-[52px] rounded-2xl bg-[#08172F] hover:bg-[#0D2140] border border-[#1B2D4B] hover:border-slate-700 text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-3 transition cursor-pointer shadow-sm"
                     >
                       <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                         <path
@@ -559,7 +565,7 @@ export const LoginPage = ({ initialMode = 'login', onBack = null }) => {
                     </button>
 
                     {/* Rodapé: Cadastre-se */}
-                    <p className="text-center text-xs sm:text-sm text-slate-400 mt-5">
+                    <p className="text-center text-xs sm:text-sm text-slate-400 mt-4 sm:mt-5">
                       Não tem uma conta?{' '}
                       <button
                         type="button"
@@ -630,69 +636,79 @@ export const LoginPage = ({ initialMode = 'login', onBack = null }) => {
                       </div>
 
                       {/* Nome Completo */}
-                      <div className="relative flex items-center bg-[#061224] border border-[#192A45] rounded-2xl px-4 py-3 focus-within:border-[#00D9FF] transition group">
-                        <User className="w-4 h-4 text-slate-400 group-focus-within:text-[#00D9FF] mr-3 shrink-0" />
+                      <div className="relative flex items-center h-[50px] sm:h-[52px] bg-[#061224] border border-[#192A45] rounded-2xl px-3.5 sm:px-4 focus-within:border-[#00D9FF] transition group">
+                        <User className="w-5 h-5 text-slate-400 group-focus-within:text-[#00D9FF] mr-3 shrink-0" />
                         <input
                           type="text"
                           value={name}
                           onChange={(e) => setName(e.target.value)}
                           placeholder="Nome completo"
-                          className="bg-transparent text-sm text-white placeholder-slate-400 focus:outline-none w-full font-medium"
+                          className="bg-transparent text-base sm:text-sm text-white placeholder-slate-400 focus:outline-none w-full font-medium"
                         />
                       </div>
 
                       {/* E-mail */}
-                      <div className="relative flex items-center bg-[#061224] border border-[#192A45] rounded-2xl px-4 py-3 focus-within:border-[#00D9FF] transition group">
-                        <Mail className="w-4 h-4 text-slate-400 group-focus-within:text-[#00D9FF] mr-3 shrink-0" />
+                      <div className="relative flex items-center h-[50px] sm:h-[52px] bg-[#061224] border border-[#192A45] rounded-2xl px-3.5 sm:px-4 focus-within:border-[#00D9FF] transition group">
+                        <Mail className="w-5 h-5 text-slate-400 group-focus-within:text-[#00D9FF] mr-3 shrink-0" />
                         <input
                           type="email"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           placeholder="Seu melhor e-mail"
-                          className="bg-transparent text-sm text-white placeholder-slate-400 focus:outline-none w-full font-medium"
+                          className="bg-transparent text-base sm:text-sm text-white placeholder-slate-400 focus:outline-none w-full font-medium"
+                          autoCapitalize="none"
+                          autoCorrect="off"
+                          spellCheck={false}
                         />
                       </div>
 
                       {/* Telefone */}
-                      <div className="relative flex items-center bg-[#061224] border border-[#192A45] rounded-2xl px-4 py-3 focus-within:border-[#00D9FF] transition group">
-                        <Phone className="w-4 h-4 text-slate-400 group-focus-within:text-[#00D9FF] mr-3 shrink-0" />
+                      <div className="relative flex items-center h-[50px] sm:h-[52px] bg-[#061224] border border-[#192A45] rounded-2xl px-3.5 sm:px-4 focus-within:border-[#00D9FF] transition group">
+                        <Phone className="w-5 h-5 text-slate-400 group-focus-within:text-[#00D9FF] mr-3 shrink-0" />
                         <input
                           type="tel"
                           value={phone}
                           onChange={(e) => setPhone(e.target.value)}
                           placeholder="(73) 99999-9999"
-                          className="bg-transparent text-sm text-white placeholder-slate-400 focus:outline-none w-full font-medium"
+                          className="bg-transparent text-base sm:text-sm text-white placeholder-slate-400 focus:outline-none w-full font-medium"
                         />
                       </div>
 
                       {/* Senha */}
-                      <div className="relative flex items-center bg-[#061224] border border-[#192A45] rounded-2xl px-4 py-3 focus-within:border-[#00D9FF] transition group">
-                        <Lock className="w-4 h-4 text-slate-400 group-focus-within:text-[#00D9FF] mr-3 shrink-0" />
+                      <div className="relative flex items-center h-[50px] sm:h-[52px] bg-[#061224] border border-[#192A45] rounded-2xl px-3.5 sm:px-4 focus-within:border-[#00D9FF] transition group">
+                        <Lock className="w-5 h-5 text-slate-400 group-focus-within:text-[#00D9FF] mr-3 shrink-0" />
                         <input
                           type={showPassword ? 'text' : 'password'}
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           placeholder="Criar uma senha (mín. 6 dígitos)"
-                          className="bg-transparent text-sm text-white placeholder-slate-400 focus:outline-none w-full font-medium"
+                          className="bg-transparent text-base sm:text-sm text-white placeholder-slate-400 focus:outline-none w-full font-medium pr-1"
+                          autoCapitalize="none"
+                          autoCorrect="off"
+                          spellCheck={false}
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="text-slate-400 hover:text-white transition p-1"
+                          className="text-slate-400 hover:text-white transition cursor-pointer h-full px-2 flex items-center justify-center shrink-0"
+                          aria-label={showPassword ? 'Ocultar senha' : 'Ver senha'}
                         >
-                          {showPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                          {showPassword ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
                         </button>
                       </div>
 
                       {/* Confirmar Senha */}
-                      <div className="relative flex items-center bg-[#061224] border border-[#192A45] rounded-2xl px-4 py-3 focus-within:border-[#00D9FF] transition group">
-                        <Lock className="w-4 h-4 text-slate-400 group-focus-within:text-[#00D9FF] mr-3 shrink-0" />
+                      <div className="relative flex items-center h-[50px] sm:h-[52px] bg-[#061224] border border-[#192A45] rounded-2xl px-3.5 sm:px-4 focus-within:border-[#00D9FF] transition group">
+                        <Lock className="w-5 h-5 text-slate-400 group-focus-within:text-[#00D9FF] mr-3 shrink-0" />
                         <input
                           type={showPassword ? 'text' : 'password'}
                           value={confirmPassword}
                           onChange={(e) => setConfirmPassword(e.target.value)}
                           placeholder="Confirmar senha"
-                          className="bg-transparent text-sm text-white placeholder-slate-400 focus:outline-none w-full font-medium"
+                          className="bg-transparent text-base sm:text-sm text-white placeholder-slate-400 focus:outline-none w-full font-medium"
+                          autoCapitalize="none"
+                          autoCorrect="off"
+                          spellCheck={false}
                         />
                       </div>
 
@@ -773,20 +789,23 @@ export const LoginPage = ({ initialMode = 'login', onBack = null }) => {
 
                     <form onSubmit={handleForgotSubmit} className="space-y-4">
                       {forgotStep === 1 && (
-                        <div className="relative flex items-center bg-[#061224] border border-[#192A45] rounded-2xl px-4 py-3.5 focus-within:border-[#00D9FF] transition group">
+                        <div className="relative flex items-center h-[52px] bg-[#061224] border border-[#192A45] rounded-2xl px-3.5 sm:px-4 focus-within:border-[#00D9FF] transition group">
                           <Mail className="w-5 h-5 text-slate-400 group-focus-within:text-[#00D9FF] mr-3 shrink-0" />
                           <input
                             type="email"
                             value={forgotEmail}
                             onChange={(e) => setForgotEmail(e.target.value)}
                             placeholder="Seu e-mail cadastrado"
-                            className="bg-transparent text-sm text-white placeholder-slate-400 focus:outline-none w-full font-medium"
+                            className="bg-transparent text-base sm:text-sm text-white placeholder-slate-400 focus:outline-none w-full font-medium"
+                            autoCapitalize="none"
+                            autoCorrect="off"
+                            spellCheck={false}
                           />
                         </div>
                       )}
 
                       {forgotStep === 2 && (
-                        <div className="relative flex items-center bg-[#061224] border border-[#192A45] rounded-2xl px-4 py-3.5 focus-within:border-[#00D9FF] transition group">
+                        <div className="relative flex items-center h-[52px] bg-[#061224] border border-[#192A45] rounded-2xl px-3.5 sm:px-4 focus-within:border-[#00D9FF] transition group">
                           <input
                             type="text"
                             value={otpCode}
@@ -799,14 +818,17 @@ export const LoginPage = ({ initialMode = 'login', onBack = null }) => {
                       )}
 
                       {forgotStep === 3 && (
-                        <div className="relative flex items-center bg-[#061224] border border-[#192A45] rounded-2xl px-4 py-3.5 focus-within:border-[#00D9FF] transition group">
+                        <div className="relative flex items-center h-[52px] bg-[#061224] border border-[#192A45] rounded-2xl px-3.5 sm:px-4 focus-within:border-[#00D9FF] transition group">
                           <Lock className="w-5 h-5 text-slate-400 group-focus-within:text-[#00D9FF] mr-3 shrink-0" />
                           <input
                             type="password"
                             value={newPassword}
                             onChange={(e) => setNewPassword(e.target.value)}
                             placeholder="Nova senha (mínimo 6 dígitos)"
-                            className="bg-transparent text-sm text-white placeholder-slate-400 focus:outline-none w-full font-medium"
+                            className="bg-transparent text-base sm:text-sm text-white placeholder-slate-400 focus:outline-none w-full font-medium"
+                            autoCapitalize="none"
+                            autoCorrect="off"
+                            spellCheck={false}
                           />
                         </div>
                       )}
