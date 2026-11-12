@@ -2,24 +2,115 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/logo-vagago.png" />
-    <link rel="apple-touch-icon" href="/logo-vagago.png" />
-    <link rel="manifest" href="/manifest.json" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VagaGo | Vagas de Estacionamento e Garagens em Itabuna - BA</title>
+    <meta
+      name="description"
+      content="Encontre vagas de estacionamento perto de você em Itabuna - BA por hora, diária ou mês. Compare preços, veja fotos reais da garagem e reserve via Pix ou alugue sua vaga parada."
+    />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://vagago-app.vercel.app/" />
+
+    <!-- Favicons & PWA Icons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon-180.png" />
+    <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#0284c7" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="VagaGo" />
-    <title>VagaGo | Vagas de Estacionamento e Garagem em Itabuna - BA</title>
-    <meta name="description" content="Encontre vagas de estacionamento perto de você em Itabuna - BA por hora, diária ou mês. Compare preços, veja fotos reais da garagem e reserve online ou alugue sua vaga parada." />
-    <meta property="og:title" content="VagaGo | Estacionamento e Garagens Privativas em Itabuna - BA" />
-    <meta property="og:description" content="Reserve vagas de garagem seguras perto de você no Centro de Itabuna, Shopping Jequitibá e bairros, ou ganhe renda extra alugando sua vaga." />
+
+    <!-- Open Graph -->
+    <meta property="og:site_name" content="VagaGo" />
+    <meta property="og:title" content="VagaGo | Vagas de Estacionamento e Garagens em Itabuna - BA" />
+    <meta
+      property="og:description"
+      content="Reserve vagas de garagem seguras perto de você no Centro de Itabuna, Shopping Jequitibá e bairros, ou ganhe renda extra alugando sua vaga."
+    />
     <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://vagago-app.vercel.app/" />
     <meta property="og:locale" content="pt_BR" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <meta property="og:image" content="https://vagago-app.vercel.app/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:alt" content="VagaGo — Vagas de Estacionamento e Garagens em Itabuna - BA" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="VagaGo | Vagas de Estacionamento e Garagens em Itabuna - BA" />
+    <meta
+      name="twitter:description"
+      content="Estacione perto de você em Itabuna - BA a partir de R$ 4/h com reserva via Pix e QR Code, ou anuncie sua garagem gratuitamente."
+    />
+    <meta name="twitter:image" content="https://vagago-app.vercel.app/og-image.png" />
+
+    <!-- JSON-LD LocalBusiness & Offers -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": ["LocalBusiness", "ParkingFacility"],
+        "name": "VagaGo — Marketplace de Garagens em Itabuna",
+        "url": "https://vagago-app.vercel.app/",
+        "image": "https://vagago-app.vercel.app/og-image.png",
+        "description": "Marketplace de vagas de estacionamento e garagens privativas em Itabuna - BA com reserva por hora, diária ou mês via Pix e QR Code.",
+        "priceRange": "R$ 4 - R$ 280",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Itabuna",
+          "addressRegion": "BA",
+          "addressCountry": "BR"
+        },
+        "geo": {
+          "@type": "GeoCoordinates",
+          "latitude": -14.7966,
+          "longitude": -39.2789
+        },
+        "areaServed": {
+          "@type": "City",
+          "name": "Itabuna"
+        },
+        "hasOfferCatalog": {
+          "@type": "OfferCatalog",
+          "name": "Vagas de Garagem em Itabuna - BA",
+          "itemListElement": [
+            {
+              "@type": "Offer",
+              "name": "Garagem Coberta Centro — Av. do Cinquentenário",
+              "price": "6.00",
+              "priceCurrency": "BRL",
+              "availability": "https://schema.org/InStock",
+              "url": "https://vagago-app.vercel.app/buscar"
+            },
+            {
+              "@type": "Offer",
+              "name": "Vaga Próxima ao Shopping Jequitibá",
+              "price": "5.00",
+              "priceCurrency": "BRL",
+              "availability": "https://schema.org/InStock",
+              "url": "https://vagago-app.vercel.app/buscar"
+            },
+            {
+              "@type": "Offer",
+              "name": "Garagem Econômica Bairro de Fátima",
+              "price": "4.00",
+              "priceCurrency": "BRL",
+              "availability": "https://schema.org/InStock",
+              "url": "https://vagago-app.vercel.app/buscar"
+            }
+          ]
+        }
+      }
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
     <style>
       body {
         font-family: 'Plus Jakarta Sans', sans-serif;
@@ -27,7 +118,7 @@
     </style>
   </head>
   <body class="bg-slate-50 text-slate-900">
-    <div id="root"></div>
+    <div id="root"><!--app-html--></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

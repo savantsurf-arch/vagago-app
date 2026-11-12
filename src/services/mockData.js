@@ -513,15 +513,17 @@ export const INITIAL_WITHDRAWALS = [
 export let GLOBAL_DYNAMIC_PARKING_SPACES = [];
 
 export function getGlobalParkingSpaces() {
-  const saved = localStorage.getItem('vagago_parkingSpaces');
-  if (saved) {
-    try {
-      const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const saved = window.localStorage.getItem('vagago_parkingSpaces');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
       }
-    } catch (e) {}
-  }
+    }
+  } catch (e) {}
   return INITIAL_PARKING_SPACES;
 }
 
@@ -533,7 +535,9 @@ export function registerGlobalParkingSpace(newSpot) {
     GLOBAL_DYNAMIC_PARKING_SPACES.unshift(newSpot);
   }
   try {
-    localStorage.setItem('vagago_parkingSpaces', JSON.stringify(GLOBAL_DYNAMIC_PARKING_SPACES));
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.setItem('vagago_parkingSpaces', JSON.stringify(GLOBAL_DYNAMIC_PARKING_SPACES));
+    }
   } catch (e) {}
   return GLOBAL_DYNAMIC_PARKING_SPACES;
 }

@@ -39,27 +39,79 @@ import {
 
 
 
+const safeStorage = {
+  getItem: (key) => {
+    try {
+      return typeof window !== 'undefined' && window.localStorage ? window.localStorage.getItem(key) : null;
+    } catch {
+      return null;
+    }
+  },
+  setItem: (key, val) => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem(key, val);
+      }
+    } catch {}
+  },
+  removeItem: (key) => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.removeItem(key);
+      }
+    } catch {}
+  }
+};
+
+const ROUTE_TO_TAB = {
+  '/': { tab: 'landing' },
+  '/buscar': { tab: 'search' },
+  '/anfitriao': { tab: 'host_landing' },
+  '/termos': { tab: 'terms', legalTab: 'driver' },
+  '/privacidade': { tab: 'terms', legalTab: 'privacy_lgpd' },
+  '/cancelamento': { tab: 'terms', legalTab: 'cancellation' },
+  '/contato': { tab: 'terms', legalTab: 'contact' },
+  '/admin': { tab: 'admin_dashboard' }
+};
+
+const TAB_TO_ROUTE = {
+  landing: '/',
+  search: '/buscar',
+  host_landing: '/anfitriao',
+  terms: '/termos',
+  admin_dashboard: '/#admin'
+};
+
+function resolveRouteState(pathname = '/', hash = '') {
+  const cleanPath = (pathname || '/').toLowerCase().replace(/\/+$/, '') || '/';
+  const cleanHash = (hash || '').toLowerCase();
+  if (cleanPath === '/admin' || cleanHash === '#admin' || cleanHash === '#/admin') {
+    return { tab: 'admin_dashboard' };
+  }
+  return ROUTE_TO_TAB[cleanPath] || { tab: 'landing' };
+}
+
 const AppContext = createContext();
 
 
 
-export const AppProvider = ({ children }) => {
+export const AppProvider = ({ children, initialRoute = '' }) => {
   // Enforce zero-state database cleanup for manual testing
   const VAGAGO_DB_VERSION = 'v2_clean_zero_state';
   if (typeof window !== 'undefined') {
     try {
-      if (localStorage.getItem('vagago_db_version') !== VAGAGO_DB_VERSION) {
-        localStorage.removeItem('vagago_parkingSpaces');
-        localStorage.removeItem('vagago_users');
-        localStorage.removeItem('vagago_bookings');
-        localStorage.removeItem('vagago_vehicles');
-        localStorage.removeItem('vagago_notifications');
-        localStorage.removeItem('vagago_reviews');
-        localStorage.removeItem('vagago_withdrawals');
-        localStorage.removeItem('vagago_isAuthenticated');
-        localStorage.removeItem('vagago_currentUser_email');
-        localStorage.removeItem('vagago_authToken');
-        localStorage.setItem('vagago_db_version', VAGAGO_DB_VERSION);
+      if (safeStorage.getItem('vagago_db_version') !== VAGAGO_DB_VERSION) {
+        safeStorage.removeItem('vagago_parkingSpaces');
+        safeStorage.removeItem('vagago_users');
+        safeStorage.removeItem('vagago_bookings');
+        safeStorage.removeItem('vagago_vehicles');
+        safeStorage.removeItem('vagago_notifications');
+        safeStorage.removeItem('vagago_reviews');
+        safeStorage.removeItem('vagago_withdrawals');
+        safeStorage.removeItem('vagago_isAuthenticated');
+        safeStorage.removeItem('vagago_currentUser_email');
+        safeStorage.removeItem('vagago_authToken');
+        safeStorage.setItem('vagago_db_version', VAGAGO_DB_VERSION);
       }
     } catch (e) {}
   }
@@ -71,7 +123,7 @@ export const AppProvider = ({ children }) => {
   // Users dataset - Only real registered users
   const [users, setUsers] = useState(() => {
     try {
-      const saved = localStorage.getItem('vagago_users');
+      const saved = safeStorage.getItem('vagago_users');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -85,13 +137,13 @@ export const AppProvider = ({ children }) => {
 
   // Active Role State
   const [activeRole, setActiveRole] = useState(() => {
-    return localStorage.getItem('vagago_activeRole') || 'CLIENTE';
+    return safeStorage.getItem('vagago_activeRole') || 'CLIENTE';
   });
 
   // AUTHENTICATION SYSTEM STATE - Defaults to false when not logged in
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    const isAuth = localStorage.getItem('vagago_isAuthenticated') === 'true';
-    const savedEmail = localStorage.getItem('vagago_currentUser_email');
+    const isAuth = safeStorage.getItem('vagago_isAuthenticated') === 'true';
+    const savedEmail = safeStorage.getItem('vagago_currentUser_email');
     if (isAuth && savedEmail && !LEGACY_EMAILS.includes(savedEmail.toLowerCase())) {
       return true;
     }
@@ -99,24 +151,24 @@ export const AppProvider = ({ children }) => {
   });
 
   const [authToken, setAuthToken] = useState(() => {
-    const isAuth = localStorage.getItem('vagago_isAuthenticated') === 'true';
-    const savedEmail = localStorage.getItem('vagago_currentUser_email');
+    const isAuth = safeStorage.getItem('vagago_isAuthenticated') === 'true';
+    const savedEmail = safeStorage.getItem('vagago_currentUser_email');
     if (isAuth && savedEmail && !LEGACY_EMAILS.includes(savedEmail.toLowerCase())) {
-      return localStorage.getItem('vagago_authToken') || null;
+      return safeStorage.getItem('vagago_authToken') || null;
     }
     return null;
   });
 
   const [currentUser, setCurrentUser] = useState(() => {
-    const isAuth = localStorage.getItem('vagago_isAuthenticated') === 'true';
-    const savedEmail = localStorage.getItem('vagago_currentUser_email');
+    const isAuth = safeStorage.getItem('vagago_isAuthenticated') === 'true';
+    const savedEmail = safeStorage.getItem('vagago_currentUser_email');
     if (isAuth && savedEmail && !LEGACY_EMAILS.includes(savedEmail.toLowerCase())) {
       const cleanEmail = savedEmail.toLowerCase();
       let userObj = null;
 
       // 1. Try dedicated vagago_currentUser
       try {
-        const savedCurrent = localStorage.getItem('vagago_currentUser');
+        const savedCurrent = safeStorage.getItem('vagago_currentUser');
         if (savedCurrent) {
           const parsed = JSON.parse(savedCurrent);
           if (parsed && parsed.email?.toLowerCase() === cleanEmail) {
@@ -128,7 +180,7 @@ export const AppProvider = ({ children }) => {
       // 2. Try from vagago_users
       if (!userObj) {
         try {
-          const saved = localStorage.getItem('vagago_users');
+          const saved = safeStorage.getItem('vagago_users');
           if (saved) {
             const parsed = JSON.parse(saved);
             const found = parsed.find(u => u && u.email?.toLowerCase() === cleanEmail);
@@ -140,7 +192,7 @@ export const AppProvider = ({ children }) => {
       if (userObj) {
         // Enforce dedicated avatar cache if available
         try {
-          const savedAvatar = localStorage.getItem(`vagago_avatar_${cleanEmail}`);
+          const savedAvatar = safeStorage.getItem(`vagago_avatar_${cleanEmail}`);
           if (savedAvatar) {
             userObj.avatar = savedAvatar;
           }
@@ -441,10 +493,10 @@ export const AppProvider = ({ children }) => {
   // Main Repositories - Protected with Strict Array & Try/Catch Guards
   const [parkingSpaces, setParkingSpaces] = useState(() => {
     try {
-      const saved = localStorage.getItem('vagago_parkingSpaces');
+      const saved = safeStorage.getItem('vagago_parkingSpaces');
       if (saved) {
         if (saved.includes('juliana@proprietario.com') || saved.includes('carlos@proprietario.com')) {
-          localStorage.removeItem('vagago_parkingSpaces');
+          safeStorage.removeItem('vagago_parkingSpaces');
           return INITIAL_PARKING_SPACES;
         }
         const parsed = JSON.parse(saved);
@@ -457,7 +509,7 @@ export const AppProvider = ({ children }) => {
 
   const [bookings, setBookings] = useState(() => {
     try {
-      const saved = localStorage.getItem('vagago_bookings');
+      const saved = safeStorage.getItem('vagago_bookings');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) return parsed;
@@ -466,9 +518,10 @@ export const AppProvider = ({ children }) => {
     return INITIAL_BOOKINGS;
   });
 
+
   const [vehicles, setVehicles] = useState(() => {
     try {
-      const saved = localStorage.getItem('vagago_vehicles');
+      const saved = safeStorage.getItem('vagago_vehicles');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) return parsed;
@@ -479,7 +532,7 @@ export const AppProvider = ({ children }) => {
 
   const [favorites, setFavorites] = useState(() => {
     try {
-      const saved = localStorage.getItem('vagago_favorites');
+      const saved = safeStorage.getItem('vagago_favorites');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) return parsed;
@@ -490,7 +543,7 @@ export const AppProvider = ({ children }) => {
 
   const [notifications, setNotifications] = useState(() => {
     try {
-      const saved = localStorage.getItem('vagago_notifications');
+      const saved = safeStorage.getItem('vagago_notifications');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) return parsed;
@@ -501,7 +554,7 @@ export const AppProvider = ({ children }) => {
 
   const [notificationPreferences, setNotificationPreferences] = useState(() => {
     try {
-      const saved = localStorage.getItem('vagago_notification_preferences');
+      const saved = safeStorage.getItem('vagago_notification_preferences');
       if (saved) {
         return JSON.parse(saved);
       }
@@ -583,7 +636,7 @@ export const AppProvider = ({ children }) => {
 
   const [coupons, setCoupons] = useState(() => {
     try {
-      const saved = localStorage.getItem('vagago_coupons');
+      const saved = safeStorage.getItem('vagago_coupons');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) return parsed;
@@ -594,7 +647,7 @@ export const AppProvider = ({ children }) => {
 
   const [reviews, setReviews] = useState(() => {
     try {
-      const saved = localStorage.getItem('vagago_reviews');
+      const saved = safeStorage.getItem('vagago_reviews');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) return parsed;
@@ -607,7 +660,7 @@ export const AppProvider = ({ children }) => {
 
     const [withdrawals, setWithdrawals] = useState(() => {
     try {
-      const saved = localStorage.getItem('vagago_withdrawals');
+      const saved = safeStorage.getItem('vagago_withdrawals');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) return parsed;
@@ -619,7 +672,7 @@ export const AppProvider = ({ children }) => {
   // DAYS OFF — Dias de Isenção de Taxa da Plataforma (0% comissão VagaGo para novas reservas)
   const [daysOff, setDaysOff] = useState(() => {
     try {
-      const saved = localStorage.getItem('vagago_daysOff');
+      const saved = safeStorage.getItem('vagago_daysOff');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -984,19 +1037,26 @@ export const AppProvider = ({ children }) => {
   const [isReferralModalOpen, setIsReferralModalOpen] = useState(false);
   const [editingSpot, setEditingSpot] = useState(null);
 
-  // URL / Route synchronization supporting dedicated /admin and #admin
+  // URL / Route synchronization supporting clean SEO URLs & /admin
   const [activeTab, setActiveTabState] = useState(() => {
+    if (initialRoute) {
+      return resolveRouteState(initialRoute, '').tab;
+    }
     if (typeof window !== 'undefined') {
-      const path = window.location.pathname.toLowerCase();
-      const hash = window.location.hash.toLowerCase();
-      if (path === '/admin' || path === '/admin/' || hash === '#admin' || hash === '#/admin') {
-        return 'admin_dashboard';
-      }
+      return resolveRouteState(window.location.pathname, window.location.hash).tab;
     }
     return 'landing';
   });
   const [isPageLoading, setIsPageLoading] = useState(false);
-  const [legalTab, setLegalTab] = useState('privacy_lgpd');
+  const [legalTab, setLegalTab] = useState(() => {
+    if (initialRoute) {
+      return resolveRouteState(initialRoute, '').legalTab || 'privacy_lgpd';
+    }
+    if (typeof window !== 'undefined') {
+      return resolveRouteState(window.location.pathname, window.location.hash).legalTab || 'privacy_lgpd';
+    }
+    return 'privacy_lgpd';
+  });
 
   const setActiveTab = (newTab) => {
     if (newTab === activeTab) return;
@@ -1004,10 +1064,11 @@ export const AppProvider = ({ children }) => {
     setActiveTabState(newTab);
     if (typeof window !== 'undefined') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      if (newTab === 'admin_dashboard') {
-        window.history.pushState(null, '', '#admin');
+      const targetUrl = TAB_TO_ROUTE[newTab];
+      if (targetUrl) {
+        window.history.pushState(null, '', targetUrl);
       } else if (window.location.hash === '#admin') {
-        window.history.pushState(null, '', window.location.pathname);
+        window.history.pushState(null, '', '/');
       }
     }
     setTimeout(() => {
@@ -1017,18 +1078,28 @@ export const AppProvider = ({ children }) => {
 
   const openTermsPage = (subTab = 'privacy_lgpd') => {
     setLegalTab(subTab);
-    setActiveTab('terms');
+    setActiveTabState('terms');
+    if (typeof window !== 'undefined') {
+      const subRoute =
+        subTab === 'cancellation'
+          ? '/cancelamento'
+          : subTab === 'contact'
+          ? '/contato'
+          : subTab === 'privacy_lgpd'
+          ? '/privacidade'
+          : '/termos';
+      window.history.pushState(null, '', subRoute);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
-  // Listen to popstate & hashchange for direct navigation to /admin
+  // Listen to popstate & hashchange for direct navigation
   useEffect(() => {
     const handleUrlSync = () => {
       if (typeof window !== 'undefined') {
-        const path = window.location.pathname.toLowerCase();
-        const hash = window.location.hash.toLowerCase();
-        if (path === '/admin' || path === '/admin/' || hash === '#admin' || hash === '#/admin') {
-          setActiveTabState('admin_dashboard');
-        }
+        const resolved = resolveRouteState(window.location.pathname, window.location.hash);
+        setActiveTabState(resolved.tab);
+        if (resolved.legalTab) setLegalTab(resolved.legalTab);
       }
     };
     window.addEventListener('popstate', handleUrlSync);

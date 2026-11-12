@@ -188,10 +188,10 @@ const MainContent = () => {
   );
 };
 
-export default function App() {
+export default function App({ initialRoute = '' }) {
   return (
     <ErrorBoundary>
-      <AppProvider>
+      <AppProvider initialRoute={initialRoute}>
         <MainContent />
       </AppProvider>
     </ErrorBoundary>
