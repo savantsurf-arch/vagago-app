@@ -72,28 +72,11 @@ CREATE TABLE IF NOT EXISTS public.parking_spaces (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 4B. TABELA DE AVALIAÇÕES PÓS-RESERVA
-CREATE TABLE IF NOT EXISTS public.reviews (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  booking_id UUID REFERENCES public.bookings(id) ON DELETE SET NULL,
-  space_id UUID REFERENCES public.parking_spaces(id) ON DELETE CASCADE,
-  user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
-  user_name TEXT NOT NULL,
-  rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
-  comment TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
+-- Garantir colunas adicionadas em evoluções posteriores (idempotente para bancos já existentes)
+ALTER TABLE public.parking_spaces ADD COLUMN IF NOT EXISTS price_monthly NUMERIC(10, 2);
+ALTER TABLE public.parking_spaces ADD COLUMN IF NOT EXISTS is_verified_host BOOLEAN DEFAULT true;
 
--- 4C. LISTA DE ESPERA DE ANFITRIÕES
-CREATE TABLE IF NOT EXISTS public.host_waitlist (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  name TEXT NOT NULL,
-  whatsapp TEXT NOT NULL,
-  neighborhood TEXT NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 5. TABELA DE RESERVAS
+-- 5. TABELA DE RESERVAS (criada antes de reviews por causa da FK booking_id)
 CREATE TABLE IF NOT EXISTS public.bookings (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   booking_number TEXT UNIQUE NOT NULL,
@@ -121,6 +104,27 @@ CREATE TABLE IF NOT EXISTS public.bookings (
   vehicle JSONB NOT NULL,
   check_in_time TIMESTAMP WITH TIME ZONE,
   check_out_time TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 5B. TABELA DE AVALIAÇÕES PÓS-RESERVA
+CREATE TABLE IF NOT EXISTS public.reviews (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  booking_id UUID REFERENCES public.bookings(id) ON DELETE SET NULL,
+  space_id UUID REFERENCES public.parking_spaces(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
+  user_name TEXT NOT NULL,
+  rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+  comment TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 5C. LISTA DE ESPERA DE ANFITRIÕES
+CREATE TABLE IF NOT EXISTS public.host_waitlist (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT NOT NULL,
+  whatsapp TEXT NOT NULL,
+  neighborhood TEXT NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -164,6 +168,20 @@ DROP POLICY IF EXISTS "policy_spaces_access" ON public.parking_spaces;
 DROP POLICY IF EXISTS "policy_bookings_access" ON public.bookings;
 DROP POLICY IF EXISTS "policy_withdrawals_access" ON public.withdrawals;
 DROP POLICY IF EXISTS "policy_coupons_access" ON public.coupons;
+
+DROP POLICY IF EXISTS "users_self_select" ON public.users;
+DROP POLICY IF EXISTS "users_self_update" ON public.users;
+DROP POLICY IF EXISTS "vehicles_owner_all" ON public.vehicles;
+DROP POLICY IF EXISTS "spaces_public_read" ON public.parking_spaces;
+DROP POLICY IF EXISTS "spaces_owner_write" ON public.parking_spaces;
+DROP POLICY IF EXISTS "bookings_participant_read" ON public.bookings;
+DROP POLICY IF EXISTS "bookings_driver_insert" ON public.bookings;
+DROP POLICY IF EXISTS "bookings_participant_update" ON public.bookings;
+DROP POLICY IF EXISTS "withdrawals_owner_all" ON public.withdrawals;
+DROP POLICY IF EXISTS "coupons_public_read" ON public.coupons;
+DROP POLICY IF EXISTS "reviews_public_read" ON public.reviews;
+DROP POLICY IF EXISTS "reviews_driver_insert" ON public.reviews;
+DROP POLICY IF EXISTS "waitlist_public_insert" ON public.host_waitlist;
 
 -- Usuários só leem/editam o próprio registro autenticado (operações admin via SERVICE_ROLE no servidor)
 CREATE POLICY "users_self_select" ON public.users FOR SELECT USING (auth.uid() = id);
