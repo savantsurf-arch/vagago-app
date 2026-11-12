@@ -727,6 +727,7 @@ export const SearchPage = () => {
                   latitude={focusedSpot.lat || -14.7966}
                   longitude={focusedSpot.lng || -39.2789}
                   endereco={focusedSpot.address || focusedSpot.neighborhood || 'Itabuna - BA'}
+                  origin={userLocation}
                   onPreviewRoute={() => setShowRouteInMap((prev) => !prev)}
                   isShowingRoute={showRouteInMap}
                   routeInfo={routeData}

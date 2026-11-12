@@ -539,7 +539,7 @@ export const SpotDetailsModal = () => {
                 )}
               </div>
 
-              {/* Localização Exata no Mapa + Botão "Como Chegar" (Waze / Google Maps / Apple Maps) */}
+              {/* Localização Exata no Mapa + Botão "Como Chegar" (OpenStreetMap / Waze / Apple Maps) */}
               <div>
                 <div className="flex items-center justify-between mb-2.5">
                   <h4 className="font-extrabold text-slate-900 text-sm">Localização e Trajeto no Mapa</h4>
@@ -569,6 +569,7 @@ export const SpotDetailsModal = () => {
                   latitude={selectedSpot.lat || -14.7966}
                   longitude={selectedSpot.lng || -39.2789}
                   endereco={selectedSpot.address || selectedSpot.neighborhood || 'Itabuna - BA'}
+                  origin={userLocation}
                   onPreviewRoute={() => setShowRouteInMap((prev) => !prev)}
                   isShowingRoute={showRouteInMap}
                   routeInfo={routeData}

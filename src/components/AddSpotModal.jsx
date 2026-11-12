@@ -25,7 +25,7 @@ import {
   UploadCloud,
   RefreshCw
 } from 'lucide-react';
-import { geocodeAddress } from '../services/geoUtils';
+import { geocodeAddressOSM } from '../services/geoUtils';
 import { compressImageToWebP } from '../services/imageUtils';
 
 export const AddSpotModal = () => {
@@ -175,8 +175,8 @@ export const AddSpotModal = () => {
             city: data.localidade || 'Itabuna',
             state: data.uf || 'BA'
           }));
-          // Geocode address
-          const geo = geocodeAddress(`${data.logradouro || ''}, ${data.bairro || ''}, ${data.localidade || 'Itabuna'}`);
+          // Geocodifica endereço via OpenStreetMap Nominatim com fallback em Itabuna
+          const geo = await geocodeAddressOSM(`${data.logradouro || ''}, ${data.bairro || ''}, ${data.localidade || 'Itabuna'}`);
           setFormData(prev => ({ ...prev, lat: geo.lat, lng: geo.lng }));
         }
       } catch (e) {

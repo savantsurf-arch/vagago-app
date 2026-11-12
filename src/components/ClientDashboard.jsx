@@ -25,7 +25,7 @@ import {
   XCircle,
   PlusCircle
 } from 'lucide-react';
-import { openExternalNavigation } from '../services/geoUtils';
+import { openExternalNavigation, getNavigationLinks } from '../services/geoUtils';
 import { AddVehicleModal } from './AddVehicleModal';
 import { HostChatModal } from './HostChatModal';
 import { ReviewModal } from './ReviewModal';
@@ -119,7 +119,8 @@ export const ClientDashboard = ({
 
   const handleShareBooking = (booking) => {
     if (!booking) return;
-    const shareText = `🚗 *Reserva de Garagem VagaGo*\n📍 *Local:* ${booking.spaceTitle}\n📌 *Endereço:* ${booking.spaceAddress}\n⏰ *Horário:* ${booking.date} das ${booking.startTime} às ${booking.endTime}\n🚘 *Veículo:* ${booking.vehicle?.brand || 'Veículo'} (${booking.vehicle?.plate || ''})\n🧭 *Navegar no Google Maps:* https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(booking.spaceAddress)}`;
+    const { openStreetMapUrl } = getNavigationLinks(booking.lat, booking.lng, booking.spaceAddress);
+    const shareText = `🚗 *Reserva de Garagem VagaGo*\n📍 *Local:* ${booking.spaceTitle}\n📌 *Endereço:* ${booking.spaceAddress}\n⏰ *Horário:* ${booking.date} das ${booking.startTime} às ${booking.endTime}\n🚘 *Veículo:* ${booking.vehicle?.brand || 'Veículo'} (${booking.vehicle?.plate || ''})\n🧭 *Navegar no OpenStreetMap:* ${openStreetMapUrl}`;
 
     if (navigator.share) {
       navigator.share({
@@ -401,11 +402,11 @@ export const ClientDashboard = ({
                       <button
                         type="button"
                         onClick={() => openExternalNavigation(b.lat || -14.7966, b.lng || -39.2789, b.spaceAddress || b.spaceTitle)}
-                        className="bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold px-3 py-2 rounded-xl flex items-center gap-1.5 transition shadow-xs cursor-pointer"
-                        title="Abrir rota no Google Maps ou Waze"
+                        className="bg-[#029518] hover:bg-[#018206] text-white text-xs font-bold px-3 py-2 rounded-xl flex items-center gap-1.5 transition shadow-xs cursor-pointer"
+                        title="Abrir rota no OpenStreetMap"
                       >
-                        <Navigation className="w-4 h-4 text-sky-200" />
-                        <span>Abrir no GPS (Maps)</span>
+                        <Navigation className="w-4 h-4 text-emerald-100" />
+                        <span>Abrir no OpenStreetMap</span>
                       </button>
 
 

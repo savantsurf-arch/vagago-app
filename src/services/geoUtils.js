@@ -175,8 +175,44 @@ export function calculateSmartParkOptions(spots = [], userLat, userLng) {
   };
 }
 
-// Links padronizados para apps externos de navegação ("Como Chegar")
-export function getNavigationLinks(lat, lng, address = '') {
+// Geocodificação real via OpenStreetMap Nominatim (gratuita) com fallback local em Itabuna - BA
+export async function geocodeAddressOSM(addressQuery) {
+  const localFallback = geocodeAddress(addressQuery);
+  if (!addressQuery || typeof fetch !== 'function') {
+    return localFallback;
+  }
+
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timeoutId = controller ? setTimeout(() => controller.abort(), 3000) : null;
+  const q = addressQuery.toLowerCase().includes('itabuna')
+    ? addressQuery
+    : `${addressQuery}, Itabuna, Bahia, Brasil`;
+
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=br&limit=1&viewbox=-39.35,-14.74,-39.20,-14.85&q=${encodeURIComponent(q)}`;
+    const res = await fetch(url, {
+      signal: controller?.signal,
+      headers: { Accept: 'application/json' }
+    });
+    if (!res.ok) return localFallback;
+    const rows = await res.json();
+    if (Array.isArray(rows) && rows[0]?.lat && rows[0]?.lon) {
+      return {
+        name: rows[0].display_name || localFallback?.name || addressQuery,
+        lat: Number(parseFloat(rows[0].lat).toFixed(6)),
+        lng: Number(parseFloat(rows[0].lon).toFixed(6))
+      };
+    }
+    return localFallback;
+  } catch {
+    return localFallback;
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
+// Links padronizados usando OpenStreetMap (principal) + Waze + Apple Maps
+export function getNavigationLinks(lat, lng, address = '', origin = null) {
   const hasCoords =
     lat !== null &&
     lat !== undefined &&
@@ -185,21 +221,38 @@ export function getNavigationLinks(lat, lng, address = '') {
     !Number.isNaN(Number(lat)) &&
     !Number.isNaN(Number(lng));
 
+  const hasOrigin =
+    origin &&
+    origin.lat !== null &&
+    origin.lat !== undefined &&
+    origin.lng !== null &&
+    origin.lng !== undefined &&
+    !Number.isNaN(Number(origin.lat)) &&
+    !Number.isNaN(Number(origin.lng));
+
+  const cleanLat = hasCoords ? Number(lat) : null;
+  const cleanLng = hasCoords ? Number(lng) : null;
   const dest = hasCoords
-    ? `${Number(lat)},${Number(lng)}`
+    ? `${cleanLat},${cleanLng}`
     : encodeURIComponent(address || 'Itabuna, BA');
 
+  const openStreetMapUrl = hasCoords
+    ? hasOrigin
+      ? `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${Number(origin.lat)}%2C${Number(origin.lng)}%3B${cleanLat}%2C${cleanLng}`
+      : `https://www.openstreetmap.org/?mlat=${cleanLat}&mlon=${cleanLng}#map=17/${cleanLat}/${cleanLng}`
+    : `https://www.openstreetmap.org/search?query=${encodeURIComponent(address || 'Itabuna, BA')}`;
+
   return {
-    googleMapsUrl: `https://www.google.com/maps/dir/?api=1&destination=${dest}&travelmode=driving`,
+    openStreetMapUrl,
     wazeUrl: hasCoords
-      ? `https://waze.com/ul?ll=${Number(lat)},${Number(lng)}&navigate=yes`
+      ? `https://waze.com/ul?ll=${cleanLat},${cleanLng}&navigate=yes`
       : `https://waze.com/ul?q=${encodeURIComponent(address || 'Itabuna, BA')}&navigate=yes`,
     appleMapsUrl: `https://maps.apple.com/?daddr=${dest}&dirflg=d`
   };
 }
 
-// Busca trajeto de carro via OSRM (OpenStreetMap gratuito) com fallback em linha reta
-export async function fetchDrivingRoute(fromLat, fromLng, toLat, toLng) {
+// Busca trajeto real via OSRM (OpenStreetMap gratuito) com fallback em linha reta
+export async function fetchDrivingRoute(fromLat, fromLng, toLat, toLng, mode = 'CAR') {
   const fLat = Number(fromLat);
   const fLng = Number(fromLng);
   const tLat = Number(toLat);
@@ -209,6 +262,8 @@ export async function fetchDrivingRoute(fromLat, fromLng, toLat, toLng) {
     return null;
   }
 
+  const isWalking = mode === 'WALKING';
+  const speedKmh = isWalking ? 4.8 : 25;
   const straightDistKm = calculateDistanceKm(fLat, fLng, tLat, tLng);
   const fallbackRoute = {
     coordinates: [
@@ -216,7 +271,7 @@ export async function fetchDrivingRoute(fromLat, fromLng, toLat, toLng) {
       [tLat, tLng]
     ],
     distanceKm: straightDistKm,
-    durationMin: Math.max(1, Math.round((straightDistKm / 25) * 60)),
+    durationMin: Math.max(1, Math.round((straightDistKm / speedKmh) * 60)),
     isEstimated: true
   };
 
@@ -226,9 +281,10 @@ export async function fetchDrivingRoute(fromLat, fromLng, toLat, toLng) {
 
   const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
   const timeoutId = controller ? setTimeout(() => controller.abort(), 3500) : null;
+  const profile = isWalking ? 'foot' : 'driving';
 
   try {
-    const url = `https://router.project-osrm.org/route/v1/driving/${fLng},${fLat};${tLng},${tLat}?overview=full&geometries=geojson`;
+    const url = `https://router.project-osrm.org/route/v1/${profile}/${fLng},${fLat};${tLng},${tLat}?overview=full&geometries=geojson`;
     const res = await fetch(url, { signal: controller?.signal });
     if (!res.ok) return fallbackRoute;
 
@@ -252,11 +308,78 @@ export async function fetchDrivingRoute(fromLat, fromLng, toLat, toLng) {
   }
 }
 
-// Open native maps app for navigation ("🧭 COMO CHEGAR")
-export function openExternalNavigation(lat, lng, address = '') {
-  const { appleMapsUrl, googleMapsUrl } = getNavigationLinks(lat, lng, address);
-  const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
-  const isIOS = /iPhone|iPad|iPod/i.test(ua);
+// Rotas alternativas baseadas em OpenStreetMap para o painel de navegação
+export function calculateOsmAlternativeRoutes(startLat, startLng, endLat, endLng, mode = 'CAR', osrmRoute = null) {
+  const safeDistKm = Math.max(
+    0.2,
+    osrmRoute?.distanceKm || calculateDistanceKm(startLat, startLng, endLat, endLng)
+  );
+  const baseMins = Math.max(
+    1,
+    osrmRoute?.durationMin || Math.round((safeDistKm / (mode === 'WALKING' ? 4.8 : 24)) * 60)
+  );
 
-  window.open(isIOS ? appleMapsUrl : googleMapsUrl, '_blank', 'noopener,noreferrer');
+  const straightLine = (offset = 0) => [
+    [Number(startLat), Number(startLng)],
+    [
+      (Number(startLat) + Number(endLat)) / 2 + offset,
+      (Number(startLng) + Number(endLng)) / 2 - offset
+    ],
+    [Number(endLat), Number(endLng)]
+  ];
+
+  const mainPolyline =
+    Array.isArray(osrmRoute?.coordinates) && osrmRoute.coordinates.length > 1
+      ? osrmRoute.coordinates
+      : straightLine(0);
+
+  let trafficStatus = '🟢 Via livre (OpenStreetMap)';
+  if (baseMins > 12 && mode === 'CAR') trafficStatus = '🟡 Fluxo moderado (OSM)';
+
+  return {
+    fastest: {
+      id: 'fastest',
+      title: '⚡ Rota Principal (OSM)',
+      subtitle: 'Via OpenStreetMap / OSRM',
+      distanceKm: Number(safeDistKm.toFixed(1)),
+      etaMinutes: baseMins,
+      etaString: `${baseMins} min (${safeDistKm.toFixed(1)} km)`,
+      trafficStatus,
+      polyline: mainPolyline
+    },
+    shortest: {
+      id: 'shortest',
+      title: '🛣️ Rota Direta',
+      subtitle: 'Via vias locais de Itabuna',
+      distanceKm: Math.max(0.1, Number((safeDistKm * 0.92).toFixed(1))),
+      etaMinutes: Math.max(1, baseMins - 1),
+      etaString: `${Math.max(1, baseMins - 1)} min (${Math.max(0.1, Number((safeDistKm * 0.92).toFixed(1)))} km)`,
+      trafficStatus: '🟢 Via local (OSM)',
+      polyline: straightLine(0.0004)
+    },
+    alternative: {
+      id: 'alternative',
+      title: '🌳 Rota Alternativa',
+      subtitle: 'Trajeto secundário OpenStreetMap',
+      distanceKm: Number((safeDistKm * 1.15).toFixed(1)),
+      etaMinutes: baseMins + 2,
+      etaString: `${baseMins + 2} min (${Number((safeDistKm * 1.15).toFixed(1))} km)`,
+      trafficStatus: '🟢 Trajeto alternativo',
+      polyline: straightLine(-0.0005)
+    }
+  };
+}
+
+export function assignGarageBoxNumber(spaceId = '') {
+  const letters = ['A', 'B', 'C', 'D'];
+  const hash = String(spaceId || '').split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+  const letter = letters[hash % letters.length];
+  const num = (hash % 18) + 1;
+  return `Box ${letter}-${num < 10 ? `0${num}` : num} (Vaga Privativa)`;
+}
+
+// Abre rota externa no OpenStreetMap (ou Apple Maps no iOS se preferir)
+export function openExternalNavigation(lat, lng, address = '', origin = null) {
+  const { openStreetMapUrl } = getNavigationLinks(lat, lng, address, origin);
+  window.open(openStreetMapUrl, '_blank', 'noopener,noreferrer');
 }

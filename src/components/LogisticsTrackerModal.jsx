@@ -21,10 +21,11 @@ import {
   Check
 } from 'lucide-react';
 import {
-  calculateAlternativeRoutes,
-  assignGarageBoxNumber
-} from '../services/googleServices';
-import { openExternalNavigation } from '../services/geoUtils';
+  fetchDrivingRoute,
+  calculateOsmAlternativeRoutes,
+  assignGarageBoxNumber,
+  openExternalNavigation
+} from '../services/geoUtils';
 
 export const LogisticsTrackerModal = ({ booking, isOpen, onClose }) => {
   const { userLocation, parkingSpaces, authorizeCheckIn } = useApp();
@@ -33,6 +34,22 @@ export const LogisticsTrackerModal = ({ booking, isOpen, onClose }) => {
   const [transportMode, setTransportMode] = useState('CAR'); // 'CAR' vs 'WALKING'
   const [selectedRouteId, setSelectedRouteId] = useState('fastest'); // 'fastest', 'shortest', 'alternative'
   const [isRecalculating, setIsRecalculating] = useState(false);
+  const [osrmRoute, setOsrmRoute] = useState(null);
+
+  const targetSpot = (parkingSpaces || []).find(s => s && s.id === booking?.spaceId) || {
+    lat: -14.7966,
+    lng: -39.2789,
+    entranceLat: -14.7968,
+    entranceLng: -39.2787,
+    title: booking?.spaceTitle,
+    address: booking?.spaceAddress,
+    photos: ["https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=1000&q=80"]
+  };
+
+  const destinationLat = targetSpot.entranceLat || targetSpot.lat || -14.7966;
+  const destinationLng = targetSpot.entranceLng || targetSpot.lng || -39.2789;
+  const originLat = userLocation?.lat || -14.7966;
+  const originLng = userLocation?.lng || -39.2789;
 
   useEffect(() => {
     if (booking) {
@@ -40,29 +57,32 @@ export const LogisticsTrackerModal = ({ booking, isOpen, onClose }) => {
     }
   }, [booking]);
 
+  useEffect(() => {
+    if (!isOpen || !booking) {
+      setOsrmRoute(null);
+      return;
+    }
+    let cancelled = false;
+    fetchDrivingRoute(originLat, originLng, destinationLat, destinationLng, transportMode).then(
+      (res) => {
+        if (!cancelled && res) setOsrmRoute(res);
+      }
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, booking, originLat, originLng, destinationLat, destinationLng, transportMode]);
+
   if (!isOpen || !booking) return null;
 
-  const targetSpot = parkingSpaces.find(s => s.id === booking.spaceId) || {
-    lat: -14.7966,
-    lng: -39.2789,
-    entranceLat: -14.7968,
-    entranceLng: -39.2787,
-    title: booking.spaceTitle,
-    address: booking.spaceAddress,
-    photos: ["https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=1000&q=80"]
-  };
-
-  // Target coordinates: navigate to exact entrance gate if available!
-  const destinationLat = targetSpot.entranceLat || targetSpot.lat;
-  const destinationLng = targetSpot.entranceLng || targetSpot.lng;
-
-  // Calculate 3 alternative routes
-  const routesData = calculateAlternativeRoutes(
-    userLocation.lat,
-    userLocation.lng,
+  // Rotas OpenStreetMap + OSRM
+  const routesData = calculateOsmAlternativeRoutes(
+    originLat,
+    originLng,
     destinationLat,
     destinationLng,
-    transportMode
+    transportMode,
+    osrmRoute
   );
 
   const activeRoute = routesData[selectedRouteId] || routesData.fastest;
@@ -70,9 +90,13 @@ export const LogisticsTrackerModal = ({ booking, isOpen, onClose }) => {
 
   const handleSimulateOffRoute = () => {
     setIsRecalculating(true);
-    setTimeout(() => {
-      setIsRecalculating(false);
-    }, 1500);
+    fetchDrivingRoute(originLat, originLng, destinationLat, destinationLng, transportMode)
+      .then((res) => {
+        if (res) setOsrmRoute(res);
+      })
+      .finally(() => {
+        setTimeout(() => setIsRecalculating(false), 600);
+      });
   };
 
   const handleSimulateArrival = () => {
@@ -285,11 +309,11 @@ export const LogisticsTrackerModal = ({ booking, isOpen, onClose }) => {
           {/* ACTION BUTTONS */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
             <button
-              onClick={() => openExternalNavigation(destinationLat, destinationLng, booking.spaceAddress)}
-              className="bg-sky-600 hover:bg-sky-500 text-white font-extrabold text-xs py-3.5 px-4 rounded-2xl shadow-lg shadow-sky-600/30 transition flex items-center justify-center gap-2 cursor-pointer"
+              onClick={() => openExternalNavigation(destinationLat, destinationLng, booking.spaceAddress, userLocation)}
+              className="bg-[#029518] hover:bg-[#018206] text-white font-extrabold text-xs py-3.5 px-4 rounded-2xl shadow-lg shadow-[#029518]/25 transition flex items-center justify-center gap-2 cursor-pointer"
             >
-              <Compass className="w-4 h-4 text-sky-200" />
-              <span>Abrir Navegação GPS Externa</span>
+              <Compass className="w-4 h-4 text-emerald-100" />
+              <span>Abrir Rota no OpenStreetMap</span>
             </button>
 
             <button

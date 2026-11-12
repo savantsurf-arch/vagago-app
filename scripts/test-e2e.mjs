@@ -5,9 +5,11 @@ import http from 'node:http';
 
 import {
   geocodeAddress,
+  geocodeAddressOSM,
   calculateSmartParkOptions,
   getNavigationLinks,
-  fetchDrivingRoute
+  fetchDrivingRoute,
+  calculateOsmAlternativeRoutes
 } from '../src/services/geoUtils.js';
 import {
   calculateBookingPricing,
@@ -90,9 +92,14 @@ async function runTests() {
   const smart = calculateSmartParkOptions(INITIAL_PARKING_SPACES, geoCentro.lat, geoCentro.lng);
   assert.ok(smart && smart.allEnriched.length >= 3, 'Busca nao retornou vagas em Itabuna');
 
-  const navLinks = getNavigationLinks(smart.allEnriched[0].lat, smart.allEnriched[0].lng);
+  const navLinks = getNavigationLinks(
+    smart.allEnriched[0].lat,
+    smart.allEnriched[0].lng,
+    smart.allEnriched[0].address,
+    { lat: geoCentro.lat, lng: geoCentro.lng }
+  );
+  assert.ok(navLinks.openStreetMapUrl.startsWith('https://www.openstreetmap.org/directions?'));
   assert.ok(navLinks.wazeUrl.startsWith('https://waze.com/ul?ll='));
-  assert.ok(navLinks.googleMapsUrl.startsWith('https://www.google.com/maps/dir/?api=1&destination='));
   assert.ok(navLinks.appleMapsUrl.startsWith('https://maps.apple.com/?daddr='));
 
   const previewRoute = await fetchDrivingRoute(
@@ -103,6 +110,18 @@ async function runTests() {
   );
   assert.ok(previewRoute && Array.isArray(previewRoute.coordinates) && previewRoute.coordinates.length >= 2);
   assert.equal(await fetchDrivingRoute(NaN, geoCentro.lng, -14.78, -39.27), null);
+
+  const osmGeo = await geocodeAddressOSM('Av. Cinquentenário, Centro');
+  assert.ok(osmGeo && osmGeo.lat < -14 && osmGeo.lat > -15, 'Geocodificacao OSM fora de Itabuna');
+  const altRoutes = calculateOsmAlternativeRoutes(
+    geoCentro.lat,
+    geoCentro.lng,
+    smart.allEnriched[0].lat,
+    smart.allEnriched[0].lng,
+    'CAR',
+    previewRoute
+  );
+  assert.ok(altRoutes.fastest && altRoutes.shortest && altRoutes.alternative);
 
   // 2B. Reservar (calculo + bloqueio de conflito + endpoint /api/bookings/create)
   const chosenSpot = smart.allEnriched[0];
