@@ -57,6 +57,7 @@ export const LoginPage = ({ initialMode = 'login', onBack = null }) => {
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showDevHelper, setShowDevHelper] = useState(false);
 
   // If already authenticated, redirect automatically
   useEffect(() => {
@@ -263,23 +264,24 @@ export const LoginPage = ({ initialMode = 'login', onBack = null }) => {
         />
       </svg>
 
-      {/* Bottom Center Curved Wave */}
+      {/* Bottom Center / Right Curved Wave */}
       <svg
-        className="pointer-events-none absolute bottom-0 left-1/4 sm:left-1/3 lg:left-1/2 w-80 sm:w-[520px] h-auto z-10 opacity-70 select-none"
-        viewBox="0 0 520 90"
+        className="pointer-events-none absolute bottom-0 right-0 sm:right-6 lg:right-16 w-80 sm:w-[520px] lg:w-[600px] h-auto z-10 opacity-80 select-none"
+        viewBox="0 0 600 110"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         aria-hidden="true"
       >
         <defs>
           <linearGradient id="bottomRibbon" x1="0%" y1="100%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#00D9FF" stopOpacity="0" />
-            <stop offset="50%" stopColor="#087BFF" stopOpacity="0.85" />
+            <stop offset="0%" stopColor="#087BFF" stopOpacity="0" />
+            <stop offset="45%" stopColor="#087BFF" stopOpacity="0.85" />
+            <stop offset="85%" stopColor="#00D9FF" stopOpacity="0.75" />
             <stop offset="100%" stopColor="#00D9FF" stopOpacity="0" />
           </linearGradient>
         </defs>
         <path
-          d="M 0 90 C 160 30, 360 25, 520 90 Z"
+          d="M 0 110 C 180 35, 420 30, 600 110 Z"
           fill="url(#bottomRibbon)"
         />
       </svg>
@@ -296,27 +298,14 @@ export const LoginPage = ({ initialMode = 'login', onBack = null }) => {
         <img
           src="/img/login-hero-night.jpg"
           alt=""
-          className="absolute bottom-0 left-0 w-full sm:w-[90%] lg:w-[68%] h-[56%] sm:h-[64%] lg:h-[70%] object-cover object-left-bottom opacity-90 select-none"
+          className="absolute bottom-0 left-0 w-full sm:w-[92%] lg:w-[72%] h-[60%] sm:h-[68%] lg:h-[75%] object-cover object-left-bottom opacity-95 select-none"
         />
-        {/* Top-to-bottom dark blend into #06152D */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#06152D] via-[#06152D]/60 to-transparent" />
-        {/* Right fade to maintain high contrast for the login card */}
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#06152D]/40 to-[#06152D]/90 hidden lg:block" />
+        {/* Top-to-bottom dark blend into #06152D for high text contrast in upper half */}
+        <div className="absolute top-0 inset-x-0 h-[50%] bg-gradient-to-b from-[#06152D] via-[#06152D]/85 to-transparent" />
+        {/* Right fade to maintain contrast behind the login card */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#06152D]/30 to-[#06152D]/95 hidden lg:block" />
         {/* Soft bottom edge shade */}
-        <div className="absolute bottom-0 inset-x-0 h-14 bg-gradient-to-t from-[#06152D]/80 to-transparent" />
-      </div>
-
-      {/* Discreet Explore Action in Top-Right */}
-      <div className="absolute top-4 sm:top-6 right-4 sm:right-8 z-30">
-        <button
-          type="button"
-          onClick={handleNavigateHome}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-300 hover:text-white transition cursor-pointer px-3.5 py-1.5 rounded-full bg-slate-900/50 hover:bg-slate-900/90 border border-slate-800/80 backdrop-blur-md shadow-sm"
-          title="Ver vagas disponíveis no mapa"
-        >
-          <Search className="w-3.5 h-3.5 text-[#00D9FF]" />
-          <span>Explorar vagas no mapa</span>
-        </button>
+        <div className="absolute bottom-0 inset-x-0 h-10 bg-gradient-to-t from-[#06152D]/90 to-transparent" />
       </div>
 
       {/* ==========================================================
@@ -570,7 +559,7 @@ export const LoginPage = ({ initialMode = 'login', onBack = null }) => {
                     </button>
 
                     {/* Rodapé: Cadastre-se */}
-                    <p className="text-center text-xs sm:text-sm text-slate-400 mt-4">
+                    <p className="text-center text-xs sm:text-sm text-slate-400 mt-5">
                       Não tem uma conta?{' '}
                       <button
                         type="button"
@@ -580,37 +569,6 @@ export const LoginPage = ({ initialMode = 'login', onBack = null }) => {
                         Cadastre-se
                       </button>
                     </p>
-
-                    {/* Contas de Acesso Rápido para Teste */}
-                    <div className="mt-4 pt-3 border-t border-slate-800/80 flex flex-col items-center gap-1.5 text-[11px] text-slate-400">
-                      <span className="font-semibold text-slate-400 text-[10px] uppercase tracking-wider">Acesso de Demonstração</span>
-                      <div className="flex flex-wrap items-center justify-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => { setEmailOrPhone('admin@vagago.com.br'); setPassword('Admin@2026'); clearMessages(); }}
-                          className="px-2.5 py-1 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-400/30 text-purple-300 font-bold transition cursor-pointer text-[10px]"
-                          title="Preencher com Admin: admin@vagago.com.br / Admin@2026"
-                        >
-                          🛡️ Admin
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => { setEmailOrPhone('rodrigo.mendonca@gmail.com'); setPassword('VagaGo@2026'); clearMessages(); }}
-                          className="px-2.5 py-1 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-400/30 text-sky-300 font-bold transition cursor-pointer text-[10px]"
-                          title="Preencher com Motorista: rodrigo.mendonca@gmail.com / VagaGo@2026"
-                        >
-                          🚗 Motorista
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => { setEmailOrPhone('carlos.costa@gmail.com'); setPassword('VagaGo@2026'); clearMessages(); }}
-                          className="px-2.5 py-1 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/30 text-emerald-300 font-bold transition cursor-pointer text-[10px]"
-                          title="Preencher com Anfitrião: carlos.costa@gmail.com / VagaGo@2026"
-                        >
-                          🏠 Anfitrião
-                        </button>
-                      </div>
-                    </div>
                   </>
                 )}
 
@@ -888,6 +846,51 @@ export const LoginPage = ({ initialMode = 'login', onBack = null }) => {
           </section>
 
         </div>
+      </div>
+
+      {/* Quick Access Helper for Testing (Discreet floating corner) */}
+      <div className="fixed bottom-2 right-2 sm:bottom-3 sm:right-3 z-50">
+        {!showDevHelper ? (
+          <button
+            type="button"
+            onClick={() => setShowDevHelper(true)}
+            className="opacity-25 hover:opacity-100 transition-opacity p-1.5 rounded-full bg-slate-900/60 hover:bg-slate-900 border border-slate-700/60 text-[10px] text-slate-300 flex items-center gap-1 cursor-pointer"
+            title="Acesso de teste rápido"
+          >
+            <span>🔑</span>
+          </button>
+        ) : (
+          <div className="p-2 rounded-2xl bg-[#07162E]/95 border border-slate-700 shadow-2xl backdrop-blur-md flex items-center gap-1.5 text-[11px]">
+            <button
+              type="button"
+              onClick={() => { setEmailOrPhone('admin@vagago.com.br'); setPassword('Admin@2026'); clearMessages(); setShowDevHelper(false); }}
+              className="px-2 py-1 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 font-bold border border-purple-400/30 text-[10px]"
+            >
+              🛡️ Admin
+            </button>
+            <button
+              type="button"
+              onClick={() => { setEmailOrPhone('rodrigo.mendonca@gmail.com'); setPassword('VagaGo@2026'); clearMessages(); setShowDevHelper(false); }}
+              className="px-2 py-1 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 font-bold border border-sky-400/30 text-[10px]"
+            >
+              🚗 Motorista
+            </button>
+            <button
+              type="button"
+              onClick={() => { setEmailOrPhone('carlos.costa@gmail.com'); setPassword('VagaGo@2026'); clearMessages(); setShowDevHelper(false); }}
+              className="px-2 py-1 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-bold border border-emerald-400/30 text-[10px]"
+            >
+              🏠 Anfitrião
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowDevHelper(false)}
+              className="text-slate-400 hover:text-white px-1 text-xs"
+            >
+              ✕
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
