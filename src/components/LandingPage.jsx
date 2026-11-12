@@ -129,9 +129,9 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
   return (
     <div className="space-y-12 sm:space-y-16 pb-16 bg-slate-50">
       {/* ==================================================
-          1. HERO MOBILE-FIRST ESTILO 99 (TOPO AMARELO + MAPA + "PARA ONDE VAMOS?")
+          1. HERO MOBILE-FIRST ESTILO 99 (TOPO AZUL VAGAGO + MAPA + "PARA ONDE VAMOS?")
          ================================================== */}
-      <section className="relative bg-gradient-to-b from-[#FFDC00] via-[#FFE64D] to-slate-50 pt-4 sm:pt-6 pb-6 border-b border-slate-200/70">
+      <section className="relative bg-gradient-to-b from-blue-600 via-sky-500 to-slate-50 pt-4 sm:pt-6 pb-6 border-b border-slate-200/70">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 space-y-4">
           {/* Header Estilo 99: Avatar + "Olá, Nome!" + Atalho Pix/QR + Toggle Anfitrião */}
           <div className="flex items-center justify-between gap-3">
@@ -149,10 +149,10 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
                 className="w-11 h-11 rounded-full object-cover ring-2 ring-white shadow-sm shrink-0"
               />
               <div>
-                <h1 className="text-lg sm:text-xl font-black text-slate-950 leading-tight group-hover:underline">
+                <h1 className="text-lg sm:text-xl font-black text-white leading-tight group-hover:underline drop-shadow-2xs">
                   Olá, {firstName}!
                 </h1>
-                <p className="text-xs font-bold text-slate-800/80 flex items-center gap-1">
+                <p className="text-xs font-bold text-sky-100 flex items-center gap-1">
                   <MapPin className="w-3 h-3" />
                   <span>{userLocation?.isLive ? 'GPS ativo em Itabuna' : 'Itabuna - BA • Estacione fácil'}</span>
                 </p>
@@ -164,7 +164,7 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
               <div
                 role="tablist"
                 aria-label="Selecione seu perfil no VagaGo"
-                className="hidden sm:inline-flex items-center p-1 bg-white/90 rounded-full shadow-xs border border-amber-300"
+                className="hidden sm:inline-flex items-center p-1 bg-white/95 rounded-full shadow-xs border border-white/60"
               >
                 <button
                   type="button"
@@ -200,7 +200,7 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
               <button
                 type="button"
                 onClick={handleQuickPixClick}
-                className="relative min-w-[44px] min-h-[44px] px-2.5 py-1.5 bg-white/85 hover:bg-white rounded-2xl border border-amber-300/80 shadow-xs flex items-center justify-center transition cursor-pointer"
+                className="relative min-w-[44px] min-h-[44px] px-2.5 py-1.5 bg-white/95 hover:bg-white rounded-2xl border border-white/60 shadow-xs flex items-center justify-center transition cursor-pointer"
                 aria-label="Abrir Carteira Pix e QR Code"
                 title="Carteira Pix e QR Code"
               >
@@ -216,7 +216,7 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
           <div
             role="tablist"
             aria-label="Alternar entre Motorista e Anfitrião"
-            className="grid grid-cols-2 sm:hidden p-1 bg-white/90 rounded-2xl shadow-xs border border-amber-300/80"
+            className="grid grid-cols-2 sm:hidden p-1 bg-white/95 rounded-2xl shadow-xs border border-white/60"
           >
             <button
               type="button"
@@ -262,7 +262,7 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
                   onClick={() => setActiveTab('search')}
                   className="absolute bottom-4 left-3 z-[15] bg-slate-900/90 hover:bg-slate-900 text-white text-xs font-extrabold px-3.5 py-2 rounded-full shadow-lg flex items-center gap-1.5 backdrop-blur-xs transition cursor-pointer"
                 >
-                  <Maximize2 className="w-3.5 h-3.5 text-[#FFDC00]" />
+                  <Maximize2 className="w-3.5 h-3.5 text-sky-400" />
                   <span>Mapa em tela cheia</span>
                 </button>
               </div>
@@ -397,9 +397,9 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
               </div>
 
               {/* Banner Promocional Estilo Card (igual centro da imagem modelo) */}
-              <div className="bg-gradient-to-r from-sky-600 via-sky-500 to-[#FFDC00] rounded-3xl p-4 sm:p-5 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-white">
+              <div className="bg-gradient-to-r from-blue-700 via-sky-600 to-cyan-500 rounded-3xl p-4 sm:p-5 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-white">
                 <div className="space-y-1">
-                  <span className="inline-block bg-slate-950 text-[#FFDC00] text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full">
+                  <span className="inline-block bg-white text-blue-700 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full">
                     VagaGo Itabuna
                   </span>
                   <h2 className="text-lg sm:text-xl font-black leading-tight text-white drop-shadow-2xs">

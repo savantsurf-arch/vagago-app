@@ -53,7 +53,7 @@ export const MobileBottomNav = ({ onOpenDepositModal = () => {} }) => {
               <span
                 className={`w-9 h-9 rounded-full flex items-center justify-center transition ${
                   isActive
-                    ? 'bg-[#FFDC00] text-slate-950 shadow-sm scale-105'
+                    ? 'bg-sky-600 text-white shadow-sm scale-105'
                     : 'text-slate-600 hover:bg-slate-100'
                 }`}
               >
@@ -61,7 +61,7 @@ export const MobileBottomNav = ({ onOpenDepositModal = () => {} }) => {
               </span>
               <span
                 className={`text-[11px] leading-none font-extrabold ${
-                  isActive ? 'text-slate-950' : 'text-slate-600'
+                  isActive ? 'text-sky-700' : 'text-slate-600'
                 }`}
               >
                 {item.label}

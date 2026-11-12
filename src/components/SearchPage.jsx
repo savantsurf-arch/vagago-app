@@ -308,7 +308,7 @@ export const SearchPage = () => {
             >
               <SlidersHorizontal className="w-4 h-4" />
               {activeFiltersCount > 0 && (
-                <span className="bg-[#FFDC00] text-slate-950 text-[10px] font-black px-1.5 py-0.5 rounded-full">
+                <span className="bg-sky-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
                   {activeFiltersCount}
                 </span>
               )}
@@ -335,7 +335,7 @@ export const SearchPage = () => {
               aria-label="Filtrar por período de cobrança"
               value={billingType}
               onChange={(e) => setSearchFilters({ ...safeFilters, billingType: e.target.value })}
-              className="px-3 py-2 rounded-full text-xs font-extrabold shadow-sm border border-slate-200 bg-[#FFDC00] text-slate-950 shrink-0 cursor-pointer outline-none"
+              className="px-3 py-2 rounded-full text-xs font-extrabold shadow-sm border border-sky-700 bg-sky-600 text-white shrink-0 cursor-pointer outline-none"
             >
               <option value="hora">⏱️ Por hora</option>
               <option value="diaria">📅 Diária</option>
