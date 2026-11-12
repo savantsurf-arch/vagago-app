@@ -1,4 +1,4 @@
-import React, { useState, Component } from 'react';
+import React, { useState, Component, Suspense, lazy } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { Navbar } from './components/Navbar';
 
@@ -6,26 +6,38 @@ import { LandingPage } from './components/LandingPage';
 import { HostLandingPage } from './components/HostLandingPage';
 import { SearchPage } from './components/SearchPage';
 import { TermsPrivacyPage } from './components/TermsPrivacyPage';
-import { SpotDetailsModal } from './components/SpotDetailsModal';
-import { BookingFlowModal } from './components/BookingFlowModal';
-import { CheckInScannerModal } from './components/CheckInScannerModal';
-import { AddSpotModal } from './components/AddSpotModal';
-import { ReferralModal } from './components/ReferralModal';
-import { AuthModal } from './components/AuthModal';
-import { ExtendBookingModal } from './components/ExtendBookingModal';
-import { WalletDepositModal } from './components/WalletDepositModal';
-import { EditProfileModal } from './components/EditProfileModal';
-import { ClientDashboard } from './components/ClientDashboard';
-import { ProfilePage } from './components/ProfilePage';
-
-import { OwnerDashboard } from './components/OwnerDashboard';
-import { AdminPanel } from './components/AdminPanel';
-import { NotificationsPage } from './components/NotificationsPage';
 import { NotificationToast } from './components/NotificationToast';
 import { Footer } from './components/Footer';
 import { LiveChatWidget } from './components/LiveChatWidget';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { RotateCcw, Sparkles } from 'lucide-react';
+
+const SpotDetailsModal = lazy(() => import('./components/SpotDetailsModal').then(m => ({ default: m.SpotDetailsModal })));
+const BookingFlowModal = lazy(() => import('./components/BookingFlowModal').then(m => ({ default: m.BookingFlowModal })));
+const CheckInScannerModal = lazy(() => import('./components/CheckInScannerModal').then(m => ({ default: m.CheckInScannerModal })));
+const AddSpotModal = lazy(() => import('./components/AddSpotModal').then(m => ({ default: m.AddSpotModal })));
+const ReferralModal = lazy(() => import('./components/ReferralModal').then(m => ({ default: m.ReferralModal })));
+const AuthModal = lazy(() => import('./components/AuthModal').then(m => ({ default: m.AuthModal })));
+const ExtendBookingModal = lazy(() => import('./components/ExtendBookingModal').then(m => ({ default: m.ExtendBookingModal })));
+const WalletDepositModal = lazy(() => import('./components/WalletDepositModal').then(m => ({ default: m.WalletDepositModal })));
+const EditProfileModal = lazy(() => import('./components/EditProfileModal').then(m => ({ default: m.EditProfileModal })));
+const LogisticsTrackerModal = lazy(() => import('./components/LogisticsTrackerModal').then(m => ({ default: m.LogisticsTrackerModal })));
+const ClientDashboard = lazy(() => import('./components/ClientDashboard').then(m => ({ default: m.ClientDashboard })));
+const ProfilePage = lazy(() => import('./components/ProfilePage').then(m => ({ default: m.ProfilePage })));
+const OwnerDashboard = lazy(() => import('./components/OwnerDashboard').then(m => ({ default: m.OwnerDashboard })));
+const AdminPanel = lazy(() => import('./components/AdminPanel').then(m => ({ default: m.AdminPanel })));
+const NotificationsPage = lazy(() => import('./components/NotificationsPage').then(m => ({ default: m.NotificationsPage })));
+
+const PageSkeletonFallback = () => (
+  <div className="max-w-6xl mx-auto px-4 py-10 space-y-4 animate-pulse" aria-busy="true" aria-label="Carregando conteúdo">
+    <div className="h-28 bg-slate-200 rounded-3xl w-full" />
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="h-32 bg-slate-200 rounded-2xl" />
+      <div className="h-32 bg-slate-200 rounded-2xl" />
+      <div className="h-32 bg-slate-200 rounded-2xl" />
+    </div>
+  </div>
+);
 
 
 
@@ -108,7 +120,7 @@ class ErrorBoundary extends Component {
 }
 
 const MainContent = () => {
-  const { activeTab, activeRole, bookings, isPageLoading } = useApp();
+  const { activeTab, isPageLoading } = useApp();
   const [trackingBooking, setTrackingBooking] = useState(null);
   const [extendingBooking, setExtendingBooking] = useState(null);
   const [isDepositOpen, setIsDepositOpen] = useState(false);
@@ -132,17 +144,19 @@ const MainContent = () => {
         {activeTab === 'host_landing' && <HostLandingPage />}
         {(activeTab === 'search' || activeTab === 'favorites') && <SearchPage />}
         {activeTab === 'terms' && <TermsPrivacyPage />}
-        {activeTab === 'client_dashboard' && (
-          <ClientDashboard
-            onOpenLogisticsTracker={(b) => setTrackingBooking(b)}
-            onOpenExtendModal={(b) => setExtendingBooking(b)}
-            onOpenDepositModal={() => setIsDepositOpen(true)}
-          />
-        )}
-        {(activeTab === 'owner_dashboard' || activeTab === 'owner_spots' || activeTab === 'owner_finance' || activeTab === 'owner_reservas') && <OwnerDashboard />}
-        {activeTab === 'profile' && <ProfilePage />}
-        {activeTab === 'notifications' && <NotificationsPage />}
-        {activeTab === 'admin_dashboard' && <AdminPanel />}
+        <Suspense fallback={<PageSkeletonFallback />}>
+          {activeTab === 'client_dashboard' && (
+            <ClientDashboard
+              onOpenLogisticsTracker={(b) => setTrackingBooking(b)}
+              onOpenExtendModal={(b) => setExtendingBooking(b)}
+              onOpenDepositModal={() => setIsDepositOpen(true)}
+            />
+          )}
+          {(activeTab === 'owner_dashboard' || activeTab === 'owner_spots' || activeTab === 'owner_finance' || activeTab === 'owner_reservas') && <OwnerDashboard />}
+          {activeTab === 'profile' && <ProfilePage />}
+          {activeTab === 'notifications' && <NotificationsPage />}
+          {activeTab === 'admin_dashboard' && <AdminPanel />}
+        </Suspense>
       </div>
 
       {/* Global Real-Time Notification Toast Alert */}
@@ -160,30 +174,30 @@ const MainContent = () => {
         onToggle={setIsLiveChatOpen}
       />
 
-
-
-      {/* Global Modals */}
-      <AuthModal />
-      <EditProfileModal />
-      <SpotDetailsModal />
-      <BookingFlowModal />
-      <CheckInScannerModal />
-      <AddSpotModal />
-      <ReferralModal />
-
-
-      {/* Driver Pack Modals */}
-      <ExtendBookingModal
-        booking={extendingBooking}
-        isOpen={Boolean(extendingBooking)}
-        onClose={() => setExtendingBooking(null)}
-      />
-
-
-      <WalletDepositModal
-        isOpen={isDepositOpen}
-        onClose={() => setIsDepositOpen(false)}
-      />
+      {/* Global Modals (Code-Split) */}
+      <Suspense fallback={null}>
+        <AuthModal />
+        <EditProfileModal />
+        <SpotDetailsModal />
+        <BookingFlowModal />
+        <CheckInScannerModal />
+        <AddSpotModal />
+        <ReferralModal />
+        <LogisticsTrackerModal
+          booking={trackingBooking}
+          isOpen={Boolean(trackingBooking)}
+          onClose={() => setTrackingBooking(null)}
+        />
+        <ExtendBookingModal
+          booking={extendingBooking}
+          isOpen={Boolean(extendingBooking)}
+          onClose={() => setExtendingBooking(null)}
+        />
+        <WalletDepositModal
+          isOpen={isDepositOpen}
+          onClose={() => setIsDepositOpen(false)}
+        />
+      </Suspense>
     </main>
   );
 };

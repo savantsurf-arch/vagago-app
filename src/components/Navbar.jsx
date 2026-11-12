@@ -85,6 +85,8 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
                 <img
                   src="/logo-vagago.png"
                   alt="VagaGo"
+                  width="72"
+                  height="48"
                   className="h-10 sm:h-12 w-auto object-contain transition transform group-hover:scale-105"
                 />
               </button>
@@ -283,7 +285,8 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
               <button
                 type="button"
                 onClick={() => setIsNotifOpen(true)}
-                className="relative p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+                className="relative min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+                aria-label="Abrir notificações"
                 title="Notificações"
               >
                 <Bell className="w-5 h-5" />
@@ -372,7 +375,9 @@ export const Navbar = ({ onOpenDepositModal = () => {} }) => {
               <button
                 type="button"
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="md:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
+                aria-expanded={isMobileMenuOpen}
+                aria-label={isMobileMenuOpen ? 'Fechar menu principal' : 'Abrir menu principal'}
+                className="md:hidden min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
               >
                 {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>

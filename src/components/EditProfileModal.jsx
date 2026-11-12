@@ -163,6 +163,9 @@ export const EditProfileModal = () => {
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Editar perfil"
       onClick={(e) => {
         if (e.target === e.currentTarget) setIsEditProfileModalOpen(false);
       }}

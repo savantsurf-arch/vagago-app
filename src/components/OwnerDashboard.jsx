@@ -266,7 +266,12 @@ export const OwnerDashboard = () => {
       {/* SaaS Greeting & Header Banner */}
       <div className="bg-gradient-to-r from-emerald-700 via-emerald-800 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
-          <div className="relative group cursor-pointer" onClick={openEditProfileModal}>
+          <button
+            type="button"
+            onClick={openEditProfileModal}
+            aria-label="Alterar foto do perfil de anfitrião"
+            className="relative group cursor-pointer rounded-full focus:outline-none"
+          >
             <img
               src={safeUser.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=250&q=80"}
               alt={safeUser.name || "Proprietário"}
@@ -275,7 +280,7 @@ export const OwnerDashboard = () => {
             <div className="absolute inset-0 bg-slate-900/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
               <UserCog className="w-5 h-5 text-white" />
             </div>
-          </div>
+          </button>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <span className="bg-amber-400/20 text-amber-300 border border-amber-400/40 text-xs font-black px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-xs">

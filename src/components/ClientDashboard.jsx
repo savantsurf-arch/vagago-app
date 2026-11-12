@@ -139,7 +139,12 @@ export const ClientDashboard = ({
       {/* Header Greeting */}
       <div className="bg-gradient-to-r from-sky-600 to-sky-700 text-white rounded-3xl p-6 sm:p-8 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="relative group cursor-pointer" onClick={openEditProfileModal}>
+          <button
+            type="button"
+            onClick={openEditProfileModal}
+            aria-label="Alterar foto do perfil"
+            className="relative group cursor-pointer rounded-full focus:outline-none"
+          >
             <img
               src={safeUser.avatar}
               alt={safeUser.name}
@@ -148,7 +153,7 @@ export const ClientDashboard = ({
             <div className="absolute inset-0 bg-slate-900/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
               <UserCog className="w-5 h-5 text-white" />
             </div>
-          </div>
+          </button>
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-sky-200 uppercase tracking-wider">Painel do Motorista</span>
