@@ -42,7 +42,7 @@ const getEntranceGateMarkerIcon = () => {
   return cachedEntranceGateIcon;
 };
 
-const getPriceMarkerIcon = (spot, isSelected = false, isFavorite = false) => {
+const getPriceMarkerIcon = (spot, isSelected = false, isFavorite = false, billingType = 'hora') => {
   const isOccupied = spot.availabilityStatus === 'Ocupada';
   const isUnavailable = spot.availabilityStatus === 'Indisponível';
 
@@ -51,9 +51,16 @@ const getPriceMarkerIcon = (spot, isSelected = false, isFavorite = false) => {
   if (isUnavailable) bgColor = '#ef4444';
   if (isSelected) bgColor = '#0f172a';
 
-  const priceVal = Number(spot.priceHourly || 6).toFixed(0);
+  const rawPrice =
+    billingType === 'diaria'
+      ? Number(spot.priceDaily || Number(spot.priceHourly || 6) * 5)
+      : billingType === 'mensal'
+      ? Number(spot.priceMonthly || Number(spot.priceHourly || 6) * 45)
+      : Number(spot.priceHourly || 6);
+  const suffix = billingType === 'diaria' ? '/d' : billingType === 'mensal' ? '/m' : '/h';
+  const priceVal = rawPrice.toFixed(0);
   const borderColor = isFavorite ? '#f43f5e' : '#ffffff';
-  const labelText = isOccupied ? 'Ocupada' : isUnavailable ? 'Indisp.' : `R$ ${priceVal}/h`;
+  const labelText = isOccupied ? 'Ocupada' : isUnavailable ? 'Indisp.' : `R$ ${priceVal}${suffix}`;
 
   const cacheKey = `${bgColor}|${borderColor}|${labelText}|${isSelected ? 1 : 0}|${isFavorite ? 1 : 0}`;
   if (priceIconCache.has(cacheKey)) {
@@ -147,6 +154,7 @@ export default function InteractiveMapCanvas({
   onSelectSpot = () => {},
   fullScreen = false,
   disablePopupOnSelect = false,
+  billingType = 'hora',
   controlsTopClass = '',
   center = [-14.7966, -39.2789],
   zoom = 14,
@@ -242,7 +250,7 @@ export default function InteractiveMapCanvas({
         {validSpots.map((spot) => {
           const isSelected = selectedSpotId === spot.id || hoveredSpotId === spot.id;
           const isFav = safeFavorites.includes(spot.id);
-          const markerIcon = getPriceMarkerIcon(spot, isSelected, isFav);
+          const markerIcon = getPriceMarkerIcon(spot, isSelected, isFav, billingType);
           const spotLat = Number(spot.lat);
           const spotLng = Number(spot.lng);
 

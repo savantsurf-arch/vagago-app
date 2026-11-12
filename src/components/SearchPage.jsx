@@ -54,6 +54,21 @@ export const SearchPage = () => {
     [favorites]
   );
 
+  const billingType = safeFilters.billingType || 'hora';
+
+  const getSpotPriceByPeriod = (spot, period = billingType) => {
+    if (!spot) return 6;
+    if (period === 'diaria') return Number(spot.priceDaily || (Number(spot.priceHourly || 6) * 5));
+    if (period === 'mensal') return Number(spot.priceMonthly || (Number(spot.priceHourly || 6) * 45));
+    return Number(spot.priceHourly || 6);
+  };
+
+  const getPeriodSuffix = (period = billingType) => {
+    if (period === 'diaria') return '/dia';
+    if (period === 'mensal') return '/mês';
+    return '/h';
+  };
+
   const displayQueryValue =
     !searchLocation || searchLocation.trim().toLowerCase() === 'itabuna, ba'
       ? ''
@@ -99,7 +114,7 @@ export const SearchPage = () => {
       if (safeFilters.accessHours === '24H' && !is24hSpot) return false;
       if (safeFilters.accessHours === 'COMMERCIAL' && is24hSpot) return false;
 
-      const spotPrice = Number(spot.priceHourly || 6);
+      const spotPrice = getSpotPriceByPeriod(spot, 'hora');
       if (safeFilters.maxPrice && spotPrice > safeFilters.maxPrice) return false;
 
       const featuresList = (spot.features || []).map((f) => (f || '').toLowerCase());
@@ -145,16 +160,22 @@ export const SearchPage = () => {
   }, [parkingSpaces, isFavoritesMode, safeFavorites, displayQueryValue, distanceRadius, safeFilters]);
 
   const sortedSpots = useMemo(() => {
+    const priceFor = (s) => {
+      if (billingType === 'diaria') return Number(s?.priceDaily || Number(s?.priceHourly || 6) * 5);
+      if (billingType === 'mensal') return Number(s?.priceMonthly || Number(s?.priceHourly || 6) * 45);
+      return Number(s?.priceHourly || 6);
+    };
     return [...filteredSpots].sort((a, b) => {
       if (sortBy === 'NEAREST') return (a.calculatedDistKm || 0.5) - (b.calculatedDistKm || 0.5);
-      if (sortBy === 'CHEAPEST') return (a.priceHourly || 6) - (b.priceHourly || 6);
+      if (sortBy === 'CHEAPEST') return priceFor(a) - priceFor(b);
       if (sortBy === 'TOP_RATED') return (b.rating || 5) - (a.rating || 5);
-      return (b.rating || 5) / (b.priceHourly || 6) - (a.rating || 5) / (a.priceHourly || 6);
+      return (b.rating || 5) / priceFor(b) - (a.rating || 5) / priceFor(a);
     });
-  }, [filteredSpots, sortBy]);
+  }, [filteredSpots, sortBy, billingType]);
 
   const activeFiltersCount = [
     distanceRadius !== 'all',
+    billingType !== 'hora',
     safeFilters.vehicleType && safeFilters.vehicleType !== 'Todos',
     safeFilters.accessHours && safeFilters.accessHours !== 'ALL',
     safeFilters.coveredOnly,
@@ -210,8 +231,13 @@ export const SearchPage = () => {
 
   const cheapestPrice = useMemo(() => {
     if (sortedSpots.length === 0) return 0;
-    return Math.min(...sortedSpots.map((s) => Number(s.priceHourly || 6)));
-  }, [sortedSpots]);
+    const priceFor = (s) => {
+      if (billingType === 'diaria') return Number(s?.priceDaily || Number(s?.priceHourly || 6) * 5);
+      if (billingType === 'mensal') return Number(s?.priceMonthly || Number(s?.priceHourly || 6) * 45);
+      return Number(s?.priceHourly || 6);
+    };
+    return Math.min(...sortedSpots.map(priceFor));
+  }, [sortedSpots, billingType]);
 
   return (
     <div className="relative h-[calc(100dvh-72px)] sm:h-[calc(100dvh-80px)] w-full bg-slate-100 overflow-hidden font-sans">
@@ -221,6 +247,7 @@ export const SearchPage = () => {
           eagerLoad={true}
           fullScreen={true}
           disablePopupOnSelect={true}
+          billingType={billingType}
           className="w-full h-full min-h-0 relative"
           spots={sortedSpots}
           userLocation={userLocation}
@@ -304,11 +331,21 @@ export const SearchPage = () => {
 
           {/* Quick Sort & Filter Pills (Horizontal Scroll) */}
           <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-1">
+            <select
+              aria-label="Filtrar por período de cobrança"
+              value={billingType}
+              onChange={(e) => setSearchFilters({ ...safeFilters, billingType: e.target.value })}
+              className="px-3 py-2 rounded-full text-xs font-extrabold shadow-sm border border-slate-200 bg-[#FFDC00] text-slate-950 shrink-0 cursor-pointer outline-none"
+            >
+              <option value="hora">⏱️ Por hora</option>
+              <option value="diaria">📅 Diária</option>
+              <option value="mensal">🗓️ Mensal</option>
+            </select>
             {[
-              { id: 'BEST', label: '🏆 Melhor', type: 'sort' },
-              { id: 'NEAREST', label: '📍 Mais próxima', type: 'sort' },
-              { id: 'CHEAPEST', label: '💰 Menor preço', type: 'sort' },
-              { id: 'TOP_RATED', label: '⭐ Melhor nota', type: 'sort' }
+              { id: 'BEST', label: '🏆 Melhor' },
+              { id: 'NEAREST', label: '📍 Mais próxima' },
+              { id: 'CHEAPEST', label: '💰 Menor preço' },
+              { id: 'TOP_RATED', label: '⭐ Melhor nota' }
             ].map((item) => {
               const active = sortBy === item.id;
               return (
@@ -368,6 +405,12 @@ export const SearchPage = () => {
               ❤️ Favoritas ({safeFavorites.length})
             </button>
           </div>
+          {/* Feedback amigável se GPS for negado ou ativo */}
+          {userLocation?.error && (
+            <div className="bg-amber-50/95 border border-amber-200 text-amber-900 text-xs font-bold px-3 py-2 rounded-xl shadow-sm">
+              {userLocation.error}
+            </div>
+          )}
         </div>
       </div>
 
@@ -401,6 +444,31 @@ export const SearchPage = () => {
                 >
                   <X className="w-5 h-5" />
                 </button>
+              </div>
+            </div>
+
+            {/* Período de Cobrança */}
+            <div className="space-y-2">
+              <label className="text-xs font-extrabold text-slate-800 block">Período</label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {[
+                  { id: 'hora', label: 'Por hora' },
+                  { id: 'diaria', label: 'Diária' },
+                  { id: 'mensal', label: 'Mensal' }
+                ].map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setSearchFilters({ ...safeFilters, billingType: p.id })}
+                    className={`py-2 px-2 rounded-xl text-xs font-bold border transition cursor-pointer ${
+                      billingType === p.id
+                        ? 'bg-slate-900 text-white border-slate-900'
+                        : 'bg-slate-50 text-slate-700 border-slate-200'
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -606,15 +674,19 @@ export const SearchPage = () => {
               </div>
 
               <div className="text-right shrink-0">
-                <span className="text-[11px] uppercase font-bold text-slate-400 block">Por hora</span>
+                <span className="text-[11px] uppercase font-bold text-slate-400 block">
+                  {billingType === 'diaria' ? 'Diária' : billingType === 'mensal' ? 'Mensal' : 'Por hora'}
+                </span>
                 <p className="text-3xl font-black text-slate-900 leading-none">
-                  R$ {formatPriceParts(focusedSpot.priceHourly).intPart}
+                  R$ {formatPriceParts(getSpotPriceByPeriod(focusedSpot)).intPart}
                   <span className="text-sm font-bold text-slate-500">
-                    ,{formatPriceParts(focusedSpot.priceHourly).decPart}/h
+                    ,{formatPriceParts(getSpotPriceByPeriod(focusedSpot)).decPart}{getPeriodSuffix()}
                   </span>
                 </p>
                 <span className="text-[11px] font-semibold text-slate-500 block mt-1">
-                  Diária R$ {Number(focusedSpot.priceDaily || 28).toFixed(0)}
+                  {billingType === 'hora'
+                    ? `Diária R$ ${Number(focusedSpot.priceDaily || 28).toFixed(0)}`
+                    : `Hora R$ ${Number(focusedSpot.priceHourly || 6).toFixed(2)}/h`}
                 </span>
               </div>
             </div>
@@ -641,7 +713,7 @@ export const SearchPage = () => {
                 </h1>
                 <p className="text-xs text-slate-500 font-semibold">
                   {sortedSpots.length} {sortedSpots.length === 1 ? 'opção em Itabuna' : 'opções em Itabuna'}
-                  {cheapestPrice > 0 ? ` • A partir de R$ ${cheapestPrice.toFixed(2)}/h` : ''}
+                  {cheapestPrice > 0 ? ` • A partir de R$ ${cheapestPrice.toFixed(2)}${getPeriodSuffix()}` : ''}
                 </p>
               </div>
 
@@ -689,9 +761,10 @@ export const SearchPage = () => {
                 ) : (
                   sortedSpots.map((spot, index) => {
                     const isRecommended = index === 0;
-                    const isCheapest = cheapestPrice > 0 && Number(spot.priceHourly || 6) === cheapestPrice;
+                    const displayPrice = getSpotPriceByPeriod(spot);
+                    const isCheapest = cheapestPrice > 0 && displayPrice === cheapestPrice;
                     const isSelected = selectedSpotId === spot.id;
-                    const { intPart, decPart } = formatPriceParts(spot.priceHourly);
+                    const { intPart, decPart } = formatPriceParts(displayPrice);
                     const thumb =
                       (spot.photos && spot.photos[0]) ||
                       spot.facadePhoto ||
@@ -763,7 +836,7 @@ export const SearchPage = () => {
                         <div className="text-right shrink-0 space-y-1.5">
                           <p className="text-xl sm:text-2xl font-black text-slate-900 leading-none">
                             R$ {intPart}
-                            <span className="text-xs font-semibold text-slate-500">,{decPart}/h</span>
+                            <span className="text-xs font-semibold text-slate-500">,{decPart}{getPeriodSuffix()}</span>
                           </p>
                           <button
                             type="button"

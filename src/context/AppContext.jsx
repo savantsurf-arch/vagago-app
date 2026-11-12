@@ -1017,7 +1017,14 @@ export const AppProvider = ({ children, initialRoute = '' }) => {
   });
 
   const requestUserLocation = () => {
-    if (!navigator.geolocation) return;
+    if (typeof window === 'undefined' || !navigator?.geolocation) {
+      setUserLocation(prev => ({
+        ...prev,
+        isLive: false,
+        error: 'Geolocalização não suportada neste navegador. Usando Centro de Itabuna.'
+      }));
+      return;
+    }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setUserLocation({
@@ -1028,9 +1035,14 @@ export const AppProvider = ({ children, initialRoute = '' }) => {
           error: null
         });
       },
-      (err) => {
-        console.warn("Geolocation blocked, using default pilot city: Itabuna - BA");
-      }
+      () => {
+        setUserLocation(prev => ({
+          ...prev,
+          isLive: false,
+          error: 'Permissão de localização negada. Exibindo vagas próximas ao Centro de Itabuna.'
+        }));
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
     );
   };
 
