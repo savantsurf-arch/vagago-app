@@ -210,10 +210,12 @@ const MainContent = () => {
       {!isLoginScreen && activeTab !== 'admin_dashboard' && activeTab !== 'search' && activeTab !== 'favorites' && (
         <Footer onOpenChatHelp={() => setIsLiveChatOpen(true)} />
       )}
-      <LiveChatWidget
-        isOpen={isLiveChatOpen}
-        onToggle={setIsLiveChatOpen}
-      />
+      {!isLoginScreen && (
+        <LiveChatWidget
+          isOpen={isLiveChatOpen}
+          onToggle={setIsLiveChatOpen}
+        />
+      )}
 
       {/* Global Modals (Code-Split) */}
       <Suspense fallback={null}>
