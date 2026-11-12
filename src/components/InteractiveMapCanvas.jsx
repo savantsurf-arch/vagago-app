@@ -233,14 +233,14 @@ export default function InteractiveMapCanvas({
           fullScreen={fullScreen}
         />
 
-        {/* CartoDB Voyager Tile Layer optimized for mobile 4G/5G data savings */}
+        {/* OpenStreetMap Standard Tile Layer (100% gratuito e sem API key) */}
         <TileLayer
-          attribution='&copy; <a href="https://carto.com/">CARTO</a> & OpenStreetMap'
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+          maxZoom={19}
           updateWhenIdle={true}
           updateWhenZooming={false}
           keepBuffer={1}
-          detectRetina={false}
         />
 
         {routePolyline && routePolyline.length > 1 && (
