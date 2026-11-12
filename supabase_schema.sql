@@ -180,6 +180,7 @@ DROP POLICY IF EXISTS "policy_withdrawals_access" ON public.withdrawals;
 DROP POLICY IF EXISTS "policy_coupons_access" ON public.coupons;
 
 DROP POLICY IF EXISTS "users_self_select" ON public.users;
+DROP POLICY IF EXISTS "users_self_insert" ON public.users;
 DROP POLICY IF EXISTS "users_self_update" ON public.users;
 DROP POLICY IF EXISTS "vehicles_owner_all" ON public.vehicles;
 DROP POLICY IF EXISTS "spaces_public_read" ON public.parking_spaces;
@@ -206,10 +207,13 @@ CREATE INDEX IF NOT EXISTS idx_bookings_date ON public.bookings(date);
 CREATE INDEX IF NOT EXISTS idx_reviews_space_id ON public.reviews(space_id);
 CREATE INDEX IF NOT EXISTS idx_withdrawals_owner_id ON public.withdrawals(owner_id);
 
--- Usuários só leem/editam o próprio registro autenticado (operações admin via SERVICE_ROLE no servidor)
+-- Usuários só leem/criam/editam o próprio registro autenticado (operações admin via SERVICE_ROLE no servidor)
 CREATE POLICY "users_self_select" ON public.users
   FOR SELECT TO authenticated
   USING ((select auth.uid()) = id);
+CREATE POLICY "users_self_insert" ON public.users
+  FOR INSERT TO authenticated
+  WITH CHECK ((select auth.uid()) = id);
 CREATE POLICY "users_self_update" ON public.users
   FOR UPDATE TO authenticated
   USING ((select auth.uid()) = id)

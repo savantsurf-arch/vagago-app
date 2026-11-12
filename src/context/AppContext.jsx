@@ -389,15 +389,20 @@ export const AppProvider = ({ children, initialRoute = '' }) => {
           password: passwordInput
         });
         if (!authErr && authData?.user) {
-          const metaRole = authData.user.user_metadata?.role || 'CLIENTE';
-          const cloudUser = users.find(u => u && u.email?.toLowerCase() === cleanEmail) || {
-            id: authData.user.id,
-            name: authData.user.user_metadata?.name || cleanEmail.split('@')[0],
-            email: cleanEmail,
-            role: metaRole,
-            credits: 20,
-            status: 'Ativo'
-          };
+          const appRole = authData.user.app_metadata?.role;
+          const requestedMetaRole = authData.user.user_metadata?.role === 'PROPRIETÁRIO' ? 'PROPRIETÁRIO' : 'CLIENTE';
+          const safeAuthRole = appRole === 'ADMINISTRADOR' || appRole === 'PROPRIETÁRIO' ? appRole : requestedMetaRole;
+          const matchedLocal = users.find(u => u && u.email?.toLowerCase() === cleanEmail);
+          const cloudUser = matchedLocal
+            ? { ...matchedLocal, id: authData.user.id }
+            : {
+                id: authData.user.id,
+                name: authData.user.user_metadata?.name || cleanEmail.split('@')[0],
+                email: cleanEmail,
+                role: safeAuthRole,
+                credits: 20,
+                status: 'Ativo'
+              };
           setCurrentUser(cloudUser);
           setActiveRole(cloudUser.role || 'CLIENTE');
           setIsAuthenticated(true);
@@ -467,14 +472,14 @@ export const AppProvider = ({ children, initialRoute = '' }) => {
   };
 
   const register = async (newUserData) => {
-    const newId = `usr_${Date.now()}`;
+    let resolvedId = `usr_${Date.now()}`;
     const cleanEmail = (newUserData.email || '').trim().toLowerCase();
     const safeRole = newUserData.role === 'PROPRIETÁRIO' ? 'PROPRIETÁRIO' : 'CLIENTE';
     const passwordHash = newUserData.password ? await hashPassword(newUserData.password) : null;
 
     if (isSupabaseConfigured && newUserData.password && typeof supabase?.auth?.signUp === 'function') {
       try {
-        await supabase.auth.signUp({
+        const { data: signUpData } = await supabase.auth.signUp({
           email: cleanEmail,
           password: newUserData.password,
           options: {
@@ -484,11 +489,14 @@ export const AppProvider = ({ children, initialRoute = '' }) => {
             }
           }
         });
+        if (signUpData?.user?.id) {
+          resolvedId = signUpData.user.id;
+        }
       } catch {}
     }
 
     const newUser = {
-      id: newId,
+      id: resolvedId,
       name: sanitizeText(newUserData.name, 100) || cleanEmail.split('@')[0],
       email: cleanEmail,
       role: safeRole,
