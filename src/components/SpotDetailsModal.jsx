@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { InteractiveMap } from './InteractiveMap';
 import { openExternalNavigation } from '../services/geoUtils';
+import { calculateBookingPricing, getOccupiedSlotsForDate } from '../services/pricingUtils';
 
 export const SpotDetailsModal = () => {
   const {
@@ -40,12 +41,18 @@ export const SpotDetailsModal = () => {
     userLocation,
     isAuthenticated,
     openLoginModal,
-    reviews = []
+    reviews = [],
+    bookings = [],
+    searchFilters,
+    setSearchFilters
   } = useApp();
 
   const [activePhotoIdx, setActivePhotoIdx] = useState(0);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isMonthlyModalOpen, setIsMonthlyModalOpen] = useState(false);
+  const [planType, setPlanType] = useState(() => searchFilters?.billingType === 'diaria' || searchFilters?.billingType === 'mensal' ? searchFilters.billingType : 'hora');
+  const [daysCount, setDaysCount] = useState(1);
+  const [monthsCount, setMonthsCount] = useState(1);
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [datePreset, setDatePreset] = useState('hoje'); // 'hoje', 'amanha', 'custom'
   const [startTime, setStartTime] = useState('14:00');
@@ -97,19 +104,19 @@ export const SpotDetailsModal = () => {
   // Real reviews for this spot
   const spotReviews = (Array.isArray(reviews) ? reviews : []).filter(r => r && (r.spotId === selectedSpot.id || r.spaceId === selectedSpot.id));
 
-  // Pricing calculations
+  // Pricing calculations (hora / diária / mensal)
   const hourlyRate = Number(selectedSpot.priceHourly || 6);
-
-  const calculateHours = () => {
-    const [startH, startM = 0] = (startTime || '14:00').split(':').map(Number);
-    const [endH, endM = 0] = (endTime || '18:00').split(':').map(Number);
-    let diff = (endH + endM / 60) - (startH + startM / 60);
-    if (diff <= 0) diff = 1;
-    return Math.max(1, Math.round(diff * 10) / 10);
-  };
-
-  const hours = calculateHours();
-  const totalPrice = hours * hourlyRate;
+  const pricing = calculateBookingPricing({
+    spot: selectedSpot,
+    planType,
+    startTime,
+    endTime,
+    days: daysCount,
+    months: monthsCount
+  });
+  const hours = pricing.totalHours;
+  const totalPrice = pricing.subtotal;
+  const occupiedSlotsToday = getOccupiedSlotsForDate(bookings, selectedSpot.id, selectedDate);
 
   // Real availability state
   const isAvailable = selectedSpot.status !== 'Pausada' && selectedSpot.isAvailable !== false && selectedSpot.availabilityStatus !== 'Indisponível';
@@ -135,6 +142,17 @@ export const SpotDetailsModal = () => {
   };
 
   const handleReservationClick = () => {
+    if (typeof setSearchFilters === 'function') {
+      setSearchFilters((prev) => ({
+        ...(prev || {}),
+        billingType: planType,
+        date: selectedDate,
+        startTime,
+        endTime,
+        daysCount,
+        monthsCount
+      }));
+    }
     if (!isAuthenticated) {
       if (typeof openLoginModal === 'function') {
         openLoginModal();
@@ -157,6 +175,9 @@ export const SpotDetailsModal = () => {
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={selectedSpot.title || 'Detalhes da garagem'}
       onClick={(e) => {
         if (e.target === e.currentTarget) handleClose();
       }}
@@ -546,8 +567,29 @@ export const SpotDetailsModal = () => {
                   </div>
                 </div>
 
-                {/* Seleção de Data e Horário */}
+                {/* Seleção de Modalidade (Hora / Diária / Mensal), Data e Horário */}
                 <div className="space-y-3 pt-3 border-t border-slate-100">
+                  <div className="grid grid-cols-3 gap-1.5 bg-slate-100 p-1 rounded-xl text-xs font-extrabold">
+                    {[
+                      { id: 'hora', label: 'Por hora' },
+                      { id: 'diaria', label: 'Diária' },
+                      { id: 'mensal', label: 'Mensal' }
+                    ].map((opt) => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setPlanType(opt.id)}
+                        className={`py-2 rounded-lg transition cursor-pointer ${
+                          planType === opt.id
+                            ? 'bg-slate-900 text-white shadow-2xs'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold text-slate-900">Quando deseja estacionar?</label>
                     <div className="flex gap-1">
@@ -578,6 +620,7 @@ export const SpotDetailsModal = () => {
 
                   <input
                     type="date"
+                    min={new Date().toISOString().split('T')[0]}
                     value={selectedDate}
                     onChange={(e) => {
                       setSelectedDate(e.target.value);
@@ -586,27 +629,58 @@ export const SpotDetailsModal = () => {
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-sky-500 outline-none"
                   />
 
-                  {/* Horários de Entrada e Saída */}
-                  <div className="grid grid-cols-2 gap-2">
+                  {planType === 'hora' ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-500 mb-1">Entrada</label>
+                        <input
+                          type="time"
+                          value={startTime}
+                          onChange={(e) => setStartTime(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-sky-500 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-500 mb-1">Saída</label>
+                        <input
+                          type="time"
+                          value={endTime}
+                          onChange={(e) => setEndTime(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-sky-500 outline-none"
+                        />
+                      </div>
+                    </div>
+                  ) : planType === 'diaria' ? (
                     <div>
-                      <label className="block text-[11px] font-semibold text-slate-500 mb-1">Entrada</label>
+                      <label className="block text-[11px] font-semibold text-slate-500 mb-1">Quantidade de diárias</label>
                       <input
-                        type="time"
-                        value={startTime}
-                        onChange={(e) => setStartTime(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-sky-500 outline-none"
+                        type="number"
+                        min="1"
+                        max="29"
+                        value={daysCount}
+                        onChange={(e) => setDaysCount(Math.max(1, Number(e.target.value) || 1))}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-sky-500 outline-none"
                       />
                     </div>
+                  ) : (
                     <div>
-                      <label className="block text-[11px] font-semibold text-slate-500 mb-1">Saída</label>
+                      <label className="block text-[11px] font-semibold text-slate-500 mb-1">Quantidade de meses</label>
                       <input
-                        type="time"
-                        value={endTime}
-                        onChange={(e) => setEndTime(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-sky-500 outline-none"
+                        type="number"
+                        min="1"
+                        max="12"
+                        value={monthsCount}
+                        onChange={(e) => setMonthsCount(Math.max(1, Number(e.target.value) || 1))}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-sky-500 outline-none"
                       />
                     </div>
-                  </div>
+                  )}
+
+                  {occupiedSlotsToday.length > 0 && (
+                    <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-[11px] font-bold text-amber-900">
+                      Horários ocupados neste dia: {occupiedSlotsToday.map((s) => `${s.startTime}–${s.endTime}`).join(', ')}
+                    </div>
+                  )}
                 </div>
 
                 {/* Resumo da Reserva */}
@@ -616,17 +690,19 @@ export const SpotDetailsModal = () => {
                     <span>Data:</span>
                     <span className="font-bold text-slate-800">{selectedDate.split('-').reverse().join('/')}</span>
                   </div>
-                  <div className="flex justify-between text-xs text-slate-600">
-                    <span>Horário:</span>
-                    <span className="font-bold text-slate-800">{startTime} — {endTime}</span>
-                  </div>
+                  {planType === 'hora' && (
+                    <div className="flex justify-between text-xs text-slate-600">
+                      <span>Horário:</span>
+                      <span className="font-bold text-slate-800">{startTime} — {endTime}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-xs text-slate-600">
                     <span>Duração:</span>
-                    <span className="font-bold text-slate-800">{hours} {hours === 1 ? 'hora' : 'horas'}</span>
+                    <span className="font-bold text-slate-800">{pricing.quantity} {pricing.unitLabel}</span>
                   </div>
                   <div className="flex justify-between text-xs text-slate-600">
-                    <span>Tarifa horária:</span>
-                    <span>R$ {hourlyRate.toFixed(2)}/h</span>
+                    <span>Tarifa ({planType}):</span>
+                    <span>R$ {pricing.unitRate.toFixed(2)}/{planType === 'diaria' ? 'dia' : planType === 'mensal' ? 'mês' : 'h'}</span>
                   </div>
                   <div className="flex justify-between text-sm font-extrabold text-slate-900 pt-2 border-t border-sky-200/60">
                     <span>Total Estimado:</span>

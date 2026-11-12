@@ -23,6 +23,7 @@ import {
   geocodeAddress,
   calculateSmartParkOptions
 } from '../services/geoUtils';
+import { isSpotAvailableOnDay } from '../services/pricingUtils';
 import { supabase, isSupabaseConfigured, fetchUsersFromSupabase } from '../services/supabaseClient';
 import {
   fetchSpacesFromSupabase,
@@ -1225,8 +1226,8 @@ export const AppProvider = ({ children, initialRoute = '' }) => {
     setFavorites(prev => prev.includes(spotId) ? prev.filter(id => id !== spotId) : [...prev, spotId]);
   };
 
-  // AVAILABILITY ENGINE - Prevents double bookings and time slot conflicts
-  const checkAvailability = (spaceId, date, startTime, endTime) => {
+  // AVAILABILITY ENGINE - Prevents double bookings, multi-day & weekday conflicts
+  const checkAvailability = (spaceId, date, startTime, endTime, endDate = date, planType = 'hora') => {
     if (!spaceId || !date || !startTime || !endTime) {
       return { available: false, reason: 'Informações de data ou horário incompletas.' };
     }
@@ -1240,6 +1241,10 @@ export const AppProvider = ({ children, initialRoute = '' }) => {
       return { available: false, reason: 'Este anúncio está pausado temporariamente pelo anfitrião.' };
     }
 
+    if (planType !== 'mensal' && !isSpotAvailableOnDay(spot, date)) {
+      return { available: false, reason: 'Esta garagem não funciona no dia da semana selecionado. Escolha outra data.' };
+    }
+
     const toMinutes = (timeStr) => {
       const [h, m] = (timeStr || '00:00').split(':').map(Number);
       return (h || 0) * 60 + (m || 0);
@@ -1247,21 +1252,30 @@ export const AppProvider = ({ children, initialRoute = '' }) => {
 
     const reqStart = toMinutes(startTime);
     const reqEnd = toMinutes(endTime);
+    const reqStartDate = date;
+    const reqEndDate = endDate || date;
 
-    if (reqEnd <= reqStart) {
+    if (planType === 'hora' && reqEndDate === reqStartDate && reqEnd <= reqStart) {
       return { available: false, reason: 'O horário de saída deve ser posterior ao horário de entrada.' };
     }
 
-    // Check conflict with existing active/pending bookings for same spot and date
+    // Check conflict with existing active/pending bookings for overlapping dates and hours
     const conflictingBooking = bookings.find(b => {
-      if (b.spaceId !== spaceId || b.date !== date) return false;
-      if (b.bookingStatus === 'Cancelado' || b.bookingStatus === 'Recusado') return false;
+      if (!b || (b.spaceId !== spaceId && b.space_id !== spaceId)) return false;
+      if (b.bookingStatus === 'Cancelado' || b.bookingStatus === 'Recusado' || b.status === 'cancelled') return false;
+
+      const bStartDate = b.date || b.startDate || b.start_date;
+      const bEndDate = b.endDate || b.end_date || bStartDate;
+      if (!bStartDate || reqEndDate < bStartDate || reqStartDate > bEndDate) return false;
+
+      if (planType !== 'hora' || bStartDate !== bEndDate || reqStartDate !== reqEndDate) {
+        return true;
+      }
 
       const bStart = toMinutes(b.startTime);
       const bEnd = toMinutes(b.endTime);
 
-      const hasOverlap = !(reqEnd <= bStart || reqStart >= bEnd);
-      return hasOverlap;
+      return !(reqEnd <= bStart || reqStart >= bEnd);
     });
 
     if (conflictingBooking) {
@@ -1434,7 +1448,14 @@ export const AppProvider = ({ children, initialRoute = '' }) => {
 
   const createBooking = (newBookingData) => {
     // Run Availability Check
-    const availCheck = checkAvailability(newBookingData.spaceId, newBookingData.date, newBookingData.startTime, newBookingData.endTime);
+    const availCheck = checkAvailability(
+      newBookingData.spaceId,
+      newBookingData.date,
+      newBookingData.startTime,
+      newBookingData.endTime,
+      newBookingData.endDate || newBookingData.date,
+      newBookingData.planType || 'hora'
+    );
     if (!availCheck.available) {
       throw new Error(availCheck.reason);
     }

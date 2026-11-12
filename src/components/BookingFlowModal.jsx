@@ -1,7 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { QRCodeSVG } from 'qrcode.react';
 import confetti from 'canvas-confetti';
+import {
+  calculateBookingPricing,
+  getOccupiedSlotsForDate,
+  isSpotAvailableOnDay,
+  addDaysToDateStr,
+  getWeekdayLabel
+} from '../services/pricingUtils';
+import { getWhatsAppUrl } from '../services/brandConfig';
 import {
   X,
   CheckCircle2,
@@ -24,19 +32,21 @@ import {
   Sparkles,
   MapPin,
   Loader2,
-  Lock
+  Mail,
+  MessageCircle
 } from 'lucide-react';
 
 export const BookingFlowModal = () => {
   const {
     selectedSpot,
-    setSelectedSpot,
     isBookingFlowOpen,
     setIsBookingFlowOpen,
     vehicles = [],
     addVehicle,
     createBooking,
     checkAvailability,
+    bookings = [],
+    searchFilters,
     coupons = [],
     currentUser,
     setActiveTab,
@@ -51,11 +61,16 @@ export const BookingFlowModal = () => {
   const [step, setStep] = useState(1);
 
   // Form selections
+  const [planType, setPlanType] = useState('hora'); // 'hora' | 'diaria' | 'mensal'
+  const [daysCount, setDaysCount] = useState(1);
+  const [monthsCount, setMonthsCount] = useState(1);
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [startTime, setStartTime] = useState('14:00');
   const [endTime, setEndTime] = useState('18:00');
   const [selectedVehicleId, setSelectedVehicleId] = useState(safeVehicles[0]?.id || 'new');
   const [availabilityError, setAvailabilityError] = useState('');
+  const [confirmEmail, setConfirmEmail] = useState(currentUser?.email || '');
+  const [emailDispatchState, setEmailDispatchState] = useState({ status: 'idle', message: '' });
 
   // New vehicle form
   const [isAddingNewVehicle, setIsAddingNewVehicle] = useState(safeVehicles.length === 0);
@@ -100,25 +115,59 @@ export const BookingFlowModal = () => {
       setCouponCode('');
       setCompletedBooking(null);
       setIsProcessing(false);
-      setSelectedDate(new Date().toISOString().split('T')[0]);
+      setEmailDispatchState({ status: 'idle', message: '' });
+      setConfirmEmail(currentUser?.email || '');
+      const f = searchFilters || {};
+      setPlanType(f.billingType === 'diaria' || f.billingType === 'mensal' ? f.billingType : 'hora');
+      setDaysCount(Number(f.daysCount || 1));
+      setMonthsCount(Number(f.monthsCount || 1));
+      setSelectedDate(f.date || new Date().toISOString().split('T')[0]);
+      if (f.startTime) setStartTime(f.startTime);
+      if (f.endTime) setEndTime(f.endTime);
     }
-  }, [isBookingFlowOpen, selectedSpot?.id]);
+  }, [isBookingFlowOpen, selectedSpot?.id, currentUser?.email, searchFilters]);
+
+  const calendarDays = useMemo(() => {
+    if (!selectedSpot) return [];
+    const todayStr = new Date().toISOString().split('T')[0];
+    return Array.from({ length: 10 }, (_, idx) => {
+      const dStr = addDaysToDateStr(todayStr, idx);
+      const occupied = getOccupiedSlotsForDate(bookings, selectedSpot.id, dStr);
+      const dayAllowed = isSpotAvailableOnDay(selectedSpot, dStr);
+      return {
+        dateStr: dStr,
+        dayNum: dStr.slice(8, 10),
+        monthNum: dStr.slice(5, 7),
+        weekday: getWeekdayLabel(dStr),
+        occupiedCount: occupied.length,
+        dayAllowed
+      };
+    });
+  }, [bookings, selectedSpot]);
 
   if (!isBookingFlowOpen || !selectedSpot) return null;
 
   const hourlyRate = Number(selectedSpot.priceHourly || selectedSpot.price_hourly || 6);
-
-  // Calculate hours & subtotal
-  const toMinutes = (timeStr) => {
-    const [h, m] = (timeStr || '00:00').split(':').map(Number);
-    return (h || 0) * 60 + (m || 0);
-  };
-  const startM = toMinutes(startTime);
-  const endM = toMinutes(endTime);
-  const durationM = Math.max(0, endM - startM);
-  let totalHours = Math.max(1, Math.ceil(durationM / 60));
-
-  const subtotal = totalHours * hourlyRate;
+  const pricing = calculateBookingPricing({
+    spot: selectedSpot,
+    planType,
+    startTime,
+    endTime,
+    days: daysCount,
+    months: monthsCount
+  });
+  const totalHours = pricing.totalHours;
+  const durationM = pricing.durationMinutes;
+  const subtotal = pricing.subtotal;
+  const endDateCalculated =
+    planType === 'diaria'
+      ? addDaysToDateStr(selectedDate, Math.max(0, daysCount - 1))
+      : planType === 'mensal'
+      ? addDaysToDateStr(selectedDate, Math.max(1, monthsCount * 30 - 1))
+      : selectedDate;
+  const effectiveStartTime = planType === 'hora' ? startTime : '08:00';
+  const effectiveEndTime = planType === 'hora' ? endTime : '20:00';
+  const occupiedSlotsSelectedDate = getOccupiedSlotsForDate(bookings, selectedSpot.id, selectedDate);
 
   // Calculate coupon discount
   let discount = 0;
@@ -195,14 +244,16 @@ export const BookingFlowModal = () => {
       return;
     }
 
-    if (endM <= startM) {
-      setAvailabilityError('O horário de saída deve ser posterior ao de entrada.');
-      return;
-    }
+    if (planType === 'hora') {
+      if (effectiveEndTime <= effectiveStartTime) {
+        setAvailabilityError('O horário de saída deve ser posterior ao de entrada.');
+        return;
+      }
 
-    if (durationM < 30) {
-      setAvailabilityError('A permanência mínima na vaga é de 30 minutos.');
-      return;
+      if (durationM < 30) {
+        setAvailabilityError('A permanência mínima na vaga é de 30 minutos.');
+        return;
+      }
     }
 
     // If user is filling new vehicle form, validate and register
@@ -219,7 +270,14 @@ export const BookingFlowModal = () => {
 
     // Availability validation engine check
     if (typeof checkAvailability === 'function') {
-      const check = checkAvailability(selectedSpot.id, selectedDate, startTime, endTime);
+      const check = checkAvailability(
+        selectedSpot.id,
+        selectedDate,
+        effectiveStartTime,
+        effectiveEndTime,
+        endDateCalculated,
+        planType
+      );
       if (!check.available) {
         setAvailabilityError(check.reason || 'Este horário não está disponível para esta vaga.');
         return;
@@ -248,7 +306,14 @@ export const BookingFlowModal = () => {
 
     // Double check availability immediately before persisting (anti-duplicate lock)
     if (typeof checkAvailability === 'function') {
-      const check = checkAvailability(selectedSpot.id, selectedDate, startTime, endTime);
+      const check = checkAvailability(
+        selectedSpot.id,
+        selectedDate,
+        effectiveStartTime,
+        effectiveEndTime,
+        endDateCalculated,
+        planType
+      );
       if (!check.available) {
         setAvailabilityError(
           check.reason || 'Desculpe, este horário acabou de ser reservado por outro motorista.'
@@ -284,8 +349,10 @@ export const BookingFlowModal = () => {
       hostPhone: selectedSpot.ownerPhone || selectedSpot.owner_phone,
       date: selectedDate,
       startDate: selectedDate,
-      startTime,
-      endTime,
+      endDate: endDateCalculated,
+      startTime: effectiveStartTime,
+      endTime: effectiveEndTime,
+      planType,
       totalHours,
       subtotal,
       discountAmount: discount,
@@ -365,8 +432,56 @@ Instruções de Acesso: ${completedBooking.secretAccessInstructions || 'Liberado
     selectedSpot.facadePhoto ||
     "https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=1000&q=80";
 
+  const handleSendEmailConfirmation = async () => {
+    if (!completedBooking || !confirmEmail.includes('@')) {
+      setEmailDispatchState({ status: 'error', message: 'Informe um e-mail válido para enviar o comprovante.' });
+      return;
+    }
+    setEmailDispatchState({ status: 'sending', message: 'Enviando comprovante com QR Code...' });
+    try {
+      const resp = await fetch('/api/bookings/send-confirmation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          toEmail: confirmEmail.trim(),
+          bookingNumber: completedBooking.bookingNumber || completedBooking.id,
+          spaceTitle: completedBooking.spaceTitle,
+          spaceAddress: completedBooking.spaceAddress,
+          date: completedBooking.date,
+          startTime: completedBooking.startTime,
+          endTime: completedBooking.endTime,
+          totalPrice: completedBooking.totalPrice,
+          qrCodeData: completedBooking.qrCodeData || completedBooking.bookingNumber,
+          vehiclePlate: completedBooking.vehicle?.plate
+        })
+      });
+      const data = await resp.json();
+      setEmailDispatchState({
+        status: resp.ok ? 'sent' : 'error',
+        message: data.message || data.error || 'Confirmação processada.'
+      });
+    } catch {
+      setEmailDispatchState({
+        status: 'error',
+        message: 'Servidor de e-mail indisponível offline. Copie ou envie via WhatsApp abaixo.'
+      });
+    }
+  };
+
+  const getBookingWhatsAppHref = () => {
+    if (!completedBooking) return getWhatsAppUrl();
+    const qrVal = completedBooking.qrCodeData || completedBooking.bookingNumber || completedBooking.id;
+    const msg = `✅ Reserva VagaGo #${completedBooking.bookingNumber || completedBooking.id}\n📍 Vaga: ${completedBooking.spaceTitle}\n🗺️ Endereço: ${completedBooking.spaceAddress}\n📅 Data: ${completedBooking.date} (${completedBooking.startTime} às ${completedBooking.endTime})\n🚗 Placa: ${completedBooking.vehicle?.plate || 'Cadastrada'}\n💰 Pago: R$ ${Number(completedBooking.totalPrice || 0).toFixed(2)}\n🔑 Código QR: ${qrVal}`;
+    return `https://wa.me/?text=${encodeURIComponent(msg)}`;
+  };
+
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Fluxo de reserva de garagem"
+      className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200"
+    >
       <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[94vh]">
         
         {/* Header with Step Tracker */}
@@ -470,7 +585,7 @@ Instruções de Acesso: ${completedBooking.secretAccessInstructions || 'Liberado
                     <span className="bg-sky-100 text-sky-800 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md">
                       Vaga Verificada
                     </span>
-                    {selectedSpot.covered && (
+                    {(selectedSpot.isCovered || selectedSpot.covered) && (
                       <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-md">
                         Coberta
                       </span>
@@ -490,21 +605,73 @@ Instruções de Acesso: ${completedBooking.secretAccessInstructions || 'Liberado
                 </div>
               </div>
 
-              {/* Date & Time Selector */}
-              <div className="space-y-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-                <div className="flex items-center justify-between">
+              {/* Calendário de Disponibilidade, Modalidade e Horário */}
+              <div className="space-y-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+                <div className="flex items-center justify-between flex-wrap gap-2">
                   <label className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                     <Calendar className="w-4 h-4 text-sky-600" />
-                    <span>Período de Permanência</span>
+                    <span>Calendário de Disponibilidade</span>
                   </label>
                   <span className="text-[11px] font-bold text-sky-700 bg-sky-50 px-2.5 py-0.5 rounded-full border border-sky-100">
-                    {totalHours} {totalHours === 1 ? 'hora' : 'horas'} de reserva
+                    {pricing.quantity} {pricing.unitLabel} • R$ {pricing.subtotal.toFixed(2)}
                   </span>
+                </div>
+
+                {/* Seletor Hora / Diária / Mensal */}
+                <div className="grid grid-cols-3 gap-1.5 bg-slate-100 p-1 rounded-xl text-xs font-extrabold">
+                  {[
+                    { id: 'hora', label: `Hora (R$ ${hourlyRate.toFixed(0)})` },
+                    { id: 'diaria', label: `Diária (R$ ${Number(selectedSpot.priceDaily || hourlyRate * 5).toFixed(0)})` },
+                    { id: 'mensal', label: `Mensal (R$ ${Number(selectedSpot.priceMonthly || hourlyRate * 45).toFixed(0)})` }
+                  ].map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setPlanType(opt.id)}
+                      className={`py-2 px-1 rounded-lg transition cursor-pointer ${
+                        planType === opt.id
+                          ? 'bg-slate-900 text-white shadow-2xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Strip Calendário Visual (Próximos 10 dias) */}
+                <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-1">
+                  {calendarDays.map((day) => {
+                    const isSelected = selectedDate === day.dateStr;
+                    return (
+                      <button
+                        key={day.dateStr}
+                        type="button"
+                        disabled={!day.dayAllowed}
+                        onClick={() => setSelectedDate(day.dateStr)}
+                        className={`min-w-[54px] py-2 px-1.5 rounded-xl border text-center transition shrink-0 cursor-pointer ${
+                          !day.dayAllowed
+                            ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed line-through'
+                            : isSelected
+                            ? 'bg-sky-600 text-white border-sky-600 shadow-sm'
+                            : day.occupiedCount > 0
+                            ? 'bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100'
+                            : 'bg-emerald-50/70 text-emerald-900 border-emerald-200 hover:bg-emerald-100'
+                        }`}
+                      >
+                        <div className="text-[10px] font-bold uppercase opacity-80">{day.weekday}</div>
+                        <div className="text-sm font-black leading-tight">{day.dayNum}/{day.monthNum}</div>
+                        <div className="text-[9px] font-bold mt-0.5">
+                          {!day.dayAllowed ? 'Fechado' : day.occupiedCount > 0 ? `${day.occupiedCount} res.` : 'Livre'}
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <span className="text-[11px] font-bold text-slate-600 block mb-1">Data da Reserva</span>
+                    <span className="text-[11px] font-bold text-slate-600 block mb-1">Data de Entrada</span>
                     <input
                       type="date"
                       min={new Date().toISOString().split('T')[0]}
@@ -514,26 +681,60 @@ Instruções de Acesso: ${completedBooking.secretAccessInstructions || 'Liberado
                     />
                   </div>
 
-                  <div>
-                    <span className="text-[11px] font-bold text-slate-600 block mb-1">Horário de Entrada</span>
-                    <input
-                      type="time"
-                      value={startTime}
-                      onChange={(e) => setStartTime(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition"
-                    />
-                  </div>
+                  {planType === 'hora' ? (
+                    <>
+                      <div>
+                        <span className="text-[11px] font-bold text-slate-600 block mb-1">Horário de Entrada</span>
+                        <input
+                          type="time"
+                          value={startTime}
+                          onChange={(e) => setStartTime(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition"
+                        />
+                      </div>
 
-                  <div>
-                    <span className="text-[11px] font-bold text-slate-600 block mb-1">Horário de Saída</span>
-                    <input
-                      type="time"
-                      value={endTime}
-                      onChange={(e) => setEndTime(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition"
-                    />
-                  </div>
+                      <div>
+                        <span className="text-[11px] font-bold text-slate-600 block mb-1">Horário de Saída</span>
+                        <input
+                          type="time"
+                          value={endTime}
+                          onChange={(e) => setEndTime(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition"
+                        />
+                      </div>
+                    </>
+                  ) : planType === 'diaria' ? (
+                    <div className="sm:col-span-2">
+                      <span className="text-[11px] font-bold text-slate-600 block mb-1">Quantidade de Diárias (até {endDateCalculated.split('-').reverse().join('/')})</span>
+                      <input
+                        type="number"
+                        min="1"
+                        max="29"
+                        value={daysCount}
+                        onChange={(e) => setDaysCount(Math.max(1, Number(e.target.value) || 1))}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 outline-none"
+                      />
+                    </div>
+                  ) : (
+                    <div className="sm:col-span-2">
+                      <span className="text-[11px] font-bold text-slate-600 block mb-1">Duração Mensal (até {endDateCalculated.split('-').reverse().join('/')})</span>
+                      <input
+                        type="number"
+                        min="1"
+                        max="12"
+                        value={monthsCount}
+                        onChange={(e) => setMonthsCount(Math.max(1, Number(e.target.value) || 1))}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-sky-500 outline-none"
+                      />
+                    </div>
+                  )}
                 </div>
+
+                {occupiedSlotsSelectedDate.length > 0 && (
+                  <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-[11px] font-bold text-amber-900">
+                    Horários já bloqueados em {selectedDate.split('-').reverse().join('/')}: {occupiedSlotsSelectedDate.map((s) => `${s.startTime}–${s.endTime}`).join(', ')}
+                  </div>
+                )}
               </div>
 
               {/* Vehicle Selection & Registration */}
@@ -954,7 +1155,9 @@ Instruções de Acesso: ${completedBooking.secretAccessInstructions || 'Liberado
               {/* Price Breakdown */}
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
                 <div className="flex justify-between text-xs text-slate-600 font-medium">
-                  <span>Subtotal ({totalHours}h x R$ {hourlyRate.toFixed(2)}):</span>
+                  <span>
+                    Subtotal ({pricing.quantity} {pricing.unitLabel} × R$ {pricing.unitRate.toFixed(2)}):
+                  </span>
                   <span className="font-bold text-slate-800">R$ {subtotal.toFixed(2)}</span>
                 </div>
                 {discount > 0 && (
@@ -1081,6 +1284,52 @@ Instruções de Acesso: ${completedBooking.secretAccessInstructions || 'Liberado
                     R$ {Number(completedBooking.totalPrice || 0).toFixed(2)}
                   </span>
                 </div>
+              </div>
+
+              {/* Confirmação por WhatsApp e E-mail com QR Code */}
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3 text-left">
+                <span className="text-xs font-black text-slate-800 block">
+                  Enviar comprovante + QR Code
+                </span>
+
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="email"
+                    placeholder="seu@email.com"
+                    value={confirmEmail}
+                    onChange={(e) => setConfirmEmail(e.target.value)}
+                    className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-sky-500"
+                  />
+                  <button
+                    type="button"
+                    disabled={emailDispatchState.status === 'sending'}
+                    onClick={handleSendEmailConfirmation}
+                    className="min-h-[42px] bg-sky-600 hover:bg-sky-500 disabled:opacity-60 text-white text-xs font-extrabold px-4 py-2 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition shrink-0"
+                  >
+                    <Mail className="w-4 h-4" />
+                    <span>{emailDispatchState.status === 'sending' ? 'Enviando...' : 'Enviar E-mail'}</span>
+                  </button>
+                </div>
+
+                {emailDispatchState.message && (
+                  <p
+                    className={`text-[11px] font-bold ${
+                      emailDispatchState.status === 'error' ? 'text-rose-600' : 'text-emerald-700'
+                    }`}
+                  >
+                    {emailDispatchState.message}
+                  </p>
+                )}
+
+                <a
+                  href={getBookingWhatsAppHref()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full min-h-[44px] bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition shadow-sm"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>Enviar Comprovante + QR Code no WhatsApp</span>
+                </a>
               </div>
 
               {/* Action Buttons */}
