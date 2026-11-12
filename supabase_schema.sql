@@ -125,8 +125,11 @@ CREATE TABLE IF NOT EXISTS public.host_waitlist (
   name TEXT NOT NULL,
   whatsapp TEXT NOT NULL,
   neighborhood TEXT NOT NULL,
+  city TEXT DEFAULT 'Itabuna - BA',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+ALTER TABLE public.host_waitlist ADD COLUMN IF NOT EXISTS city TEXT DEFAULT 'Itabuna - BA';
 
 -- 6. TABELA DE SAQUES
 CREATE TABLE IF NOT EXISTS public.withdrawals (
@@ -162,6 +165,13 @@ ALTER TABLE public.coupons ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.host_waitlist ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Acesso público completo a usuários" ON public.users;
+DROP POLICY IF EXISTS "Acesso público completo a veículos" ON public.vehicles;
+DROP POLICY IF EXISTS "Acesso público completo a vagas" ON public.parking_spaces;
+DROP POLICY IF EXISTS "Acesso público completo a reservas" ON public.bookings;
+DROP POLICY IF EXISTS "Acesso público completo a saques" ON public.withdrawals;
+DROP POLICY IF EXISTS "Acesso público completo a cupons" ON public.coupons;
+
 DROP POLICY IF EXISTS "policy_users_access" ON public.users;
 DROP POLICY IF EXISTS "policy_vehicles_access" ON public.vehicles;
 DROP POLICY IF EXISTS "policy_spaces_access" ON public.parking_spaces;
@@ -174,6 +184,9 @@ DROP POLICY IF EXISTS "users_self_update" ON public.users;
 DROP POLICY IF EXISTS "vehicles_owner_all" ON public.vehicles;
 DROP POLICY IF EXISTS "spaces_public_read" ON public.parking_spaces;
 DROP POLICY IF EXISTS "spaces_owner_write" ON public.parking_spaces;
+DROP POLICY IF EXISTS "spaces_owner_insert" ON public.parking_spaces;
+DROP POLICY IF EXISTS "spaces_owner_update" ON public.parking_spaces;
+DROP POLICY IF EXISTS "spaces_owner_delete" ON public.parking_spaces;
 DROP POLICY IF EXISTS "bookings_participant_read" ON public.bookings;
 DROP POLICY IF EXISTS "bookings_driver_insert" ON public.bookings;
 DROP POLICY IF EXISTS "bookings_participant_update" ON public.bookings;
@@ -183,34 +196,81 @@ DROP POLICY IF EXISTS "reviews_public_read" ON public.reviews;
 DROP POLICY IF EXISTS "reviews_driver_insert" ON public.reviews;
 DROP POLICY IF EXISTS "waitlist_public_insert" ON public.host_waitlist;
 
+-- Índices para performance em consultas e chaves estrangeiras
+CREATE INDEX IF NOT EXISTS idx_vehicles_user_id ON public.vehicles(user_id);
+CREATE INDEX IF NOT EXISTS idx_parking_spaces_owner_id ON public.parking_spaces(owner_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_user_id ON public.bookings(user_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_owner_id ON public.bookings(owner_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_space_id ON public.bookings(space_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_date ON public.bookings(date);
+CREATE INDEX IF NOT EXISTS idx_reviews_space_id ON public.reviews(space_id);
+CREATE INDEX IF NOT EXISTS idx_withdrawals_owner_id ON public.withdrawals(owner_id);
+
 -- Usuários só leem/editam o próprio registro autenticado (operações admin via SERVICE_ROLE no servidor)
-CREATE POLICY "users_self_select" ON public.users FOR SELECT USING (auth.uid() = id);
-CREATE POLICY "users_self_update" ON public.users FOR UPDATE USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
+CREATE POLICY "users_self_select" ON public.users
+  FOR SELECT TO authenticated
+  USING ((select auth.uid()) = id);
+CREATE POLICY "users_self_update" ON public.users
+  FOR UPDATE TO authenticated
+  USING ((select auth.uid()) = id)
+  WITH CHECK ((select auth.uid()) = id);
 
 -- Veículos restritos ao proprietário autenticado
-CREATE POLICY "vehicles_owner_all" ON public.vehicles FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "vehicles_owner_all" ON public.vehicles
+  FOR ALL TO authenticated
+  USING ((select auth.uid()) = user_id)
+  WITH CHECK ((select auth.uid()) = user_id);
 
 -- Vagas aprovadas/ativas visíveis para busca; escrita apenas pelo anfitrião dono
-CREATE POLICY "spaces_public_read" ON public.parking_spaces FOR SELECT USING (status IN ('Aprovado', 'Ativa') OR auth.uid() = owner_id);
-CREATE POLICY "spaces_owner_write" ON public.parking_spaces FOR ALL USING (auth.uid() = owner_id) WITH CHECK (auth.uid() = owner_id);
+CREATE POLICY "spaces_public_read" ON public.parking_spaces
+  FOR SELECT TO anon, authenticated
+  USING (status IN ('Aprovado', 'Ativa') OR (select auth.uid()) = owner_id);
+CREATE POLICY "spaces_owner_insert" ON public.parking_spaces
+  FOR INSERT TO authenticated
+  WITH CHECK ((select auth.uid()) = owner_id);
+CREATE POLICY "spaces_owner_update" ON public.parking_spaces
+  FOR UPDATE TO authenticated
+  USING ((select auth.uid()) = owner_id)
+  WITH CHECK ((select auth.uid()) = owner_id);
+CREATE POLICY "spaces_owner_delete" ON public.parking_spaces
+  FOR DELETE TO authenticated
+  USING ((select auth.uid()) = owner_id);
 
--- Reservas visíveis apenas para motorista ou anfitrião envolvidos
-CREATE POLICY "bookings_participant_read" ON public.bookings FOR SELECT USING (auth.uid() = user_id OR auth.uid() = owner_id);
-CREATE POLICY "bookings_driver_insert" ON public.bookings FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "bookings_participant_update" ON public.bookings FOR UPDATE USING (auth.uid() = user_id OR auth.uid() = owner_id);
+-- Reservas visíveis e atualizáveis apenas por motorista ou anfitrião envolvidos
+CREATE POLICY "bookings_participant_read" ON public.bookings
+  FOR SELECT TO authenticated
+  USING ((select auth.uid()) = user_id OR (select auth.uid()) = owner_id);
+CREATE POLICY "bookings_driver_insert" ON public.bookings
+  FOR INSERT TO authenticated
+  WITH CHECK ((select auth.uid()) = user_id);
+CREATE POLICY "bookings_participant_update" ON public.bookings
+  FOR UPDATE TO authenticated
+  USING ((select auth.uid()) = user_id OR (select auth.uid()) = owner_id)
+  WITH CHECK ((select auth.uid()) = user_id OR (select auth.uid()) = owner_id);
 
 -- Saques apenas pelo anfitrião autenticado
-CREATE POLICY "withdrawals_owner_all" ON public.withdrawals FOR ALL USING (auth.uid() = owner_id) WITH CHECK (auth.uid() = owner_id);
+CREATE POLICY "withdrawals_owner_all" ON public.withdrawals
+  FOR ALL TO authenticated
+  USING ((select auth.uid()) = owner_id)
+  WITH CHECK ((select auth.uid()) = owner_id);
 
 -- Cupons ativos visíveis para leitura
-CREATE POLICY "coupons_public_read" ON public.coupons FOR SELECT USING (status = 'Ativo');
+CREATE POLICY "coupons_public_read" ON public.coupons
+  FOR SELECT TO anon, authenticated
+  USING (status = 'Ativo');
 
 -- Avaliações públicas para leitura; criação pelo motorista autenticado
-CREATE POLICY "reviews_public_read" ON public.reviews FOR SELECT USING (true);
-CREATE POLICY "reviews_driver_insert" ON public.reviews FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "reviews_public_read" ON public.reviews
+  FOR SELECT TO anon, authenticated
+  USING (true);
+CREATE POLICY "reviews_driver_insert" ON public.reviews
+  FOR INSERT TO authenticated
+  WITH CHECK ((select auth.uid()) = user_id);
 
--- Waitlist permite cadastro público (insert only), leitura apenas via service_role
-CREATE POLICY "waitlist_public_insert" ON public.host_waitlist FOR INSERT WITH CHECK (true);
+-- Waitlist permite apenas envio público validado (insert only), leitura apenas via service_role
+CREATE POLICY "waitlist_public_insert" ON public.host_waitlist
+  FOR INSERT TO anon, authenticated
+  WITH CHECK (length(trim(name)) >= 2 AND length(regexp_replace(whatsapp, '\D', '', 'g')) >= 10);
 
 -- 9. DADOS INICIAIS
 INSERT INTO public.users (name, email, role, phone, cpf, pix_key, referral_code, credits)
