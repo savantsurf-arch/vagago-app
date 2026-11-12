@@ -1,3 +1,5 @@
+import { applyRateLimit, verifyCsrfOrigin } from '../_lib/security.js';
+
 /**
  * Vercel Serverless Function — Confirmação de Reserva por E-mail (via Resend opcional)
  * POST /api/bookings/send-confirmation
@@ -6,6 +8,8 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Método não permitido.' });
   }
+  if (!verifyCsrfOrigin(req, res)) return;
+  if (!applyRateLimit(req, res, { windowMs: 60_000, max: 15, bucket: 'email-confirm' })) return;
 
   const {
     toEmail,

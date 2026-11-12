@@ -148,13 +148,15 @@ CREATE TABLE IF NOT EXISTS public.coupons (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 8. PERMISSÕES DE SEGURANÇA (RLS)
+-- 8. PERMISSÕES DE SEGURANÇA (RLS RESTRITIVO — PRINCÍPIO DO MENOR PRIVILÉGIO)
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vehicles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.parking_spaces ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.bookings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.withdrawals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.coupons ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.host_waitlist ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "policy_users_access" ON public.users;
 DROP POLICY IF EXISTS "policy_vehicles_access" ON public.vehicles;
@@ -163,12 +165,34 @@ DROP POLICY IF EXISTS "policy_bookings_access" ON public.bookings;
 DROP POLICY IF EXISTS "policy_withdrawals_access" ON public.withdrawals;
 DROP POLICY IF EXISTS "policy_coupons_access" ON public.coupons;
 
-CREATE POLICY "policy_users_access" ON public.users FOR ALL USING (true);
-CREATE POLICY "policy_vehicles_access" ON public.vehicles FOR ALL USING (true);
-CREATE POLICY "policy_spaces_access" ON public.parking_spaces FOR ALL USING (true);
-CREATE POLICY "policy_bookings_access" ON public.bookings FOR ALL USING (true);
-CREATE POLICY "policy_withdrawals_access" ON public.withdrawals FOR ALL USING (true);
-CREATE POLICY "policy_coupons_access" ON public.coupons FOR ALL USING (true);
+-- Usuários só leem/editam o próprio registro autenticado (operações admin via SERVICE_ROLE no servidor)
+CREATE POLICY "users_self_select" ON public.users FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "users_self_update" ON public.users FOR UPDATE USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
+
+-- Veículos restritos ao proprietário autenticado
+CREATE POLICY "vehicles_owner_all" ON public.vehicles FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+-- Vagas aprovadas/ativas visíveis para busca; escrita apenas pelo anfitrião dono
+CREATE POLICY "spaces_public_read" ON public.parking_spaces FOR SELECT USING (status IN ('Aprovado', 'Ativa') OR auth.uid() = owner_id);
+CREATE POLICY "spaces_owner_write" ON public.parking_spaces FOR ALL USING (auth.uid() = owner_id) WITH CHECK (auth.uid() = owner_id);
+
+-- Reservas visíveis apenas para motorista ou anfitrião envolvidos
+CREATE POLICY "bookings_participant_read" ON public.bookings FOR SELECT USING (auth.uid() = user_id OR auth.uid() = owner_id);
+CREATE POLICY "bookings_driver_insert" ON public.bookings FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "bookings_participant_update" ON public.bookings FOR UPDATE USING (auth.uid() = user_id OR auth.uid() = owner_id);
+
+-- Saques apenas pelo anfitrião autenticado
+CREATE POLICY "withdrawals_owner_all" ON public.withdrawals FOR ALL USING (auth.uid() = owner_id) WITH CHECK (auth.uid() = owner_id);
+
+-- Cupons ativos visíveis para leitura
+CREATE POLICY "coupons_public_read" ON public.coupons FOR SELECT USING (status = 'Ativo');
+
+-- Avaliações públicas para leitura; criação pelo motorista autenticado
+CREATE POLICY "reviews_public_read" ON public.reviews FOR SELECT USING (true);
+CREATE POLICY "reviews_driver_insert" ON public.reviews FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+-- Waitlist permite cadastro público (insert only), leitura apenas via service_role
+CREATE POLICY "waitlist_public_insert" ON public.host_waitlist FOR INSERT WITH CHECK (true);
 
 -- 9. DADOS INICIAIS
 INSERT INTO public.users (name, email, role, phone, cpf, pix_key, referral_code, credits)

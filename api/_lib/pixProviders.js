@@ -66,7 +66,7 @@ export function resolvePixProvider() {
 }
 
 export async function createAsaasPixPayment({
-  amount,
+  amount: _amount,
   bookingNumber,
   description,
   customerName,

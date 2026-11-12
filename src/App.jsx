@@ -10,7 +10,8 @@ import { NotificationToast } from './components/NotificationToast';
 import { Footer } from './components/Footer';
 import { LiveChatWidget } from './components/LiveChatWidget';
 import { MobileBottomNav } from './components/MobileBottomNav';
-import { RotateCcw, Sparkles } from 'lucide-react';
+import { reportError } from './services/telemetry';
+import { RotateCcw, Sparkles, ShieldAlert } from 'lucide-react';
 
 const SpotDetailsModal = lazy(() => import('./components/SpotDetailsModal').then(m => ({ default: m.SpotDetailsModal })));
 const BookingFlowModal = lazy(() => import('./components/BookingFlowModal').then(m => ({ default: m.BookingFlowModal })));
@@ -55,6 +56,7 @@ class ErrorBoundary extends Component {
 
   componentDidCatch(error, errorInfo) {
     console.error("VagaGo Error Boundary caught error:", error, errorInfo);
+    reportError(error, { componentStack: errorInfo?.componentStack });
   }
 
   handleReset = () => {
@@ -120,11 +122,14 @@ class ErrorBoundary extends Component {
 }
 
 const MainContent = () => {
-  const { activeTab, isPageLoading } = useApp();
+  const { activeTab, activeRole, isAuthenticated, currentUser, openLoginModal, setActiveTab, isPageLoading } = useApp();
   const [trackingBooking, setTrackingBooking] = useState(null);
   const [extendingBooking, setExtendingBooking] = useState(null);
   const [isDepositOpen, setIsDepositOpen] = useState(false);
   const [isLiveChatOpen, setIsLiveChatOpen] = useState(false);
+
+  const isAdminAuthorized =
+    isAuthenticated && (activeRole === 'ADMINISTRADOR' || currentUser?.role === 'ADMINISTRADOR');
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans relative">
@@ -155,7 +160,37 @@ const MainContent = () => {
           {(activeTab === 'owner_dashboard' || activeTab === 'owner_spots' || activeTab === 'owner_finance' || activeTab === 'owner_reservas') && <OwnerDashboard />}
           {activeTab === 'profile' && <ProfilePage />}
           {activeTab === 'notifications' && <NotificationsPage />}
-          {activeTab === 'admin_dashboard' && <AdminPanel />}
+          {activeTab === 'admin_dashboard' && (
+            isAdminAuthorized ? (
+              <AdminPanel />
+            ) : (
+              <div className="max-w-md mx-auto px-4 py-20 text-center space-y-4">
+                <div className="w-16 h-16 bg-purple-100 text-purple-700 rounded-3xl flex items-center justify-center mx-auto">
+                  <ShieldAlert className="w-8 h-8" />
+                </div>
+                <h1 className="text-2xl font-black text-slate-900">Acesso Administrativo Restrito</h1>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Esta rota exige autenticação com perfil de Administrador autorizado.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                  <button
+                    type="button"
+                    onClick={openLoginModal}
+                    className="min-h-[44px] bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs px-5 py-2.5 rounded-2xl cursor-pointer"
+                  >
+                    Entrar na Conta Admin
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('landing')}
+                    className="min-h-[44px] bg-white border border-slate-200 text-slate-700 font-bold text-xs px-5 py-2.5 rounded-2xl cursor-pointer"
+                  >
+                    Voltar ao Início
+                  </button>
+                </div>
+              </div>
+            )
+          )}
         </Suspense>
       </div>
 

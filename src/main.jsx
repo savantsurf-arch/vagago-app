@@ -2,6 +2,9 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App.jsx';
+import { initTelemetry } from './services/telemetry';
+
+initTelemetry();
 
 // Registro leve do Service Worker para suportar instalação PWA (Adicionar à tela inicial)
 if (typeof window !== 'undefined' && 'serviceWorker' in navigator && import.meta.env.PROD) {

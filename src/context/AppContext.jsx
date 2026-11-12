@@ -25,6 +25,7 @@ import {
 } from '../services/geoUtils';
 import { isSpotAvailableOnDay } from '../services/pricingUtils';
 import { supabase, isSupabaseConfigured, fetchUsersFromSupabase } from '../services/supabaseClient';
+import { hashPassword, verifyPassword, sanitizeText } from '../services/securityUtils';
 import {
   fetchSpacesFromSupabase,
   publishSpaceToSupabase,
@@ -360,8 +361,11 @@ export const AppProvider = ({ children, initialRoute = '' }) => {
   }, [users]);
 
   const switchRole = (newRole) => {
+    if (newRole === 'ADMINISTRADOR' && currentUser?.role !== 'ADMINISTRADOR') {
+      return;
+    }
     setActiveRole(newRole);
-    localStorage.setItem('vagago_activeRole', newRole);
+    safeStorage.setItem('vagago_activeRole', newRole);
     if (currentUser) {
       const updatedUser = { ...currentUser, role: newRole };
       setCurrentUser(updatedUser);
@@ -369,16 +373,43 @@ export const AppProvider = ({ children, initialRoute = '' }) => {
     }
   };
 
-  // Auth Methods - Clean Real Authentication
+  // Auth Methods - Validação de senha com hash SHA-256 + suporte a Supabase Auth
   const login = async (emailInput, passwordInput) => {
     const cleanEmail = (emailInput || '').trim().toLowerCase();
 
-    if (!cleanEmail) return false;
+    if (!cleanEmail || !passwordInput || String(passwordInput).length < 6) {
+      return false;
+    }
 
-    // Search in local registered users
+    // 1. Se Supabase Auth estiver configurado, tenta autenticar na nuvem primeiro
+    if (isSupabaseConfigured && typeof supabase?.auth?.signInWithPassword === 'function') {
+      try {
+        const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password: passwordInput
+        });
+        if (!authErr && authData?.user) {
+          const metaRole = authData.user.user_metadata?.role || 'CLIENTE';
+          const cloudUser = users.find(u => u && u.email?.toLowerCase() === cleanEmail) || {
+            id: authData.user.id,
+            name: authData.user.user_metadata?.name || cleanEmail.split('@')[0],
+            email: cleanEmail,
+            role: metaRole,
+            credits: 20,
+            status: 'Ativo'
+          };
+          setCurrentUser(cloudUser);
+          setActiveRole(cloudUser.role || 'CLIENTE');
+          setIsAuthenticated(true);
+          setAuthToken(authData.session?.access_token || `sb_session_${Date.now()}`);
+          return true;
+        }
+      } catch {}
+    }
+
+    // 2. Busca no repositório local/sincronizado
     let foundUser = users.find(u => u && u.email?.toLowerCase() === cleanEmail);
 
-    // If not found locally, try fetching from Supabase Cloud users table
     if (!foundUser && isSupabaseConfigured) {
       try {
         const cloudUsers = await fetchUsersFromSupabase();
@@ -396,9 +427,19 @@ export const AppProvider = ({ children, initialRoute = '' }) => {
       return false;
     }
 
+    // Bloqueia acesso sem verificação quando o usuário já possui passwordHash cadastrado
+    if (foundUser.passwordHash) {
+      const passwordValid = await verifyPassword(passwordInput, foundUser.passwordHash);
+      if (!passwordValid) {
+        return false;
+      }
+    } else if (foundUser.role === 'ADMINISTRADOR') {
+      return false;
+    }
+
     let resolvedUser = foundUser;
     try {
-      const savedAvatar = localStorage.getItem(`vagago_avatar_${cleanEmail}`);
+      const savedAvatar = safeStorage.getItem(`vagago_avatar_${cleanEmail}`);
       if (savedAvatar) {
         resolvedUser = { ...resolvedUser, avatar: savedAvatar };
       }
@@ -411,11 +452,11 @@ export const AppProvider = ({ children, initialRoute = '' }) => {
     const token = `jwt_token_${Date.now()}`;
     setAuthToken(token);
     try {
-      localStorage.setItem('vagago_isAuthenticated', 'true');
-      localStorage.setItem('vagago_authToken', token);
-      localStorage.setItem('vagago_currentUser_email', resolvedUser.email);
-      localStorage.setItem('vagago_currentUser', JSON.stringify(resolvedUser));
-      localStorage.setItem('vagago_activeRole', userRole);
+      safeStorage.setItem('vagago_isAuthenticated', 'true');
+      safeStorage.setItem('vagago_authToken', token);
+      safeStorage.setItem('vagago_currentUser_email', resolvedUser.email);
+      safeStorage.setItem('vagago_currentUser', JSON.stringify(resolvedUser));
+      safeStorage.setItem('vagago_activeRole', userRole);
     } catch (e) {}
 
     if (userRole === 'PROPRIETÁRIO') {
@@ -428,13 +469,32 @@ export const AppProvider = ({ children, initialRoute = '' }) => {
   const register = async (newUserData) => {
     const newId = `usr_${Date.now()}`;
     const cleanEmail = (newUserData.email || '').trim().toLowerCase();
+    const safeRole = newUserData.role === 'PROPRIETÁRIO' ? 'PROPRIETÁRIO' : 'CLIENTE';
+    const passwordHash = newUserData.password ? await hashPassword(newUserData.password) : null;
+
+    if (isSupabaseConfigured && newUserData.password && typeof supabase?.auth?.signUp === 'function') {
+      try {
+        await supabase.auth.signUp({
+          email: cleanEmail,
+          password: newUserData.password,
+          options: {
+            data: {
+              name: sanitizeText(newUserData.name, 100),
+              role: safeRole
+            }
+          }
+        });
+      } catch {}
+    }
+
     const newUser = {
       id: newId,
-      name: newUserData.name || cleanEmail.split('@')[0],
+      name: sanitizeText(newUserData.name, 100) || cleanEmail.split('@')[0],
       email: cleanEmail,
-      role: newUserData.role || 'CLIENTE',
-      phone: newUserData.phone || '(73) 99123-4567',
-      cpf: newUserData.cpf || '000.000.000-00',
+      role: safeRole,
+      phone: sanitizeText(newUserData.phone, 24) || '(73) 99123-4567',
+      cpf: sanitizeText(newUserData.cpf, 20) || '000.000.000-00',
+      passwordHash,
       avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=250&q=80",
       status: "Ativo",
       referralCode: `VAGA${Math.floor(1000 + Math.random() * 9000)}`,
@@ -449,11 +509,11 @@ export const AppProvider = ({ children, initialRoute = '' }) => {
     const token = `jwt_token_${Date.now()}`;
     setAuthToken(token);
     try {
-      localStorage.setItem('vagago_isAuthenticated', 'true');
-      localStorage.setItem('vagago_authToken', token);
-      localStorage.setItem('vagago_currentUser_email', cleanEmail);
-      localStorage.setItem('vagago_currentUser', JSON.stringify(newUser));
-      localStorage.setItem('vagago_activeRole', newUser.role);
+      safeStorage.setItem('vagago_isAuthenticated', 'true');
+      safeStorage.setItem('vagago_authToken', token);
+      safeStorage.setItem('vagago_currentUser_email', cleanEmail);
+      safeStorage.setItem('vagago_currentUser', JSON.stringify(newUser));
+      safeStorage.setItem('vagago_activeRole', newUser.role);
     } catch (e) {}
 
     if (newUser.role === 'PROPRIETÁRIO') {
@@ -475,20 +535,29 @@ export const AppProvider = ({ children, initialRoute = '' }) => {
     setCurrentUser(null);
     setAuthToken(null);
     setActiveRole('CLIENTE');
+    if (isSupabaseConfigured && typeof supabase?.auth?.signOut === 'function') {
+      supabase.auth.signOut().catch(() => {});
+    }
     try {
-      localStorage.removeItem('vagago_isAuthenticated');
-      localStorage.removeItem('vagago_authToken');
-      localStorage.removeItem('vagago_currentUser_email');
-      localStorage.removeItem('vagago_currentUser');
-      localStorage.setItem('vagago_activeRole', 'CLIENTE');
+      safeStorage.removeItem('vagago_isAuthenticated');
+      safeStorage.removeItem('vagago_authToken');
+      safeStorage.removeItem('vagago_currentUser_email');
+      safeStorage.removeItem('vagago_currentUser');
+      safeStorage.setItem('vagago_activeRole', 'CLIENTE');
     } catch (e) {}
     setActiveTab('landing');
   };
 
 
 
-  const resetPassword = (emailInput, newPassword) => {
-    console.log(`Password reset for ${emailInput} to ${newPassword}`);
+  const resetPassword = async (emailInput, newPassword) => {
+    const cleanEmail = (emailInput || '').trim().toLowerCase();
+    if (!cleanEmail || !newPassword || String(newPassword).length < 6) return false;
+    const newHash = await hashPassword(newPassword);
+    setUsers(prev =>
+      prev.map(u => (u && u.email?.toLowerCase() === cleanEmail ? { ...u, passwordHash: newHash } : u))
+    );
+    return true;
   };
 
   // Main Repositories - Protected with Strict Array & Try/Catch Guards

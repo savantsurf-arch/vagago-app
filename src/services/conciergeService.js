@@ -5,10 +5,10 @@
  * e o Locador (dono da vaga) durante todo o ciclo de locação.
  */
 
-// 1. Regex de Detecção de Vazamento de Contato Externo e Pagamento Fora da Plataforma
-const PHONE_REGEX = /(\+?55\s?)?(\(?\d{2}\)?\s?)?(9\s?\d{4}[-\s]?\d{4}|\d{4}[-\s]?\d{4})/g;
-const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/gi;
-const PIX_CPF_REGEX = /\b(\d{3}\.?\d{3}\.?\d{3}-?\d{2})\b/g;
+// 1. Regex de Detecção de Vazamento de Contato Externo e Pagamento Fora (sem flag /g para .test() sem estado)
+const PHONE_REGEX = /(\+?55\s?)?(\(?\d{2}\)?\s?)?(9\s?\d{4}[-\s]?\d{4}|\d{4}[-\s]?\d{4})/;
+const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/i;
+const PIX_CPF_REGEX = /\b(\d{3}\.?\d{3}\.?\d{3}-?\d{2})\b/;
 
 // Palavras-chave de tentativa de levar para fora do app
 const EXTERNAL_CHAT_KEYWORDS = [
@@ -66,7 +66,7 @@ export const normalizeText = (text = '') => {
  * Analisa a mensagem enviada pelo usuário (Locatário ou Locador)
  * Retorna status de moderação, texto higienizado e intervenção do Vagago Concierge se aplicável.
  */
-export const analyzeConciergeMessage = (messageText = '', context = {}) => {
+export const analyzeConciergeMessage = (messageText = '', _context = {}) => {
   if (!messageText || typeof messageText !== 'string') {
     return {
       isBlocked: false,

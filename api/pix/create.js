@@ -5,11 +5,14 @@ import {
   createAsaasPixPayment,
   createMercadoPagoPixPayment
 } from '../_lib/pixProviders.js';
+import { applyRateLimit, verifyCsrfOrigin, sanitizeString } from '../_lib/security.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Método não permitido.' });
   }
+  if (!verifyCsrfOrigin(req, res)) return;
+  if (!applyRateLimit(req, res, { windowMs: 60_000, max: 25, bucket: 'pix-create' })) return;
 
   try {
     const {
@@ -22,6 +25,9 @@ export default async function handler(req, res) {
       hostWalletId,
       isDayOff = false
     } = req.body || {};
+
+    const cleanBookingNumber = sanitizeString(bookingNumber, 32);
+    const cleanSpaceTitle = sanitizeString(spaceTitle, 120);
 
     const numAmount = Number(amount);
     if (!numAmount || numAmount <= 0 || numAmount > 10000) {
@@ -39,11 +45,11 @@ export default async function handler(req, res) {
     if (provider === 'asaas') {
       const payment = await createAsaasPixPayment({
         amount: numAmount,
-        bookingNumber,
-        description: `VagaGo | ${spaceTitle} (#${bookingNumber})`,
-        customerName: payerName,
+        bookingNumber: cleanBookingNumber,
+        description: `VagaGo | ${cleanSpaceTitle} (#${cleanBookingNumber})`,
+        customerName: sanitizeString(payerName, 100),
         customerCpf: payerCpf,
-        customerEmail: payerEmail,
+        customerEmail: sanitizeString(payerEmail, 120),
         hostWalletId,
         splitBreakdown
       });
@@ -54,10 +60,10 @@ export default async function handler(req, res) {
       const host = req.headers.host || 'vagago-app.vercel.app';
       const protocol = host.includes('localhost') ? 'http' : 'https';
       const payment = await createMercadoPagoPixPayment({
-        bookingNumber,
-        description: `VagaGo | ${spaceTitle} (#${bookingNumber})`,
-        payerEmail,
-        payerName,
+        bookingNumber: cleanBookingNumber,
+        description: `VagaGo | ${cleanSpaceTitle} (#${cleanBookingNumber})`,
+        payerEmail: sanitizeString(payerEmail, 120),
+        payerName: sanitizeString(payerName, 100),
         splitBreakdown,
         notificationUrl: `${protocol}://${host}/api/pix/webhook`
       });
@@ -67,13 +73,13 @@ export default async function handler(req, res) {
     // Modo Sandbox quando ASAAS_API_KEY / MP_ACCESS_TOKEN ainda não estão configurados
     const pixCopyPaste = buildSandboxPixPayload({
       amount: splitBreakdown.amount,
-      bookingNumber
+      bookingNumber: cleanBookingNumber
     });
 
     return res.status(200).json({
       provider: 'sandbox',
       mode: 'sandbox',
-      paymentId: `sbx_${bookingNumber}_${Date.now()}`,
+      paymentId: `sbx_${cleanBookingNumber}_${Date.now()}`,
       status: 'PENDING',
       pixCopyPaste,
       qrImageBase64: null,

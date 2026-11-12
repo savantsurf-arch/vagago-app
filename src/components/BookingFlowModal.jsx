@@ -10,6 +10,7 @@ import {
   getWeekdayLabel
 } from '../services/pricingUtils';
 import { getWhatsAppUrl } from '../services/brandConfig';
+import { trackEvent } from '../services/telemetry';
 import {
   X,
   CheckCircle2,
@@ -419,6 +420,22 @@ export const BookingFlowModal = () => {
           qrCodeData: `VAGAGO-GATE-${Date.now()}`
         };
       }
+
+      // Registra validação no servidor quando online
+      fetch('/api/bookings/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...bookingPayload,
+          bookingNumber: result?.bookingNumber
+        })
+      }).catch(() => {});
+
+      trackEvent('booking_completed', {
+        planType,
+        paymentMethod,
+        value: totalPrice
+      });
 
       setCompletedBooking(result);
       setStep(3);

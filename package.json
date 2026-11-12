@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build && vite build --ssr src/entry-server.jsx --outDir dist/server && node scripts/prerender.mjs",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:e2e": "node scripts/test-e2e.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",
