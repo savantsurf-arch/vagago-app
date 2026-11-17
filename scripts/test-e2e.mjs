@@ -81,9 +81,12 @@ async function runTests() {
   assert.ok(homeHtml.includes('twitter:card'), 'twitter:card ausente');
   assert.ok(homeHtml.includes('rel="canonical"'), 'canonical ausente');
   const cleanHomeText = homeHtml.replace(/<!--.*?-->/g, '');
-  assert.ok(cleanHomeText.includes('Bem-vindo de volta!'), 'Conteudo Principal (Login) nao renderizado na raiz');
-  assert.ok(cleanHomeText.includes('rápida e segura!'), 'Frase de impacto ausente na Home');
-  assert.ok(cleanHomeText.includes('Entrar com Google'), 'Botao Google ausente na Home');
+  assert.ok(cleanHomeText.includes('Vagas de garagem em Itabuna (BA)'), 'H1 principal da Landing Page ausente na Home');
+  assert.ok(cleanHomeText.includes('rápida e segura'), 'Frase de impacto ausente na Home');
+  assert.ok(cleanHomeText.includes('Encontrar vaga'), 'CTA Encontrar vaga (Motorista) ausente na Home');
+  assert.ok(cleanHomeText.includes('Anunciar minha garagem'), 'CTA Anunciar garagem (Dono) ausente na Home');
+  assert.ok(cleanHomeText.includes('A partir de R$ 4/h'), 'Preço transparente R$ 4/h ausente na Home');
+  assert.ok(cleanHomeText.includes('Perguntas frequentes'), 'Bloco FAQ ausente na Home');
 
   const mapaHtml = fs.readFileSync(path.join(distDir, 'mapa/index.html'), 'utf-8').replace(/<!--.*?-->/g, '');
   assert.ok(mapaHtml.includes('Onde você vai estacionar?'), 'Placeholder do Mapa ausente');

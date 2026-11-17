@@ -72,33 +72,63 @@ export const GARAGE_TRUST_GALLERY = [
   }
 ];
 
-// Relatos representativos da comunidade local em Itabuna - BA
+// Estrutura de depoimentos para validação e preenchimento com dados reais
+// TODO: Não inventar números ou avaliações falsas. Preencher com depoimentos reais coletados de usuários e anfitriões de Itabuna.
 export const ITABUNA_TESTIMONIALS = [
   {
     id: 'test_1',
-    name: 'Maria S.',
-    neighborhood: 'Bairro Fátima, Itabuna',
-    role: 'Motorista frequente',
+    isPlaceholder: true,
+    name: 'Depoimento de Motorista (Centro)',
+    neighborhood: 'Centro / Av. Cinquentenário, Itabuna',
+    role: 'Motorista • Usuário Frequente',
     avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80',
     rating: 5,
-    quote: 'Uso a vaga perto do Centro toda semana quando vou resolver coisas na Av. do Cinquentenário. Antes rodava quase 20 minutos, agora já chego com garagem certa!'
+    quote: '[TODO: Inserir depoimento real de motorista sobre economia de tempo ao estacionar no Centro de Itabuna]',
+    todoNote: 'TODO: Preencher com nome, foto e frase real autorizada pelo usuário.'
   },
   {
     id: 'test_2',
-    name: 'Rafael Oliveira',
-    neighborhood: 'Góes Calmon, Itabuna',
-    role: 'Motorista • Região do Jequitibá',
+    isPlaceholder: true,
+    name: 'Depoimento de Motorista (Shopping)',
+    neighborhood: 'Góes Calmon / Shopping Jequitibá, Itabuna',
+    role: 'Motorista • Mensalista / Horista',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
     rating: 5,
-    quote: 'Deixar o carro em garagem coberta perto do Shopping Jequitibá pagando por hora saiu mais barato e deu muito mais tranquilidade nos dias de chuva.'
+    quote: '[TODO: Inserir relato real sobre custo-benefício de garagem coberta e reserva garantida no Jequitibá]',
+    todoNote: 'TODO: Preencher com avaliação real colhida na pesquisa de satisfação.'
   },
   {
     id: 'test_3',
-    name: 'Juliana Peixoto',
-    neighborhood: 'Centro / Jardim Vitória, Itabuna',
-    role: 'Anfitriã verificada',
+    isPlaceholder: true,
+    name: 'Depoimento de Anfitrião (Garagem)',
+    neighborhood: 'Bairro Fátima / Jardim Vitória, Itabuna',
+    role: 'Anfitrião de Garagem Privativa',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
     rating: 5,
-    quote: 'Minha garagem ficava vazia enquanto eu trabalhava fora. Cadastrei em poucos minutos, aprovo pelo celular e recebo meus repasses certinhos via PIX.'
+    quote: '[TODO: Inserir depoimento real do dono de garagem sobre a facilidade de gerar renda extra e repasse via Pix]',
+    todoNote: 'TODO: Preencher com relato verificado de proprietário cadastrado na plataforma.'
+  }
+];
+
+// Perguntas Frequentes (FAQ) com regras reais do produto
+// TODO: Confirmar respostas e tolerâncias definitivas com o operador antes do lançamento em larga escala.
+export const PLATFORM_FAQ = [
+  {
+    id: 'faq_pix',
+    question: 'Como funciona o pagamento via Pix?',
+    answer: 'O QR Code dinâmico e o código Pix Copia e Cola são gerados instantaneamente na finalização da reserva. A confirmação bancária ocorre em poucos segundos e os dados exatos de acesso ao portão são liberados imediatamente na tela.',
+    todoNote: 'TODO: Confirmar tempo limite de expiração do QR Code (atualmente configurado em 15 minutos) e eventuais regras de comprovante bancário manual.'
+  },
+  {
+    id: 'faq_cancellation',
+    question: 'O que acontece se o motorista precisar cancelar a reserva?',
+    answer: 'Cancelamentos solicitados com até 1 hora de antecedência em relação ao horário de início da reserva têm reembolso integral garantido (sem multa), estornado na carteira VagaGo ou na conta bancária.',
+    todoNote: 'TODO: Confirmar política definitiva para cancelamentos efetuados com menos de 1 hora de antecedência ou no-show.'
+  },
+  {
+    id: 'faq_host_payout',
+    question: 'Como o dono da garagem recebe o dinheiro das reservas?',
+    answer: 'O anfitrião recebe 90% do valor bruto da reserva diretamente na chave Pix cadastrada em seu perfil. A taxa da plataforma VagaGo é de apenas 10%, cobrindo infraestrutura, seguros operacionais e gateway.',
+    todoNote: 'TODO: Confirmar se o repasse ao proprietário é instantâneo (D+0/D+1) ou por ciclo semanal/mensal.'
   }
 ];

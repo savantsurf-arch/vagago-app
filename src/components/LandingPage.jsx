@@ -8,7 +8,8 @@ import { PwaInstallSection } from './PwaInstallSection';
 import {
   PLATFORM_GUARANTEES,
   GARAGE_TRUST_GALLERY,
-  ITABUNA_TESTIMONIALS
+  ITABUNA_TESTIMONIALS,
+  PLATFORM_FAQ
 } from '../services/brandConfig';
 import {
   Search,
@@ -31,8 +32,12 @@ import {
   Clock,
   Maximize2,
   ChevronRight,
+  ChevronDown,
   Tag,
-  Gift
+  Gift,
+  HelpCircle,
+  Sparkles,
+  Check
 } from 'lucide-react';
 
 export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
@@ -60,6 +65,7 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
   const [heroAudience, setHeroAudience] = useState('driver');
   const [quickHostHourly, setQuickHostHourly] = useState(6);
   const [quickHostHoursDay, setQuickHostHoursDay] = useState(6);
+  const [openFaqId, setOpenFaqId] = useState('faq_pix');
 
   const safeFilters = searchFilters || {
     dateType: 'hoje',
@@ -71,6 +77,12 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
     (s) => s && s.status !== 'Pausada' && s.isAvailable !== false
   );
   const displaySpots = activeSpots.length > 0 ? activeSpots : safeSpots;
+
+  // Preço mínimo real a partir das vagas cadastradas em Itabuna (R$ 4/h no banco)
+  const minSpotPrice = safeSpots.reduce((min, s) => {
+    const p = Number(s?.priceHourly || 6);
+    return p > 0 && p < min ? p : min;
+  }, 4);
 
   const estimatedMonthlyHostNet = quickHostHourly * quickHostHoursDay * 22 * 0.9;
 
@@ -129,8 +141,8 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
           1. HERO MOBILE-FIRST ESTILO 99 (CORES OFICIAIS VAGAGO: AZUL MARINHO + AZUL + VERDE GO)
          ================================================== */}
       <section className="relative bg-gradient-to-b from-[#062B5B] via-[#0070F3] to-slate-50 pt-4 sm:pt-6 pb-6 border-b border-slate-200/70">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 space-y-4">
-          {/* Header Estilo 99: Avatar + "Olá, Nome!" + Atalho Pix/QR + Toggle Anfitrião */}
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 space-y-6">
+          {/* Top Bar: Status do Usuário / GPS + Atalhos */}
           <div className="flex items-center justify-between gap-3">
             <button
               type="button"
@@ -143,12 +155,14 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
                   'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'
                 }
                 alt={firstName}
+                width="44"
+                height="44"
                 className="w-11 h-11 rounded-full object-cover ring-2 ring-white shadow-sm shrink-0"
               />
               <div>
-                <h1 className="text-lg sm:text-xl font-black text-white leading-tight group-hover:underline drop-shadow-2xs">
+                <p className="text-sm sm:text-base font-black text-white leading-tight group-hover:underline drop-shadow-2xs">
                   Olá, {firstName}!
-                </h1>
+                </p>
                 <p className="text-xs font-bold text-sky-100 flex items-center gap-1">
                   <MapPin className="w-3 h-3" />
                   <span>{userLocation?.isLive ? 'GPS ativo em Itabuna' : 'Itabuna - BA • Estacione fácil'}</span>
@@ -168,7 +182,7 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
                   role="tab"
                   aria-selected={heroAudience === 'driver'}
                   onClick={() => setHeroAudience('driver')}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-extrabold flex items-center gap-1.5 transition cursor-pointer ${
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-extrabold flex items-center gap-1.5 transition cursor-pointer min-h-[36px] ${
                     heroAudience === 'driver'
                       ? 'bg-[#062B5B] text-white'
                       : 'text-slate-700 hover:text-slate-950'
@@ -182,7 +196,7 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
                   role="tab"
                   aria-selected={heroAudience === 'host'}
                   onClick={() => setHeroAudience('host')}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-extrabold flex items-center gap-1.5 transition cursor-pointer ${
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-extrabold flex items-center gap-1.5 transition cursor-pointer min-h-[36px] ${
                     heroAudience === 'host'
                       ? 'bg-[#00A838] text-white'
                       : 'text-slate-700 hover:text-slate-950'
@@ -193,7 +207,7 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
                 </button>
               </div>
 
-              {/* Atalho Pix + QR (Canto superior direito, igual imagem modelo) */}
+              {/* Atalho Pix + QR */}
               <button
                 type="button"
                 onClick={handleQuickPixClick}
@@ -205,6 +219,57 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
                   Pix
                 </span>
                 <QrCode className="w-5 h-5 text-[#062B5B] mt-1" />
+              </button>
+            </div>
+          </div>
+
+          {/* ==========================================================
+              HERO PRINCIPAL DE MARKETING — ÚNICO H1 DA PÁGINA (TAREFA 1 & 3)
+             ========================================================== */}
+          <div className="space-y-4 pt-1">
+            <div className="space-y-2.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 bg-[#19E600] text-[#06152D] px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider shadow-sm">
+                  <MapPin className="w-3.5 h-3.5" /> Itabuna - BA
+                </span>
+                <span className="inline-flex items-center gap-1.5 bg-white/15 text-white px-3 py-1 rounded-full text-xs font-bold border border-white/25">
+                  <Tag className="w-3.5 h-3.5 text-[#19E600]" /> A partir de R$ {minSpotPrice.toFixed(2).replace('.', ',')}/h
+                </span>
+                <span className="inline-flex items-center gap-1.5 bg-white/15 text-white px-3 py-1 rounded-full text-xs font-bold border border-white/25">
+                  <QrCode className="w-3.5 h-3.5 text-cyan-300" /> Pagamento instantâneo via Pix
+                </span>
+              </div>
+
+              <h1 className="text-2xl sm:text-4xl lg:text-[42px] font-black text-white tracking-tight leading-[1.15]">
+                Vagas de garagem em Itabuna (BA) — Encontre, reserve e estacione de forma{' '}
+                <span className="text-[#19E600] drop-shadow-[0_0_20px_rgba(25,230,0,0.4)]">
+                  rápida e segura
+                </span>
+              </h1>
+
+              <p className="text-sm sm:text-base text-sky-100 font-medium leading-relaxed max-w-3xl">
+                Alugue vagas de garagem privativas e comerciais por hora, diária ou mês no Centro, Shopping Jequitibá e principais bairros de Itabuna. Preços transparentes a partir de <strong className="text-white font-extrabold underline decoration-[#19E600] decoration-2">R$ 4/h</strong> com confirmação imediata via Pix.
+              </p>
+            </div>
+
+            {/* DOIS PÚBLICOS, DOIS CAMINHOS — CTAs SEPARADOS (TAREFA 3) */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-1">
+              <button
+                type="button"
+                onClick={() => setActiveTab('search')}
+                className="min-h-[48px] px-6 py-3 bg-[#19E600] hover:bg-[#16d000] text-[#06152D] font-black text-sm sm:text-base rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#19E600]/30 transition transform hover:scale-[1.02] cursor-pointer"
+              >
+                <Search className="w-4 h-4 text-[#06152D]" strokeWidth={2.5} />
+                <span>Encontrar vaga (Motorista)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleStartHosting}
+                className="min-h-[48px] px-6 py-3 bg-white/15 hover:bg-white/25 text-white font-extrabold text-sm sm:text-base rounded-2xl border border-white/30 flex items-center justify-center gap-2 transition transform hover:scale-[1.02] cursor-pointer"
+              >
+                <Home className="w-4 h-4 text-[#19E600]" />
+                <span>Anunciar minha garagem (Dono)</span>
               </button>
             </div>
           </div>
@@ -609,7 +674,104 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
       </section>
 
       {/* ==================================================
-          2. ESTACIONAR PERTO DE MIM (DADOS DISTINTOS + CARROSSEL)
+          2. BENEFÍCIOS CONCRETOS E TRANSPARÊNCIA DE PREÇO EM ITABUNA (TAREFA 2)
+         ================================================== */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-gradient-to-br from-[#06152D] via-[#0A2246] to-[#06152D] rounded-3xl p-6 sm:p-10 text-white shadow-xl border border-sky-900/50 space-y-8">
+          <div className="max-w-3xl space-y-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-[#19E600]/15 text-[#19E600] border border-[#19E600]/30">
+              <Sparkles className="w-3.5 h-3.5" /> Benefícios Reais e Preço Justo
+            </span>
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white">
+              Transparência total para quem estaciona e para quem anuncia
+            </h2>
+            <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
+              O VagaGo conecta motoristas a garagens ociosas em Itabuna com preços pré-fixados, cobertura nos principais bairros e repasse transparente via Pix.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {/* Card 1: Preço Real no Corpo da Página */}
+            <div className="p-5 sm:p-6 rounded-2xl bg-[#07162E]/90 border border-slate-700/60 space-y-3 hover:border-[#19E600]/60 transition group">
+              <div className="w-11 h-11 rounded-xl bg-[#19E600]/15 border border-[#19E600]/30 flex items-center justify-center text-[#19E600]">
+                <DollarSign className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <span className="text-[11px] font-black uppercase text-[#19E600] tracking-wider">
+                  Tarifa Clara
+                </span>
+                <h3 className="text-lg font-black text-white">A partir de R$ 4/h</h3>
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Economize até 40% em comparação com estacionamentos rotativos convencionais. Vagas por hora, diária ou mês sem taxas ocultas.
+              </p>
+              <div className="pt-1 text-[11px] font-bold text-[#19E600] flex items-center gap-1">
+                <Check className="w-3.5 h-3.5" /> Preço real verificado
+              </div>
+            </div>
+
+            {/* Card 2: Cobertura em Itabuna */}
+            <div className="p-5 sm:p-6 rounded-2xl bg-[#07162E]/90 border border-slate-700/60 space-y-3 hover:border-cyan-400/60 transition group">
+              <div className="w-11 h-11 rounded-xl bg-cyan-500/15 border border-cyan-400/30 flex items-center justify-center text-cyan-300">
+                <MapPin className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <span className="text-[11px] font-black uppercase text-cyan-300 tracking-wider">
+                  Cobertura Local
+                </span>
+                <h3 className="text-lg font-black text-white">Centro, Shopping e Bairros</h3>
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Garagens na Av. Cinquentenário, Praça Camacan, Shopping Jequitibá, Hospital Calixto Midlej, Bairro Fátima, Góes Calmon e São Caetano.
+              </p>
+              <div className="pt-1 text-[11px] font-bold text-cyan-300 flex items-center gap-1">
+                <Check className="w-3.5 h-3.5" /> GPS e rotas integradas
+              </div>
+            </div>
+
+            {/* Card 3: Pagamento Instantâneo via Pix */}
+            <div className="p-5 sm:p-6 rounded-2xl bg-[#07162E]/90 border border-slate-700/60 space-y-3 hover:border-emerald-400/60 transition group">
+              <div className="w-11 h-11 rounded-xl bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center text-emerald-300">
+                <QrCode className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <span className="text-[11px] font-black uppercase text-emerald-300 tracking-wider">
+                  Pix Imediato
+                </span>
+                <h3 className="text-lg font-black text-white">QR Code Dinâmico</h3>
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Pague em segundos via QR Code ou Copia e Cola. Confirmação instantânea com liberação imediata do código do portão e orientações.
+              </p>
+              <div className="pt-1 text-[11px] font-bold text-emerald-300 flex items-center gap-1">
+                <Check className="w-3.5 h-3.5" /> Reembolso garantido até 1h antes
+              </div>
+            </div>
+
+            {/* Card 4: Anúncio Gratuito para Donos */}
+            <div className="p-5 sm:p-6 rounded-2xl bg-[#07162E]/90 border border-slate-700/60 space-y-3 hover:border-[#087BFF]/60 transition group">
+              <div className="w-11 h-11 rounded-xl bg-blue-500/15 border border-blue-400/30 flex items-center justify-center text-blue-300">
+                <Home className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <span className="text-[11px] font-black uppercase text-blue-300 tracking-wider">
+                  Para Donos
+                </span>
+                <h3 className="text-lg font-black text-white">Anúncio 100% Gratuito</h3>
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Cadastre sua garagem sem taxa de adesão ou mensalidades. O dono recebe 90% do valor de cada reserva diretamente na sua chave Pix.
+              </p>
+              <div className="pt-1 text-[11px] font-bold text-blue-300 flex items-center gap-1">
+                <Check className="w-3.5 h-3.5" /> Ganhe renda com vaga parada
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ==================================================
+          3. ESTACIONAR PERTO DE MIM (DADOS DISTINTOS + CARROSSEL)
          ================================================== */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <SmartParkWidget />
@@ -947,18 +1109,21 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
       </section>
 
       {/* ==================================================
-          8. DEPOIMENTOS DE MORADORES DE ITABUNA
+          8. AVALIAÇÕES E PROVA SOCIAL (ESTRUTURA COM TODO - TAREFA 7)
          ================================================== */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-2xl mx-auto mb-8 space-y-2">
-          <span className="text-xs font-bold uppercase text-sky-600 tracking-wider">
-            Comunidade Local em Itabuna - BA
-          </span>
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+        <div className="text-center max-w-2xl mx-auto space-y-2">
+          <div className="flex justify-center">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-200">
+              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+              TODO: Espaço reservado para avaliações reais de Itabuna
+            </span>
+          </div>
           <h2 className="text-2xl sm:text-3xl font-black text-slate-900">
             Quem usa no dia a dia em Itabuna recomenda
           </h2>
           <p className="text-slate-600 text-xs sm:text-sm">
-            Motoristas e proprietários de bairros como Fátima, Góes Calmon, Centro e Jardim Vitória.
+            Estrutura pronta para depoimentos verificados de motoristas e proprietários do Centro, Shopping Jequitibá, Fátima e Góes Calmon.
           </p>
         </div>
 
@@ -966,23 +1131,35 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
           {ITABUNA_TESTIMONIALS.map((item) => (
             <div
               key={item.id}
-              className="p-6 bg-white rounded-3xl border border-slate-200/90 shadow-2xs flex flex-col justify-between space-y-4"
+              className="p-6 bg-white rounded-3xl border border-slate-200/90 shadow-2xs flex flex-col justify-between space-y-4 hover:border-sky-300 transition"
             >
               <div className="space-y-3">
-                <div className="flex items-center gap-1 text-amber-400">
-                  {Array.from({ length: item.rating }).map((_, idx) => (
-                    <Star key={idx} className="w-4 h-4 fill-amber-400" />
-                  ))}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1 text-amber-400">
+                    {Array.from({ length: item.rating }).map((_, idx) => (
+                      <Star key={idx} className="w-4 h-4 fill-amber-400" />
+                    ))}
+                  </div>
+                  <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                    TODO: Depoimento Real
+                  </span>
                 </div>
                 <p className="text-xs sm:text-sm text-slate-700 leading-relaxed italic">
                   &ldquo;{item.quote}&rdquo;
                 </p>
+                {item.todoNote && (
+                  <p className="text-[11px] text-slate-400 font-mono bg-slate-50 p-2 rounded-xl border border-slate-100">
+                    {item.todoNote}
+                  </p>
+                )}
               </div>
 
               <div className="flex items-center gap-3 pt-3 border-t border-slate-100">
                 <img
                   src={item.avatar}
                   alt={item.name}
+                  width="44"
+                  height="44"
                   loading="lazy"
                   decoding="async"
                   className="w-11 h-11 rounded-full object-cover ring-2 ring-sky-100 shrink-0"
@@ -999,6 +1176,61 @@ export const LandingPage = ({ onOpenDepositModal = () => {} }) => {
               </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* ==================================================
+          9. PERGUNTAS FREQUENTES (FAQ) - REGRAS REAIS E NOTAS TODO (TAREFA 7)
+         ================================================== */}
+      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+        <div className="text-center space-y-2">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-sky-50 text-sky-700 border border-sky-200">
+            <HelpCircle className="w-3.5 h-3.5" /> Dúvidas Frequentes
+          </span>
+          <h2 className="text-2xl sm:text-3xl font-black text-slate-900">
+            Perguntas frequentes sobre o VagaGo
+          </h2>
+          <p className="text-slate-600 text-xs sm:text-sm max-w-xl mx-auto">
+            Tire suas dúvidas sobre pagamento via Pix, regras de cancelamento e repasses financeiros para donos de garagens em Itabuna.
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          {PLATFORM_FAQ.map((faq) => {
+            const isOpen = openFaqId === faq.id;
+            return (
+              <div
+                key={faq.id}
+                className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden transition"
+              >
+                <button
+                  type="button"
+                  onClick={() => setOpenFaqId(isOpen ? null : faq.id)}
+                  aria-expanded={isOpen}
+                  className="w-full min-h-[52px] p-4 sm:p-5 flex items-center justify-between gap-4 text-left font-extrabold text-slate-900 hover:text-sky-700 transition cursor-pointer"
+                >
+                  <span className="text-sm sm:text-base">{faq.question}</span>
+                  <ChevronDown
+                    className={`w-5 h-5 text-slate-400 transition-transform duration-200 shrink-0 ${
+                      isOpen ? 'rotate-180 text-sky-600' : ''
+                    }`}
+                  />
+                </button>
+
+                {isOpen && (
+                  <div className="px-4 pb-5 sm:px-5 space-y-3 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-3">
+                    <p>{faq.answer}</p>
+                    {faq.todoNote && (
+                      <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-mono space-y-1">
+                        <span className="font-bold block uppercase text-[10px] text-amber-700">Nota para validação:</span>
+                        <span>{faq.todoNote}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </section>
 

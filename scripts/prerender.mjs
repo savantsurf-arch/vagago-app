@@ -10,55 +10,73 @@ const ROUTES = [
   {
     route: '/',
     outFile: 'index.html',
-    title: 'VagaGo | Acesse sua conta ou crie um cadastro para estacionar',
+    title: 'Vagas de garagem em Itabuna (BA) | VagaGo',
+    ogTitle: 'VagaGo — Garagens em Itabuna',
+    twitterTitle: 'Encontre e reserve sua vaga em Itabuna com o VagaGo',
     url: 'https://vagago-app.vercel.app/'
   },
   {
     route: '/login',
     outFile: 'login/index.html',
-    title: 'Entrar no VagaGo | Acesse sua conta de Motorista ou Anfitrião',
+    title: 'Entrar no VagaGo | Acesse sua conta em Itabuna',
+    ogTitle: 'Entrar no VagaGo',
+    twitterTitle: 'Acesse sua conta no VagaGo para estacionar ou anunciar',
     url: 'https://vagago-app.vercel.app/login'
   },
   {
     route: '/mapa',
     outFile: 'mapa/index.html',
-    title: 'VagaGo | Vagas de Estacionamento e Garagens em Itabuna - BA',
+    title: 'Mapa de Vagas em Itabuna (BA) | VagaGo',
+    ogTitle: 'Mapa de Vagas • Itabuna',
+    twitterTitle: 'Veja garagens disponíveis perto de você no mapa de Itabuna',
     url: 'https://vagago-app.vercel.app/mapa'
   },
   {
     route: '/buscar',
     outFile: 'buscar/index.html',
-    title: 'Buscar Vagas no Mapa em Itabuna - BA | VagaGo',
+    title: 'Buscar Garagens em Itabuna (BA) | VagaGo',
+    ogTitle: 'Buscar Garagens em Itabuna',
+    twitterTitle: 'Encontre vagas com fotos e preços em Itabuna',
     url: 'https://vagago-app.vercel.app/buscar'
   },
   {
     route: '/anfitriao',
     outFile: 'anfitriao/index.html',
-    title: 'Alugue sua Garagem em Itabuna - BA | Seja Anfitrião VagaGo',
+    title: 'Anuncie sua Garagem em Itabuna (BA) | VagaGo',
+    ogTitle: 'Anuncie sua Garagem • VagaGo',
+    twitterTitle: 'Transforme sua vaga ociosa em renda extra em Itabuna',
     url: 'https://vagago-app.vercel.app/anfitriao'
   },
   {
     route: '/termos',
     outFile: 'termos/index.html',
-    title: 'Termos de Uso e Política de Privacidade | VagaGo',
+    title: 'Termos de Uso | VagaGo Itabuna',
+    ogTitle: 'Termos de Uso • VagaGo',
+    twitterTitle: 'Termos de uso e regras de reserva do VagaGo',
     url: 'https://vagago-app.vercel.app/termos'
   },
   {
     route: '/privacidade',
     outFile: 'privacidade/index.html',
-    title: 'Política de Privacidade (LGPD) | VagaGo',
+    title: 'Privacidade e LGPD | VagaGo Itabuna',
+    ogTitle: 'Privacidade • VagaGo',
+    twitterTitle: 'Compromisso com seus dados e privacidade (LGPD)',
     url: 'https://vagago-app.vercel.app/privacidade'
   },
   {
     route: '/cancelamento',
     outFile: 'cancelamento/index.html',
-    title: 'Política de Cancelamento e Reembolso | VagaGo',
+    title: 'Política de Cancelamento | VagaGo Itabuna',
+    ogTitle: 'Cancelamento e Reembolso • VagaGo',
+    twitterTitle: 'Regras de cancelamento e reembolso transparente',
     url: 'https://vagago-app.vercel.app/cancelamento'
   },
   {
     route: '/contato',
     outFile: 'contato/index.html',
-    title: 'Contato e Suporte WhatsApp | VagaGo Itabuna',
+    title: 'Suporte e Contato | VagaGo Itabuna',
+    ogTitle: 'Contato e Suporte • VagaGo',
+    twitterTitle: 'Fale com o suporte do VagaGo em Itabuna',
     url: 'https://vagago-app.vercel.app/contato'
   }
 ];
@@ -74,10 +92,13 @@ async function runPrerender() {
   for (const item of ROUTES) {
     const appHtml = render(item.route);
     let html = template.replace('<!--app-html-->', appHtml);
+    const ogTitle = item.ogTitle || item.title;
+    const twitterTitle = item.twitterTitle || item.title;
+
     html = html
       .replace(/<title>.*?<\/title>/i, `<title>${item.title}</title>`)
-      .replace(/<meta property="og:title" content=".*?" \/>/i, `<meta property="og:title" content="${item.title}" />`)
-      .replace(/<meta name="twitter:title" content=".*?" \/>/i, `<meta name="twitter:title" content="${item.title}" />`)
+      .replace(/<meta property="og:title" content=".*?" \/>/i, `<meta property="og:title" content="${ogTitle}" />`)
+      .replace(/<meta name="twitter:title" content=".*?" \/>/i, `<meta name="twitter:title" content="${twitterTitle}" />`)
       .replace(/<link rel="canonical" href=".*?" \/>/i, `<link rel="canonical" href="${item.url}" />`)
       .replace(/<meta property="og:url" content=".*?" \/>/i, `<meta property="og:url" content="${item.url}" />`);
 

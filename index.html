@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>VagaGo | Vagas de Estacionamento e Garagens em Itabuna - BA</title>
+    <title>Vagas de garagem em Itabuna (BA) | VagaGo</title>
     <meta
       name="description"
-      content="Encontre vagas de estacionamento perto de você em Itabuna - BA por hora, diária ou mês. Compare preços, veja fotos reais da garagem e reserve via Pix ou alugue sua vaga parada."
+      content="Reserve vagas de garagem e estacionamento em Itabuna (BA) a partir de R$ 4/h. Centro, Shopping Jequitibá e bairros. Pagamento via Pix com reserva garantida."
     />
     <meta name="robots" content="index, follow" />
     <link rel="canonical" href="https://vagago-app.vercel.app/" />
@@ -22,12 +22,12 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="VagaGo" />
 
-    <!-- Open Graph -->
+    <!-- Open Graph (Diferenciado e Otimizado para Redes) -->
     <meta property="og:site_name" content="VagaGo" />
-    <meta property="og:title" content="VagaGo | Vagas de Estacionamento e Garagens em Itabuna - BA" />
+    <meta property="og:title" content="VagaGo — Garagens em Itabuna" />
     <meta
       property="og:description"
-      content="Reserve vagas de garagem seguras perto de você no Centro de Itabuna, Shopping Jequitibá e bairros, ou ganhe renda extra alugando sua vaga."
+      content="Reserve vagas de garagem seguras em Itabuna a partir de R$ 4/h no Centro, Shopping Jequitibá e bairros, ou anuncie sua vaga ociosa."
     />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://vagago-app.vercel.app/" />
@@ -36,72 +36,95 @@
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:type" content="image/png" />
-    <meta property="og:image:alt" content="VagaGo — Vagas de Estacionamento e Garagens em Itabuna - BA" />
+    <meta property="og:image:alt" content="VagaGo — Vagas de Garagem em Itabuna (BA)" />
 
-    <!-- Twitter Card -->
+    <!-- Twitter Card (Frase de Chamada e Imagem Grande) -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="VagaGo | Vagas de Estacionamento e Garagens em Itabuna - BA" />
+    <meta name="twitter:title" content="Encontre e reserve sua vaga em Itabuna com o VagaGo" />
     <meta
       name="twitter:description"
       content="Estacione perto de você em Itabuna - BA a partir de R$ 4/h com reserva via Pix e QR Code, ou anuncie sua garagem gratuitamente."
     />
     <meta name="twitter:image" content="https://vagago-app.vercel.app/og-image.png" />
 
-    <!-- JSON-LD LocalBusiness & Offers -->
+    <!-- JSON-LD WebApplication & LocalBusiness Schema -->
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": ["LocalBusiness", "ParkingFacility"],
-        "name": "VagaGo — Marketplace de Garagens em Itabuna",
-        "url": "https://vagago-app.vercel.app/",
-        "image": "https://vagago-app.vercel.app/og-image.png",
-        "description": "Marketplace de vagas de estacionamento e garagens privativas em Itabuna - BA com reserva por hora, diária ou mês via Pix e QR Code.",
-        "priceRange": "R$ 4 - R$ 280",
-        "address": {
-          "@type": "PostalAddress",
-          "addressLocality": "Itabuna",
-          "addressRegion": "BA",
-          "addressCountry": "BR"
-        },
-        "geo": {
-          "@type": "GeoCoordinates",
-          "latitude": -14.7966,
-          "longitude": -39.2789
-        },
-        "areaServed": {
-          "@type": "City",
-          "name": "Itabuna"
-        },
-        "hasOfferCatalog": {
-          "@type": "OfferCatalog",
-          "name": "Vagas de Garagem em Itabuna - BA",
-          "itemListElement": [
-            {
-              "@type": "Offer",
-              "name": "Garagem Coberta Centro — Av. do Cinquentenário",
-              "price": "6.00",
+        "@graph": [
+          {
+            "@type": "WebApplication",
+            "@id": "https://vagago-app.vercel.app/#webapp",
+            "name": "VagaGo",
+            "url": "https://vagago-app.vercel.app/",
+            "applicationCategory": "ParkingApplication",
+            "operatingSystem": "All",
+            "browserRequirements": "Requires JavaScript. Requires HTML5.",
+            "offers": {
+              "@type": "AggregateOffer",
               "priceCurrency": "BRL",
-              "availability": "https://schema.org/InStock",
-              "url": "https://vagago-app.vercel.app/buscar"
-            },
-            {
-              "@type": "Offer",
-              "name": "Vaga Próxima ao Shopping Jequitibá",
-              "price": "5.00",
-              "priceCurrency": "BRL",
-              "availability": "https://schema.org/InStock",
-              "url": "https://vagago-app.vercel.app/buscar"
-            },
-            {
-              "@type": "Offer",
-              "name": "Garagem Econômica Bairro de Fátima",
-              "price": "4.00",
-              "priceCurrency": "BRL",
-              "availability": "https://schema.org/InStock",
-              "url": "https://vagago-app.vercel.app/buscar"
+              "lowPrice": "4.00",
+              "highPrice": "280.00",
+              "offerCount": "10"
             }
-          ]
-        }
+          },
+          {
+            "@type": ["LocalBusiness", "ParkingFacility"],
+            "@id": "https://vagago-app.vercel.app/#localbusiness",
+            "name": "VagaGo — Garagens em Itabuna",
+            "url": "https://vagago-app.vercel.app/",
+            "image": "https://vagago-app.vercel.app/og-image.png",
+            "description": "Plataforma de busca, reserva e anúncio de vagas de garagem e estacionamento em Itabuna - BA por hora, diária ou mês via Pix e QR Code.",
+            "priceRange": "R$ 4 - R$ 280",
+            "address": {
+              "@type": "PostalAddress",
+              "addressLocality": "Itabuna",
+              "addressRegion": "BA",
+              "addressCountry": "BR"
+            },
+            "geo": {
+              "@type": "GeoCoordinates",
+              "latitude": -14.7966,
+              "longitude": -39.2789
+            },
+            "areaServed": {
+              "@type": "City",
+              "name": "Itabuna",
+              "addressRegion": "BA",
+              "addressCountry": "BR"
+            },
+            "hasOfferCatalog": {
+              "@type": "OfferCatalog",
+              "name": "Vagas de Garagem em Itabuna - BA",
+              "itemListElement": [
+                {
+                  "@type": "Offer",
+                  "name": "Garagem Coberta Centro — Av. do Cinquentenário",
+                  "price": "6.00",
+                  "priceCurrency": "BRL",
+                  "availability": "https://schema.org/InStock",
+                  "url": "https://vagago-app.vercel.app/buscar"
+                },
+                {
+                  "@type": "Offer",
+                  "name": "Vaga Próxima ao Shopping Jequitibá",
+                  "price": "5.00",
+                  "priceCurrency": "BRL",
+                  "availability": "https://schema.org/InStock",
+                  "url": "https://vagago-app.vercel.app/buscar"
+                },
+                {
+                  "@type": "Offer",
+                  "name": "Garagem Econômica Bairro de Fátima",
+                  "price": "4.00",
+                  "priceCurrency": "BRL",
+                  "availability": "https://schema.org/InStock",
+                  "url": "https://vagago-app.vercel.app/buscar"
+                }
+              ]
+            }
+          }
+        ]
       }
     </script>
 

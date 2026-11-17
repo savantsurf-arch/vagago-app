@@ -66,7 +66,7 @@ const safeStorage = {
 };
 
 const ROUTE_TO_TAB = {
-  '/': { tab: 'login' },
+  '/': { tab: 'landing' },
   '/login': { tab: 'login' },
   '/cadastro': { tab: 'login', initialMode: 'register' },
   '/mapa': { tab: 'landing' },
@@ -80,8 +80,8 @@ const ROUTE_TO_TAB = {
 };
 
 const TAB_TO_ROUTE = {
-  login: '/',
-  landing: '/mapa',
+  landing: '/',
+  login: '/login',
   search: '/buscar',
   host_landing: '/anfitriao',
   terms: '/termos',
