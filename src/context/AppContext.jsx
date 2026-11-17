@@ -213,6 +213,10 @@ export const AppProvider = ({ children, initialRoute = '' }) => {
   const [authModalMode, setAuthModalMode] = useState('login'); // login, register, forgot
   const [suggestedAccountType, setSuggestedAccountType] = useState('CLIENTE');
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
+  const [trackingBooking, setTrackingBooking] = useState(null);
+
+  const openLogisticsTracker = (booking) => setTrackingBooking(booking);
+  const closeLogisticsTracker = () => setTrackingBooking(null);
 
   const openLoginModal = () => {
     setAuthModalMode('login');
@@ -2691,7 +2695,11 @@ export const AppProvider = ({ children, initialRoute = '' }) => {
       authorizeCheckIn,
       completeCheckOut,
       openSpotDetails,
-      openBookingFlow
+      openBookingFlow,
+      trackingBooking,
+      setTrackingBooking,
+      openLogisticsTracker,
+      closeLogisticsTracker
     }}>
 
       {children}

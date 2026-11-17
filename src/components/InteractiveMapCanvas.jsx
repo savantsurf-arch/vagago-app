@@ -9,6 +9,26 @@ const priceIconCache = new Map();
 let cachedUserLocationIcon = null;
 let cachedEntranceGateIcon = null;
 
+const getVehicleLocationMarkerIcon = (heading = 0) => {
+  const rotation = Math.round(heading || 0);
+  const html = `
+    <div style="position:relative;width:40px;height:40px;display:flex;align-items:center;justify-content:center;">
+      <div style="position:absolute;width:38px;height:38px;background:rgba(8,123,255,0.22);border-radius:50%;animation:ping 2s cubic-bezier(0,0,0.2,1) infinite;"></div>
+      <div style="position:relative;width:32px;height:32px;background:#06152D;border:2.5px solid #00D9FF;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(6,21,45,0.6);transform:rotate(${rotation}deg);transition:transform 0.35s ease-out;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="#19E600" stroke="#06152D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="12 2 19 21 12 17 5 21 12 2"></polygon>
+        </svg>
+      </div>
+    </div>
+  `;
+  return L.divIcon({
+    html,
+    className: 'live-gps-vehicle-marker',
+    iconSize: [40, 40],
+    iconAnchor: [20, 20]
+  });
+};
+
 const getUserLocationMarkerIcon = () => {
   if (cachedUserLocationIcon) return cachedUserLocationIcon;
   const html = `
@@ -161,6 +181,16 @@ function FitRouteBoundsController({ routePolyline, fullScreen }) {
   return null;
 }
 
+function RecenterController({ targetCoords, trigger }) {
+  const map = useMap();
+  useEffect(() => {
+    if (trigger && Array.isArray(targetCoords) && targetCoords[0] && targetCoords[1]) {
+      map.setView(targetCoords, Math.max(map.getZoom(), 16), { animate: true, duration: 0.5 });
+    }
+  }, [trigger, targetCoords, map]);
+  return null;
+}
+
 export default function InteractiveMapCanvas({
   spots = [],
   userLocation = null,
@@ -176,6 +206,7 @@ export default function InteractiveMapCanvas({
   controlsTopClass = '',
   center = [-14.7966, -39.2789],
   zoom = 14,
+  recenterTrigger = 0,
   className = "w-full h-full min-h-[380px] rounded-3xl overflow-hidden border border-slate-200 shadow-sm relative group"
 }) {
   const [autoFitKey, setAutoFitKey] = useState(0);
@@ -233,6 +264,11 @@ export default function InteractiveMapCanvas({
           fullScreen={fullScreen}
         />
 
+        <RecenterController
+          targetCoords={userLocation && userLocation.lat && userLocation.lng ? [Number(userLocation.lat), Number(userLocation.lng)] : null}
+          trigger={recenterTrigger}
+        />
+
         {/* OpenStreetMap Standard Tile Layer (100% gratuito e sem API key) */}
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -261,11 +297,15 @@ export default function InteractiveMapCanvas({
         {userLocation && userLocation.lat && userLocation.lng && (
           <Marker
             position={[Number(userLocation.lat), Number(userLocation.lng)]}
-            icon={getUserLocationMarkerIcon()}
+            icon={
+              userLocation.isLive || userLocation.heading !== undefined
+                ? getVehicleLocationMarkerIcon(userLocation.heading)
+                : getUserLocationMarkerIcon()
+            }
           >
             <Popup>
               <div className="p-2 font-sans text-xs text-slate-800 font-bold">
-                📍 {userLocation.addressName || "Sua Posição Atual (GPS)"}
+                {userLocation.isLive ? "🚗 Veículo em Deslocamento (GPS Realtime)" : `📍 ${userLocation.addressName || "Sua Posição Atual (GPS)"}`}
               </div>
             </Popup>
           </Marker>

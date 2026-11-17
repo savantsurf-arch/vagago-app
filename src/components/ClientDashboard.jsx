@@ -338,6 +338,18 @@ export const ClientDashboard = ({
                 <div className="flex flex-wrap items-center gap-2 self-end md:self-center shrink-0">
                   {b.bookingStatus !== 'Cancelado' && (
                     <>
+                      {(b.bookingStatus === 'Confirmado' || b.bookingStatus === 'Em Andamento' || b.status === 'confirmed') && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenLogisticsTracker(b)}
+                          className="bg-[#06152D] hover:bg-slate-800 text-white text-xs font-black px-3 py-2 rounded-xl flex items-center gap-1.5 transition shadow-sm border border-[#00D9FF]/40 cursor-pointer"
+                          title="Acompanhar deslocamento via GPS em tempo real"
+                        >
+                          <Navigation className="w-3.5 h-3.5 text-[#19E600] animate-pulse" />
+                          <span>Acompanhar GPS</span>
+                        </button>
+                      )}
+
                       <button
                         type="button"
                         onClick={() => { setGateBooking(b); setIsGateOpen(true); }}

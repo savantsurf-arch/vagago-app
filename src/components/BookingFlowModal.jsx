@@ -34,7 +34,8 @@ import {
   MapPin,
   Loader2,
   Mail,
-  MessageCircle
+  MessageCircle,
+  Navigation
 } from 'lucide-react';
 
 export const BookingFlowModal = () => {
@@ -51,7 +52,8 @@ export const BookingFlowModal = () => {
     coupons = [],
     currentUser,
     setActiveTab,
-    switchRole
+    switchRole,
+    openLogisticsTracker
   } = useApp();
 
   const safeUser = currentUser || { credits: 20 };
@@ -1485,7 +1487,35 @@ Instruções de Acesso: ${completedBooking.secretAccessInstructions || 'Liberado
               </div>
 
               {/* Action Buttons */}
-              <div className="space-y-2">
+              <div className="space-y-2.5">
+                {/* Botão Primário: Iniciar Deslocamento e Rastreamento GPS */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const bookingToTrack = completedBooking || {
+                      id: 'bkg_current',
+                      bookingNumber: 'RES-' + Math.floor(100000 + Math.random() * 900000),
+                      spaceId: selectedSpot?.id,
+                      spaceTitle: selectedSpot?.title,
+                      spaceAddress: selectedSpot?.address,
+                      date: selectedDate,
+                      startTime,
+                      endTime,
+                      totalPrice: pricing.finalTotal,
+                      qrCodeData: `VAGAGO-${selectedSpot?.id}-${Date.now()}`
+                    };
+                    setIsBookingFlowOpen(false);
+                    setStep(1);
+                    if (typeof openLogisticsTracker === 'function') {
+                      openLogisticsTracker(bookingToTrack);
+                    }
+                  }}
+                  className="w-full bg-gradient-to-r from-[#06152D] via-[#087BFF] to-[#06152D] hover:opacity-95 text-white font-black text-sm py-4 px-4 rounded-2xl transition shadow-xl cursor-pointer flex items-center justify-center gap-2.5 border border-[#00D9FF]/40"
+                >
+                  <Navigation className="w-5 h-5 text-[#19E600] animate-pulse" />
+                  <span>🚗 Iniciar Deslocamento e Rastreamento GPS</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={handleCopySummary}
@@ -1507,7 +1537,7 @@ Instruções de Acesso: ${completedBooking.secretAccessInstructions || 'Liberado
                       setActiveTab('client_dashboard');
                     }
                   }}
-                  className="w-full bg-slate-900 hover:bg-slate-800 text-white font-black text-sm py-4 px-4 rounded-2xl transition shadow-lg cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full bg-slate-900 hover:bg-slate-800 text-white font-black text-sm py-3.5 px-4 rounded-2xl transition shadow-lg cursor-pointer flex items-center justify-center gap-2"
                 >
                   <span>Concluir e Ver Minhas Reservas</span>
                   <ArrowRight className="w-4 h-4" />

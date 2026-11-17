@@ -123,8 +123,18 @@ class ErrorBoundary extends Component {
 }
 
 const MainContent = () => {
-  const { activeTab, activeRole, isAuthenticated, currentUser, openLoginModal, setActiveTab, isPageLoading, authModalMode } = useApp();
-  const [trackingBooking, setTrackingBooking] = useState(null);
+  const {
+    activeTab,
+    activeRole,
+    isAuthenticated,
+    currentUser,
+    openLoginModal,
+    setActiveTab,
+    isPageLoading,
+    authModalMode,
+    trackingBooking,
+    setTrackingBooking
+  } = useApp();
   const [extendingBooking, setExtendingBooking] = useState(null);
   const [isDepositOpen, setIsDepositOpen] = useState(false);
   const [isLiveChatOpen, setIsLiveChatOpen] = useState(false);

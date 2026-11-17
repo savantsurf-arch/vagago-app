@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { InteractiveMap } from './InteractiveMap';
 import { QRCodeSVG } from 'qrcode.react';
@@ -11,74 +11,138 @@ import {
   Car,
   MapPin,
   ShieldCheck,
-  Phone,
   QrCode,
   Sparkles,
-  ArrowRight,
   Footprints,
   RotateCcw,
   Zap,
-  Check
+  Check,
+  LocateFixed,
+  Radio,
+  AlertTriangle,
+  Play,
+  CheckCircle
 } from 'lucide-react';
 import {
   fetchDrivingRoute,
   calculateOsmAlternativeRoutes,
   assignGarageBoxNumber,
-  openExternalNavigation
+  formatDistance
 } from '../services/geoUtils';
+import {
+  useRealtimeGpsTracker,
+  subscribeToDriverLocationRealtime
+} from '../services/gpsTrackingService';
 
 export const LogisticsTrackerModal = ({ booking, isOpen, onClose }) => {
-  const { userLocation, parkingSpaces, authorizeCheckIn } = useApp();
+  const { userLocation, parkingSpaces, authorizeCheckIn, currentUser } = useApp();
 
   const [logisticsStep, setLogisticsStep] = useState(1); // 1: Em Rota, 2: Chegando, 3: Portão/QR Code, 4: Estacionado
   const [transportMode, setTransportMode] = useState('CAR'); // 'CAR' vs 'WALKING'
-  const [selectedRouteId, setSelectedRouteId] = useState('fastest'); // 'fastest', 'shortest', 'alternative'
+  const [selectedRouteId, setSelectedRouteId] = useState('fastest');
   const [isRecalculating, setIsRecalculating] = useState(false);
   const [osrmRoute, setOsrmRoute] = useState(null);
+  const [recenterTrigger, setRecenterTrigger] = useState(0);
+  const [simStepFraction, setSimStepFraction] = useState(0);
 
-  const targetSpot = (parkingSpaces || []).find(s => s && s.id === booking?.spaceId) || {
+  const targetSpot = (parkingSpaces || []).find((s) => s && s.id === booking?.spaceId) || {
+    id: booking?.spaceId || 'spc_default',
     lat: -14.7966,
     lng: -39.2789,
     entranceLat: -14.7968,
     entranceLng: -39.2787,
-    title: booking?.spaceTitle,
-    address: booking?.spaceAddress,
-    photos: ["https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=1000&q=80"]
+    title: booking?.spaceTitle || 'Garagem VagaGo',
+    address: booking?.spaceAddress || 'Centro, Itabuna - BA',
+    photos: ['https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=1000&q=80'],
+    entranceInstructions: 'Dirija-se ao portão automático à direita da entrada.'
   };
 
-  const destinationLat = targetSpot.entranceLat || targetSpot.lat || -14.7966;
-  const destinationLng = targetSpot.entranceLng || targetSpot.lng || -39.2789;
-  const originLat = userLocation?.lat || -14.7966;
-  const originLng = userLocation?.lng || -39.2789;
+  const destinationLat = Number(targetSpot.entranceLat || targetSpot.lat || -14.7966);
+  const destinationLng = Number(targetSpot.entranceLng || targetSpot.lng || -39.2789);
 
+  // Hook nativo de rastreamento GPS em tempo real (watchPosition + Supabase Realtime sync)
+  const tracker = useRealtimeGpsTracker({
+    bookingId: booking?.id || booking?.bookingNumber,
+    userId: currentUser?.id || booking?.userId,
+    destinationLat,
+    destinationLng,
+    autoStart: isOpen
+  });
+
+  // Coordenadas ativas do motorista: se o GPS já emitiu posição, usa ela; senão usa a posição do AppContext
+  const driverLat = tracker.currentLocation?.latitude ?? (userLocation?.lat || -14.7966);
+  const driverLng = tracker.currentLocation?.longitude ?? (userLocation?.lng || -39.2789);
+  const driverHeading = tracker.currentLocation?.heading ?? 0;
+
+  // Escuta atualizações de localização remotas no Supabase Realtime (ex: se visualizado por outro dispositivo)
+  useEffect(() => {
+    if (!isOpen || !booking?.id) return;
+    const unsub = subscribeToDriverLocationRealtime(booking.id, (remoteLoc) => {
+      // Confirmação de recebimento em tempo real pelo canal Supabase
+      console.log('📡 Coordenada recebida via Supabase Realtime:', remoteLoc);
+    });
+    return () => {
+      if (typeof unsub === 'function') unsub();
+    };
+  }, [isOpen, booking?.id]);
+
+  // Sincroniza passo inicial com status da reserva
   useEffect(() => {
     if (booking) {
       setLogisticsStep(booking.bookingStatus === 'Em Andamento' ? 4 : 1);
     }
   }, [booking]);
 
+  // Atualiza automaticamente o passo para "Chegando" quando estiver a menos de 100m
+  useEffect(() => {
+    if (tracker.distanceRemainingMeters !== null) {
+      if (tracker.distanceRemainingMeters <= 50 && logisticsStep < 3) {
+        setLogisticsStep(3);
+      } else if (tracker.distanceRemainingMeters <= 150 && logisticsStep === 1) {
+        setLogisticsStep(2);
+      }
+    }
+  }, [tracker.distanceRemainingMeters, logisticsStep]);
+
+  // Busca e atualiza a rota OSRM baseada no deslocamento
+  const lastFetchedOriginRef = useRef({ lat: null, lng: null });
+
   useEffect(() => {
     if (!isOpen || !booking) {
       setOsrmRoute(null);
       return;
     }
+
+    // Só busca nova rota se não houver rota ou se o deslocamento for relevante (> 60m)
+    const prev = lastFetchedOriginRef.current;
+    if (prev.lat && prev.lng) {
+      const dist = Math.hypot(driverLat - prev.lat, driverLng - prev.lng);
+      if (dist < 0.0006 && osrmRoute) {
+        return; // Posição muito próxima da anterior, reaproveita rota existente
+      }
+    }
+
     let cancelled = false;
-    fetchDrivingRoute(originLat, originLng, destinationLat, destinationLng, transportMode).then(
+    fetchDrivingRoute(driverLat, driverLng, destinationLat, destinationLng, transportMode).then(
       (res) => {
-        if (!cancelled && res) setOsrmRoute(res);
+        if (!cancelled && res) {
+          lastFetchedOriginRef.current = { lat: driverLat, lng: driverLng };
+          setOsrmRoute(res);
+        }
       }
     );
+
     return () => {
       cancelled = true;
     };
-  }, [isOpen, booking, originLat, originLng, destinationLat, destinationLng, transportMode]);
+  }, [isOpen, booking, driverLat, driverLng, destinationLat, destinationLng, transportMode]);
 
   if (!isOpen || !booking) return null;
 
   // Rotas OpenStreetMap + OSRM
   const routesData = calculateOsmAlternativeRoutes(
-    originLat,
-    originLng,
+    driverLat,
+    driverLng,
     destinationLat,
     destinationLng,
     transportMode,
@@ -88,86 +152,200 @@ export const LogisticsTrackerModal = ({ booking, isOpen, onClose }) => {
   const activeRoute = routesData[selectedRouteId] || routesData.fastest;
   const assignedBox = booking.assignedBox || assignGarageBoxNumber(booking.spaceId);
 
-  const handleSimulateOffRoute = () => {
+  // Recalcular rota sob demanda
+  const handleRecalculateRoute = () => {
     setIsRecalculating(true);
-    fetchDrivingRoute(originLat, originLng, destinationLat, destinationLng, transportMode)
+    fetchDrivingRoute(driverLat, driverLng, destinationLat, destinationLng, transportMode)
       .then((res) => {
-        if (res) setOsrmRoute(res);
+        if (res) {
+          lastFetchedOriginRef.current = { lat: driverLat, lng: driverLng };
+          setOsrmRoute(res);
+        }
       })
       .finally(() => {
-        setTimeout(() => setIsRecalculating(false), 600);
+        setTimeout(() => setIsRecalculating(false), 500);
       });
   };
 
-  const handleSimulateArrival = () => {
-    if (logisticsStep === 1) setLogisticsStep(2);
-    else if (logisticsStep === 2) setLogisticsStep(3);
-    else if (logisticsStep === 3) {
-      authorizeCheckIn(booking.id);
-      setLogisticsStep(4);
+  // Botão para avançar no teste controlado de bancada (sem GPS físico)
+  const handleAdvanceSimulation = () => {
+    const nextFraction = simStepFraction >= 0.95 ? 1 : simStepFraction + 0.25;
+    setSimStepFraction(nextFraction);
+    tracker.simulateStep(nextFraction, activeRoute.polyline);
+
+    if (nextFraction >= 1) {
+      setLogisticsStep(3);
+    } else if (nextFraction >= 0.75) {
+      setLogisticsStep(2);
     }
   };
 
+  // Centraliza o mapa na posição do veículo
+  const handleRecenter = () => {
+    setRecenterTrigger((prev) => prev + 1);
+  };
+
+  // Encerramento do trajeto
+  const handleFinishTracking = () => {
+    tracker.stopTracking();
+    if (logisticsStep >= 3) {
+      authorizeCheckIn(booking.id);
+    }
+    onClose();
+  };
+
+  // Objeto de localização formatado para o Leaflet com heading dinâmico e pulso
+  const driverMapLocation = {
+    lat: driverLat,
+    lng: driverLng,
+    heading: driverHeading,
+    isLive: true,
+    addressName: 'Seu Veículo (Em deslocamento)'
+  };
+
+  // Métricas dinâmicas em tempo real
+  const displayDistMeters = tracker.distanceRemainingMeters ?? Math.round((activeRoute.distanceKm || 0.8) * 1000);
+  const displayDistText = displayDistMeters > 999
+    ? `${(displayDistMeters / 1000).toFixed(1)} km`
+    : `${displayDistMeters} m`;
+
+  const displayEta = activeRoute.etaString || `${Math.max(1, Math.round(displayDistMeters / 400))} min`;
+
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-in fade-in">
-      <div className="bg-white w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-in fade-in">
+      <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[94vh] border border-slate-200">
         
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-900 text-white">
+        {/* Header Tecnológico VagaGo */}
+        <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between bg-[#06152D] text-white">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-sky-500/20 text-sky-400 rounded-xl border border-sky-400/30">
-              <Navigation className="w-5 h-5 animate-pulse" />
+            <div className="relative p-2.5 bg-gradient-to-br from-[#087BFF]/30 to-[#19E600]/20 text-[#00D9FF] rounded-2xl border border-[#00D9FF]/40 shadow-inner">
+              <Navigation className="w-5 h-5 animate-pulse text-[#19E600]" />
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#19E600] animate-ping"></span>
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-extrabold bg-sky-500/30 text-sky-300 px-2 py-0.5 rounded uppercase">
-                  Navegação GPS Avançada
+                <span className="text-[10px] font-black bg-[#087BFF]/30 text-[#00D9FF] border border-[#087BFF]/50 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                  Rastreamento GPS em Tempo Real
                 </span>
-                <span className="text-xs text-slate-400">• #{booking.bookingNumber}</span>
+                <span className="text-xs text-slate-400 font-mono">#{booking.bookingNumber || booking.id?.slice(0, 8)}</span>
               </div>
-              <h3 className="font-extrabold text-base">GPS & Navegação até a Garagem</h3>
+              <h3 className="font-extrabold text-base text-white flex items-center gap-2">
+                Navegação até a Garagem
+                <span className="text-xs font-bold text-slate-400 font-normal">({booking.spaceTitle || targetSpot.title})</span>
+              </h3>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition"
+            aria-label="Fechar navegação"
+            className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-5">
+        {/* Banner de Status GPS e Realtime */}
+        <div className="px-5 py-2.5 bg-slate-900 border-b border-slate-800 text-xs flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            {tracker.trackingStatus === 'TRACKING' ? (
+              <span className="inline-flex items-center gap-1.5 text-emerald-400 font-bold">
+                <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                <span>GPS Ativo em Alta Precisão (Leaflet + OpenStreetMap)</span>
+              </span>
+            ) : tracker.trackingStatus === 'LOCATING' ? (
+              <span className="inline-flex items-center gap-1.5 text-sky-400 font-bold">
+                <Radio className="w-3.5 h-3.5 text-sky-400 animate-spin" />
+                <span>Localizando sinal de GPS do dispositivo...</span>
+              </span>
+            ) : tracker.trackingStatus === 'PERMISSION_DENIED' ? (
+              <span className="inline-flex items-center gap-1.5 text-amber-400 font-bold">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                <span>Permissão de GPS negada pelo navegador.</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 text-slate-400 font-semibold">
+                <Radio className="w-3.5 h-3.5 text-slate-500" />
+                <span>GPS em espera</span>
+              </span>
+            )}
+
+            {tracker.isTestMode && (
+              <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-black uppercase px-2 py-0.5 rounded-full">
+                Modo de Teste Controlado Ativo
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] text-slate-400 font-medium">Sincronização:</span>
+            <span className="text-[11px] font-bold text-sky-400 bg-sky-950/80 px-2 py-0.5 rounded border border-sky-800/60">
+              Supabase Realtime
+            </span>
+          </div>
+        </div>
+
+        {/* Content Body */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
           
-          {/* Recalculating Banner */}
+          {/* Recalculating alert */}
           {isRecalculating && (
-            <div className="p-3 bg-amber-500 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 shadow-md animate-pulse">
+            <div className="p-3 bg-gradient-to-r from-sky-600 to-blue-700 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 shadow-md animate-pulse">
               <RotateCcw className="w-4 h-4 animate-spin" />
-              <span>Desvio detectado! Recalculando melhor rota a partir da sua posição...</span>
+              <span>Ajustando trajeto a partir da sua localização em tempo real...</span>
+            </div>
+          )}
+
+          {/* PERMISSION DENIED BANNER */}
+          {tracker.permissionError && !tracker.isTestMode && (
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs space-y-2">
+              <div className="flex items-center gap-2 font-black text-amber-900">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>Aviso de Localização: {tracker.permissionError}</span>
+              </div>
+              <p className="text-slate-600 font-medium">
+                Para acompanhar sua rota no mapa em tempo real enquanto dirige, permita o acesso à localização neste site, ou utilize o botão de teste de bancada abaixo:
+              </p>
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={tracker.startTracking}
+                  className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-3 py-1.5 rounded-xl cursor-pointer"
+                >
+                  Tentar Ativar GPS Novamente
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAdvanceSimulation}
+                  className="bg-slate-900 hover:bg-slate-800 text-white font-bold px-3 py-1.5 rounded-xl cursor-pointer flex items-center gap-1.5"
+                >
+                  <Play className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Usar Modo de Teste Controlado</span>
+                </button>
+              </div>
             </div>
           )}
 
           {/* STEP PROGRESS BAR */}
-          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+          <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2.5">
             <div className="flex items-center justify-between text-xs font-bold">
-              <span className="text-slate-700">Fluxo de Navegação & Chegada</span>
-              <span className="text-sky-600 font-extrabold">Passo {logisticsStep} de 4</span>
+              <span className="text-slate-700">Etapas do Deslocamento</span>
+              <span className="text-[#087BFF] font-extrabold">Passo {logisticsStep} de 4</span>
             </div>
 
-            <div className="grid grid-cols-4 gap-2 text-center text-[10px] font-bold">
+            <div className="grid grid-cols-4 gap-2 text-center text-[11px] font-bold">
               <div className={`p-2 rounded-xl border transition ${
-                logisticsStep >= 1 ? 'bg-sky-600 text-white border-sky-600' : 'bg-white text-slate-400 border-slate-200'
+                logisticsStep >= 1 ? 'bg-[#06152D] text-white border-[#06152D]' : 'bg-white text-slate-400 border-slate-200'
               }`}>
                 1. Em Rota 🚗
               </div>
               <div className={`p-2 rounded-xl border transition ${
-                logisticsStep >= 2 ? 'bg-sky-600 text-white border-sky-600' : 'bg-white text-slate-400 border-slate-200'
+                logisticsStep >= 2 ? 'bg-[#06152D] text-white border-[#06152D]' : 'bg-white text-slate-400 border-slate-200'
               }`}>
                 2. Aproximando 📍
               </div>
               <div className={`p-2 rounded-xl border transition ${
-                logisticsStep >= 3 ? 'bg-sky-600 text-white border-sky-600' : 'bg-white text-slate-400 border-slate-200'
+                logisticsStep >= 3 ? 'bg-[#06152D] text-white border-[#06152D]' : 'bg-white text-slate-400 border-slate-200'
               }`}>
                 3. Portão / QR 🏁
               </div>
@@ -179,35 +357,40 @@ export const LogisticsTrackerModal = ({ booking, isOpen, onClose }) => {
             </div>
           </div>
 
-          {/* MODE SELECTOR (Carro 🚗 vs A Pé 🚶) & ETA */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-sky-50 p-4 rounded-2xl border border-sky-200">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-2xl font-black text-sky-950">{activeRoute.etaString}</span>
-                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-white text-emerald-700 border border-emerald-200 shadow-2xs">
-                  {activeRoute.trafficStatus}
+          {/* HUD METRICS (Uber / iFood Style: Distância restante, ETA e Transporte) */}
+          <div className="bg-gradient-to-r from-sky-50 via-slate-50 to-emerald-50 p-4 rounded-2xl border border-sky-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+            <div className="space-y-1">
+              <div className="flex items-baseline gap-3">
+                <span className="text-3xl font-black text-slate-900 tracking-tight">{displayDistText}</span>
+                <span className="text-base font-extrabold text-[#087BFF] bg-sky-100/80 px-2.5 py-0.5 rounded-lg">
+                  {displayEta}
+                </span>
+                <span className="text-xs font-bold text-emerald-700 bg-white px-2 py-0.5 rounded-full border border-emerald-200 shadow-2xs">
+                  {activeRoute.trafficStatus || '🟢 Trajeto Livre'}
                 </span>
               </div>
-              <p className="text-xs font-semibold text-sky-800 mt-0.5">
-                Destino: Portão da Garagem ({booking.spaceAddress})
+              <p className="text-xs font-semibold text-slate-600">
+                Destino: <strong className="text-slate-900">{targetSpot.address}</strong> (Portão de Acesso)
               </p>
             </div>
 
-            {/* Transport Mode Switcher */}
-            <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-sky-200 shrink-0">
+            {/* Switcher Carro / A pé */}
+            <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 shrink-0 shadow-2xs">
               <button
+                type="button"
                 onClick={() => setTransportMode('CAR')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1 transition ${
-                  transportMode === 'CAR' ? 'bg-sky-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
+                className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1 transition cursor-pointer ${
+                  transportMode === 'CAR' ? 'bg-[#06152D] text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
                 }`}
               >
                 <Car className="w-3.5 h-3.5" />
                 <span>Carro</span>
               </button>
               <button
+                type="button"
                 onClick={() => setTransportMode('WALKING')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1 transition ${
-                  transportMode === 'WALKING' ? 'bg-sky-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
+                className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1 transition cursor-pointer ${
+                  transportMode === 'WALKING' ? 'bg-[#06152D] text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
                 }`}
               >
                 <Footprints className="w-3.5 h-3.5" />
@@ -216,117 +399,128 @@ export const LogisticsTrackerModal = ({ booking, isOpen, onClose }) => {
             </div>
           </div>
 
-          {/* ALTERNATIVE ROUTES SELECTOR */}
+          {/* MAPA PRINCIPAL LEAFLET / OPENSTREETMAP (100% Integrado sem redirecionamento externo) */}
           <div className="space-y-2">
-            <span className="text-xs font-bold text-slate-700 block">Selecione a Rota de Preferência:</span>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              {Object.values(routesData).map(r => (
+            <div className="flex items-center justify-between text-xs font-bold">
+              <span className="text-slate-800 flex items-center gap-1.5">
+                <MapPin className="w-4 h-4 text-[#087BFF]" />
+                <span>Mapa em Tempo Real (Leaflet • OpenStreetMap)</span>
+              </span>
+
+              <div className="flex items-center gap-2">
                 <button
-                  key={r.id}
-                  onClick={() => setSelectedRouteId(r.id)}
-                  className={`p-3 rounded-2xl border text-left transition ${
-                    selectedRouteId === r.id
-                      ? 'bg-slate-900 text-white border-slate-900 shadow-md'
-                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                  }`}
+                  type="button"
+                  onClick={handleRecenter}
+                  className="bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 text-[11px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-2xs transition cursor-pointer"
+                  title="Centralizar no seu veículo"
                 >
-                  <div className="flex items-center justify-between text-xs font-extrabold">
-                    <span>{r.title}</span>
-                    {selectedRouteId === r.id && <Check className="w-3.5 h-3.5 text-sky-400" />}
-                  </div>
-                  <div className="text-sm font-black mt-1">{r.etaString}</div>
-                  <div className="text-[10px] opacity-75 truncate">{r.subtitle}</div>
+                  <LocateFixed className="w-3.5 h-3.5 text-[#087BFF]" />
+                  <span>Centralizar GPS</span>
                 </button>
-              ))}
+
+                <button
+                  type="button"
+                  onClick={handleRecalculateRoute}
+                  className="text-[11px] font-bold text-sky-600 hover:text-sky-700 hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Recalcular</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Container do Mapa Leaflet */}
+            <div className="h-72 sm:h-80 rounded-2xl overflow-hidden border border-slate-200 shadow-md relative group">
+              <InteractiveMap
+                eagerLoad={true}
+                spots={[targetSpot]}
+                userLocation={driverMapLocation}
+                routePolyline={activeRoute.polyline}
+                selectedSpotId={targetSpot.id}
+                center={[driverLat, driverLng]}
+                zoom={16}
+                recenterTrigger={recenterTrigger}
+                className="w-full h-full rounded-2xl"
+              />
+
+              {/* Tag flutuante sobre o mapa indicando posição viva */}
+              <div className="absolute bottom-3 left-3 z-[10] bg-[#06152D]/90 backdrop-blur-md text-white text-[10px] font-extrabold px-3 py-1.5 rounded-xl border border-[#00D9FF]/40 shadow-lg flex items-center gap-2 pointer-events-none">
+                <span className="w-2 h-2 rounded-full bg-[#19E600] animate-ping"></span>
+                <span>Marcador de Veículo VagaGo (Orientação em {Math.round(driverHeading)}°)</span>
+              </div>
             </div>
           </div>
 
-          {/* GATE ENTRANCE & SECRET INSTRUCTIONS */}
+          {/* INSTRUÇÕES DO PORTÃO E BOX ATRIBUÍDO */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl text-xs space-y-1">
-              <span className="font-extrabold text-amber-900 block flex items-center gap-1">
-                🚪 Local Exato da Entrada:
+              <span className="font-extrabold text-amber-950 flex items-center gap-1.5">
+                🚪 Instruções do Portão:
               </span>
               <p className="font-semibold text-slate-800">
-                {targetSpot.entranceInstructions || "Direcione o veículo para o portão principal."}
+                {targetSpot.entranceInstructions || 'Direcione o veículo para o portão principal da garagem.'}
               </p>
             </div>
 
             <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs space-y-1">
-              <span className="font-extrabold text-emerald-900 block flex items-center gap-1">
+              <span className="font-extrabold text-emerald-950 flex items-center gap-1.5">
                 🅿️ Box Atribuído:
               </span>
-              <p className="font-black text-emerald-950 text-sm">{assignedBox}</p>
+              <p className="font-black text-emerald-950 text-base">{assignedBox}</p>
             </div>
           </div>
 
-          {/* MAP WITH ACTIVE ROUTE POLYLINE */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs font-bold">
-              <span className="text-slate-800 flex items-center gap-1.5">
-                <MapPin className="w-4 h-4 text-sky-600" />
-                Trajeto Ativo no Mapa (Indo para o Portão)
-              </span>
-              <button
-                onClick={handleSimulateOffRoute}
-                className="text-[11px] font-bold text-sky-600 hover:underline flex items-center gap-1 cursor-pointer"
-              >
-                <RotateCcw className="w-3 h-3" />
-                Recalcular Trajeto
-              </button>
-            </div>
-
-            <div className="h-64 rounded-2xl overflow-hidden border border-slate-200 shadow-inner">
-              <InteractiveMap
-                eagerLoad={true}
-                spots={[targetSpot]}
-                userLocation={userLocation}
-                routePolyline={activeRoute.polyline}
-                selectedSpotId={targetSpot.id}
-                center={[userLocation.lat, userLocation.lng]}
-                zoom={15}
-                className="w-full h-full rounded-2xl"
-              />
-            </div>
-          </div>
-
-          {/* STEP 3 & 4 QR CODE DISPLAY */}
+          {/* QR CODE DE LIBERAÇÃO (Exibido a partir do Passo 3 ou ao aproximar) */}
           {logisticsStep >= 3 && (
-            <div className="p-5 bg-slate-900 text-white rounded-2xl text-center space-y-3 animate-in fade-in">
-              <span className="bg-emerald-500/20 text-emerald-300 font-extrabold text-xs px-3 py-1 rounded-full border border-emerald-400/30">
-                🎉 VOCÊ CHEGOU À GARAGEM!
-              </span>
-              <h4 className="font-extrabold text-sm text-sky-400">Escaneie no Portão Eletrônico</h4>
-              <div className="bg-white p-3 rounded-xl inline-block">
-                <QRCodeSVG value={booking.qrCodeData} size={150} />
+            <div className="p-5 bg-gradient-to-br from-[#06152D] to-slate-900 text-white rounded-3xl text-center space-y-3 border border-emerald-500/40 shadow-xl animate-in fade-in">
+              <div className="inline-flex items-center gap-2 bg-emerald-500/20 text-emerald-300 font-black text-xs px-3.5 py-1 rounded-full border border-emerald-400/30">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span>VOCÊ CHEGOU AO DESTINO!</span>
               </div>
-              <p className="text-xs text-slate-300">
-                Apresente este código para liberar a trava do <strong>{assignedBox}</strong>.
+              <h4 className="font-extrabold text-sm text-[#00D9FF]">Apresente no Leitor do Portão Eletrônico</h4>
+              
+              <div className="bg-white p-3.5 rounded-2xl inline-block shadow-lg">
+                <QRCodeSVG value={booking.qrCodeData || `VAGAGO-GATE-${booking.id}`} size={160} />
+              </div>
+              
+              <p className="text-xs text-slate-300 max-w-sm mx-auto font-medium">
+                Aproxime este QR Code da câmera do portão para destravar o acesso ao <strong>{assignedBox}</strong>.
               </p>
             </div>
           )}
 
-          {/* ACTION BUTTONS */}
+          {/* ACTION BUTTONS (Sem links externos — 100% no app) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+            {/* Botão de Teste de Bancada para computadores sem GPS físico */}
             <button
-              onClick={() => openExternalNavigation(destinationLat, destinationLng, booking.spaceAddress, userLocation)}
-              className="bg-[#029518] hover:bg-[#018206] text-white font-extrabold text-xs py-3.5 px-4 rounded-2xl shadow-lg shadow-[#029518]/25 transition flex items-center justify-center gap-2 cursor-pointer"
+              type="button"
+              onClick={handleAdvanceSimulation}
+              className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs py-3.5 px-4 rounded-2xl transition flex items-center justify-center gap-2 cursor-pointer border border-slate-200"
             >
-              <Compass className="w-4 h-4 text-emerald-100" />
-              <span>Abrir Rota no OpenStreetMap</span>
+              <Play className="w-4 h-4 text-sky-600" />
+              <span>Simular Deslocamento (Teste de Bancada)</span>
             </button>
 
-            <button
-              onClick={handleSimulateArrival}
-              className="bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs py-3.5 px-4 rounded-2xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
-            >
-              {logisticsStep === 1 && "Avançar no Trajeto (500m)"}
-              {logisticsStep === 2 && "Confirmar Chegada ao Portão"}
-              {logisticsStep === 3 && "Escanear QR Code & Estacionar"}
-              {logisticsStep === 4 && "✓ Estacionado com Sucesso"}
-            </button>
+            {/* Botão de Avanço e Finalização */}
+            {logisticsStep < 3 ? (
+              <button
+                type="button"
+                onClick={() => setLogisticsStep(3)}
+                className="bg-[#19E600] hover:bg-[#15c500] text-[#06152D] font-black text-xs py-3.5 px-4 rounded-2xl shadow-lg shadow-[#19E600]/25 transition flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>Confirmar Chegada ao Portão</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleFinishTracking}
+                className="bg-[#06152D] hover:bg-slate-800 text-white font-black text-xs py-3.5 px-4 rounded-2xl shadow-lg transition flex items-center justify-center gap-2 cursor-pointer border border-slate-700"
+              >
+                <Check className="w-4 h-4 text-[#19E600]" />
+                <span>Finalizar Acompanhamento & Liberar Vaga</span>
+              </button>
+            )}
           </div>
-
 
         </div>
 
